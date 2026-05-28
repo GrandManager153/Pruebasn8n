@@ -10,6 +10,12 @@ node_modules/
 data/request_logs.json
 data/dashboard_payload.json
 data/reports/*.html
+test-results/
+
+# Python ML API
+ml-forecast-api/.venv/
+ml-forecast-api/.env
+ml-forecast-api/__pycache__/
 
 # Logs
 *.log
