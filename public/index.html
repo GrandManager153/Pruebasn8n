@@ -1,36 +1,36 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BOS Panel - Manuel Solis Law Offices</title>
     <meta name="description" content="Business Operating System - Panel de Control Operativo y Financiero de Marketing">
-    
+
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    
+
     <!-- Custom Extracted Stylesheets -->
     <link rel="stylesheet" href="/css/styles.css">
 </head>
+
 <body>
     <!-- Ambient Space Background Nebulas -->
     <div class="ambient-nebula nebula-gold"></div>
     <div class="ambient-nebula nebula-crimson"></div>
     <div class="global-flashlight"></div>
-    
+
     <div class="app-container">
         <!-- Sidebar Menu (Left) -->
         <aside class="sidebar">
             <div class="sidebar-brand">
                 <div class="v-flex-row">
-                    <div class="brand-logo">BOS</div>
-                    <div class="brand-text">
-                        <h1>BOS Panel</h1>
-                        <p>Manuel Solis Law Offices</p>
-                    </div>
+                    <div class="brand-logo">MANUEL SOLIS</div>
                 </div>
             </div>
 
@@ -86,11 +86,12 @@
 
             <!-- Dashboard Content Container (Scrollable) -->
             <div class="content-scrollable">
-                
+
                 <!-- LOADING & CONNECTION STATES -->
                 <div class="loading-state" id="loading">
                     <div class="loading-spinner"></div>
-                    <p style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Estableciendo conexión y cargando datos analíticos del BOS...</p>
+                    <p style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Estableciendo conexión y
+                        cargando datos analíticos del BOS...</p>
                 </div>
 
                 <!-- 1. TAB: RESUMEN GENERAL (DASHBOARD) -->
@@ -116,20 +117,28 @@
                 <!-- 2. TAB: EMBUDO Y CONVERSIONES (FUNNEL) -->
                 <section class="tab-content" id="tab-funnel">
                     <!-- Conversion Rate Banner -->
-                    <div class="card v-mb-4 card-animate" style="background: linear-gradient(135deg, var(--bg-card), #0a2015) !important; border-left: 4px solid var(--green) !important; animation-delay: 0.02s;">
+                    <div class="card v-mb-4 card-animate"
+                        style="background: linear-gradient(135deg, var(--bg-card), #0a2015) !important; border-left: 4px solid var(--green) !important; animation-delay: 0.02s;">
                         <div class="v-flex-between v-mb-3">
-                            <h2 style="font-size: 18px; font-weight: 800; color: white; margin: 0;">Desempeño y Absorción de Leads</h2>
+                            <h2 style="font-size: 18px; font-weight: 800; color: white; margin: 0;">Desempeño y
+                                Absorción de Leads</h2>
                             <span class="custom-badge custom-badge-success" id="funnel-target-label">Objetivo</span>
                         </div>
-                        <p class="text-muted v-mb-4" style="font-size: 13.5px;">Análisis probabilístico de la conversión general de contactos. Mide la tasa de leads que transitan exitosamente a través del funnel hasta la consolidación.</p>
+                        <p class="text-muted v-mb-4" style="font-size: 13.5px;">Análisis probabilístico de la conversión
+                            general de contactos. Mide la tasa de leads que transitan exitosamente a través del funnel
+                            hasta la consolidación.</p>
                         <div class="v-grid-1-1">
-                            <div class="card card-animate" style="background: rgba(255,255,255,0.01) !important; border-color: rgba(255,255,255,0.05) !important; animation-delay: 0.04s;">
+                            <div class="card card-animate"
+                                style="background: rgba(255,255,255,0.01) !important; border-color: rgba(255,255,255,0.05) !important; animation-delay: 0.04s;">
                                 <div class="card-stat-label" style="font-size: 9px;">Tasa Global de Conversión</div>
-                                <div class="card-stat-value" id="funnel-conv-pct" style="font-size: 26px; color: var(--green);">0%</div>
+                                <div class="card-stat-value" id="funnel-conv-pct"
+                                    style="font-size: 26px; color: var(--green);">0%</div>
                             </div>
-                            <div class="card card-animate" style="background: rgba(255,255,255,0.01) !important; border-color: rgba(255,255,255,0.05) !important; animation-delay: 0.06s;">
+                            <div class="card card-animate"
+                                style="background: rgba(255,255,255,0.01) !important; border-color: rgba(255,255,255,0.05) !important; animation-delay: 0.06s;">
                                 <div class="card-stat-label" style="font-size: 9px;">Ingresos en Riesgo Estimados</div>
-                                <div class="card-stat-value" id="funnel-risk-revenue" style="font-size: 26px; color: var(--red);">$0</div>
+                                <div class="card-stat-value" id="funnel-risk-revenue"
+                                    style="font-size: 26px; color: var(--red);">$0</div>
                             </div>
                         </div>
                     </div>
@@ -137,18 +146,21 @@
                     <div class="v-grid-1-1">
                         <!-- Top Feeders -->
                         <div class="card card-animate" style="animation-delay: 0.08s;">
-                            <div class="chart-title"><span class="dot" style="background: var(--green)"></span> Estados con Mayor Conversión</div>
+                            <div class="chart-title"><span class="dot" style="background: var(--green)"></span> Estados
+                                con Mayor Conversión</div>
                             <div class="v-flex-col v-mt-2" id="funnel-feeders-list"></div>
                         </div>
                         <!-- Key Leaks -->
                         <div class="card card-animate" style="animation-delay: 0.10s;">
-                            <div class="chart-title"><span class="dot" style="background: var(--red)"></span> Principales Fugas del Embudo</div>
+                            <div class="chart-title"><span class="dot" style="background: var(--red)"></span>
+                                Principales Fugas del Embudo</div>
                             <div class="v-flex-col v-mt-2" id="funnel-leaks-list"></div>
                         </div>
                     </div>
 
                     <div class="section-header">
-                        <div class="section-title"><span class="bar"></span> Probabilidades de Conversión y Pasos Operativos Esperados</div>
+                        <div class="section-title"><span class="bar"></span> Probabilidades de Conversión y Pasos
+                            Operativos Esperados</div>
                     </div>
                     <div class="card card-animate" style="animation-delay: 0.12s;">
                         <div class="custom-table-container">
@@ -181,11 +193,13 @@
 
                     <div class="v-grid-2-1">
                         <div class="card card-animate" style="animation-delay: 0.08s;">
-                            <div class="chart-title"><span class="dot" style="background: #3b82f6"></span> Histórico de Leads y Predicción Temporal</div>
+                            <div class="chart-title"><span class="dot" style="background: #3b82f6"></span> Histórico de
+                                Leads y Predicción Temporal</div>
                             <div class="chart-wrapper"><canvas id="chart-timeseries"></canvas></div>
                         </div>
                         <div class="card card-animate" style="animation-delay: 0.10s;">
-                            <div class="chart-title"><span class="dot" style="background: var(--gold)"></span> Comportamiento Estacional Semanal</div>
+                            <div class="chart-title"><span class="dot" style="background: var(--gold)"></span>
+                                Comportamiento Estacional Semanal</div>
                             <div class="chart-wrapper"><canvas id="chart-seasonal"></canvas></div>
                         </div>
                     </div>
@@ -193,7 +207,8 @@
                     <div class="v-mb-4">
                         <!-- Model Leaderboard -->
                         <div class="card card-animate" style="animation-delay: 0.12s;">
-                            <div class="chart-title"><span class="dot" style="background: var(--gold)"></span> Clasificación de Modelos Predictivos</div>
+                            <div class="chart-title"><span class="dot" style="background: var(--gold)"></span>
+                                Clasificación de Modelos Predictivos</div>
                             <div class="custom-table-container v-mt-3">
                                 <table class="custom-table">
                                     <thead>
@@ -215,11 +230,13 @@
                 <!-- 4. TAB: INVERSIÓN Y CAMPAÑAS -->
                 <section class="tab-content" id="tab-investment">
                     <div class="section-header">
-                        <div class="section-title"><span class="bar"></span> Presupuesto Publicitario e Distribución</div>
+                        <div class="section-title"><span class="bar"></span> Presupuesto Publicitario e Distribución
+                        </div>
                     </div>
                     <div class="v-grid-2-1">
                         <div class="card card-animate" style="animation-delay: 0.02s;">
-                            <div class="chart-title"><span class="dot" style="background: var(--green)"></span> Distribución del Gasto por Campaña Publicitaria</div>
+                            <div class="chart-title"><span class="dot" style="background: var(--green)"></span>
+                                Distribución del Gasto por Campaña Publicitaria</div>
                             <div class="chart-wrapper"><canvas id="chart-campaigns"></canvas></div>
                         </div>
                         <div class="v-flex-col justify-content-center">
@@ -263,7 +280,8 @@
                     </div>
                     <div class="v-mb-4">
                         <div class="card card-animate" style="animation-delay: 0.02s;">
-                            <div class="chart-title"><span class="dot" style="background: #ef4444"></span> Distribución Horaria de Contactos Telefónicos</div>
+                            <div class="chart-title"><span class="dot" style="background: #ef4444"></span> Distribución
+                                Horaria de Contactos Telefónicos</div>
                             <div class="chart-wrapper"><canvas id="chart-hourly"></canvas></div>
                         </div>
                     </div>
@@ -277,15 +295,22 @@
                     <!-- Alerts Table and Severity Filter -->
                     <div class="card v-mb-4 card-animate" style="animation-delay: 0.10s;">
                         <div class="v-flex-between v-mb-3" style="flex-wrap: wrap;">
-                            <div class="section-title"><span class="bar"></span> Registro Detallado de Alertas del Sistema</div>
+                            <div class="section-title"><span class="bar"></span> Registro Detallado de Alertas del
+                                Sistema</div>
                             <div class="filter-pills">
-                                <button class="filter-pill active" data-filter="all" onclick="filterAlerts('all')">Todas</button>
-                                <button class="filter-pill critical" data-filter="critical" onclick="filterAlerts('critical')">Críticas</button>
-                                <button class="filter-pill warning" data-filter="warning" onclick="filterAlerts('warning')">Advertencias</button>
-                                <button class="filter-pill info" data-filter="info" onclick="filterAlerts('info')">Informativas</button>
+                                <button class="filter-pill active" data-filter="all"
+                                    onclick="filterAlerts('all')">Todas</button>
+                                <button class="filter-pill critical" data-filter="critical"
+                                    onclick="filterAlerts('critical')">Críticas</button>
+                                <button class="filter-pill warning" data-filter="warning"
+                                    onclick="filterAlerts('warning')">Advertencias</button>
+                                <button class="filter-pill info" data-filter="info"
+                                    onclick="filterAlerts('info')">Informativas</button>
                             </div>
                         </div>
-                        <p class="text-muted v-mb-4" style="font-size: 13px;">Supervisión en tiempo real de desviaciones operativas, reintentos de contacto por lead y anomalías de inversión publicitaria. Los incidentes se ponderan según el riesgo de negocio (RPN).</p>
+                        <p class="text-muted v-mb-4" style="font-size: 13px;">Supervisión en tiempo real de desviaciones
+                            operativas, reintentos de contacto por lead y anomalías de inversión publicitaria. Los
+                            incidentes se ponderan según el riesgo de negocio (RPN).</p>
                         <div class="custom-table-container">
                             <table class="custom-table">
                                 <thead>
@@ -310,7 +335,9 @@
                         <div class="section-meta">Actualizados al momento de la auditoría</div>
                     </div>
                     <div class="v-grid-1-1">
-                        <a href="/reports/executive" onclick="loadReportInViewer('/reports/executive', 'Informe de Dirección Corporativa', event)" class="report-card card-animate" style="animation-delay: 0.02s;">
+                        <a href="/reports/executive"
+                            onclick="loadReportInViewer('/reports/executive', 'Informe de Dirección Corporativa', event)"
+                            class="report-card card-animate" style="animation-delay: 0.02s;">
                             <div class="icon-box exec">DIR</div>
                             <div class="report-info">
                                 <h4>Informe de Dirección Corporativa</h4>
@@ -318,7 +345,9 @@
                             </div>
                             <span class="arrow">→</span>
                         </a>
-                        <a href="/reports/manager" onclick="loadReportInViewer('/reports/manager', 'Informe de Gestión de Embudo', event)" class="report-card card-animate" style="animation-delay: 0.04s;">
+                        <a href="/reports/manager"
+                            onclick="loadReportInViewer('/reports/manager', 'Informe de Gestión de Embudo', event)"
+                            class="report-card card-animate" style="animation-delay: 0.04s;">
                             <div class="icon-box mgr">GES</div>
                             <div class="report-info">
                                 <h4>Informe de Gestión de Embudo</h4>
@@ -326,7 +355,9 @@
                             </div>
                             <span class="arrow">→</span>
                         </a>
-                        <a href="/reports/analyst" onclick="loadReportInViewer('/reports/analyst', 'Informe de Análisis Estadístico', event)" class="report-card card-animate" style="animation-delay: 0.06s;">
+                        <a href="/reports/analyst"
+                            onclick="loadReportInViewer('/reports/analyst', 'Informe de Análisis Estadístico', event)"
+                            class="report-card card-animate" style="animation-delay: 0.06s;">
                             <div class="icon-box analyst">EST</div>
                             <div class="report-info">
                                 <h4>Informe de Análisis Estadístico</h4>
@@ -334,7 +365,9 @@
                             </div>
                             <span class="arrow">→</span>
                         </a>
-                        <a href="/reports/operations" onclick="loadReportInViewer('/reports/operations', 'Informe de Capacidad Operativa', event)" class="report-card card-animate" style="animation-delay: 0.08s;">
+                        <a href="/reports/operations"
+                            onclick="loadReportInViewer('/reports/operations', 'Informe de Capacidad Operativa', event)"
+                            class="report-card card-animate" style="animation-delay: 0.08s;">
                             <div class="icon-box ops">OPE</div>
                             <div class="report-info">
                                 <h4>Informe de Capacidad Operativa</h4>
@@ -345,33 +378,50 @@
                     </div>
 
                     <!-- Interactive Report Viewer Screen (Integrated Frame) -->
-                    <div class="card card-animate v-mt-4" id="report-viewer-card" style="animation-delay: 0.10s; padding: 0; overflow: hidden; margin-top: 32px;">
-                        <div class="viewer-header" style="display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background: rgba(9, 15, 32, 0.85); border-bottom: 1px solid var(--border);">
+                    <div class="card card-animate v-mt-4" id="report-viewer-card"
+                        style="animation-delay: 0.10s; padding: 0; overflow: hidden; margin-top: 32px;">
+                        <div class="viewer-header"
+                            style="display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background: rgba(9, 15, 32, 0.85); border-bottom: 1px solid var(--border);">
                             <div style="display: flex; align-items: center; gap: 12px;">
-                                <div class="pulse-dot" style="background-color: var(--gold); animation: none; box-shadow: none;" id="viewer-status-dot"></div>
-                                <h4 id="viewer-report-title" style="font-size: 13.5px; font-weight: 800; color: white; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Visor de Informe Interactivo</h4>
+                                <div class="pulse-dot"
+                                    style="background-color: var(--gold); animation: none; box-shadow: none;"
+                                    id="viewer-status-dot"></div>
+                                <h4 id="viewer-report-title"
+                                    style="font-size: 13.5px; font-weight: 800; color: white; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    Visor de Informe Interactivo</h4>
                             </div>
                             <div style="display: flex; align-items: center; gap: 12px;">
-                                <a id="viewer-open-link" href="#" target="_blank" class="btn-sec" style="padding: 6px 12px; font-size: 11px; display: none; align-items: center; gap: 6px; border-radius: 6px;">
+                                <a id="viewer-open-link" href="#" target="_blank" class="btn-sec"
+                                    style="padding: 6px 12px; font-size: 11px; display: none; align-items: center; gap: 6px; border-radius: 6px;">
                                     Pantalla Completa ↗
                                 </a>
-                                <button id="viewer-close-btn" class="btn-sec" style="padding: 6px 12px; font-size: 11px; cursor: pointer; display: none; border-radius: 6px;" onclick="closeReportViewer()">
+                                <button id="viewer-close-btn" class="btn-sec"
+                                    style="padding: 6px 12px; font-size: 11px; cursor: pointer; display: none; border-radius: 6px;"
+                                    onclick="closeReportViewer()">
                                     Cerrar Vista ×
                                 </button>
                             </div>
                         </div>
-                        
+
                         <!-- Placeholder State -->
-                        <div id="viewer-placeholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 420px; text-align: center; padding: 40px; background: rgba(7, 13, 25, 0.45); backdrop-filter: blur(10px);">
-                            <svg class="premium-empty-icon" viewBox="0 0 24 24" style="width: 48px; height: 48px; stroke: var(--gold); fill: none; margin-bottom: 16px;">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                        <div id="viewer-placeholder"
+                            style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 420px; text-align: center; padding: 40px; background: rgba(7, 13, 25, 0.45); backdrop-filter: blur(10px);">
+                            <svg class="premium-empty-icon" viewBox="0 0 24 24"
+                                style="width: 48px; height: 48px; stroke: var(--gold); fill: none; margin-bottom: 16px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"
+                                    d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                             </svg>
-                            <h3 style="font-size: 15px; font-weight: 800; margin-bottom: 8px; color: white;">Pantalla Integrada de Informes</h3>
-                            <p style="color: var(--text-muted); font-size: 13px; max-width: 440px; line-height: 1.6; margin: 0;">Selecciona cualquiera de las tarjetas de arriba para cargar el informe analítico completo directamente dentro de esta pantalla sin abandonar el dashboard.</p>
+                            <h3 style="font-size: 15px; font-weight: 800; margin-bottom: 8px; color: white;">Pantalla
+                                Integrada de Informes</h3>
+                            <p
+                                style="color: var(--text-muted); font-size: 13px; max-width: 440px; line-height: 1.6; margin: 0;">
+                                Selecciona cualquiera de las tarjetas de arriba para cargar el informe analítico
+                                completo directamente dentro de esta pantalla sin abandonar el dashboard.</p>
                         </div>
-                        
+
                         <!-- Embedded iFrame -->
-                        <iframe id="viewer-iframe" src="" style="width: 100%; height: 800px; border: none; background: #070d19; display: none;"></iframe>
+                        <iframe id="viewer-iframe" src=""
+                            style="width: 100%; height: 800px; border: none; background: #070d19; display: none;"></iframe>
                     </div>
                 </section>
 
@@ -382,4 +432,5 @@
     <!-- Application Script Logic Linked Externally -->
     <script src="/js/app.js" defer></script>
 </body>
+
 </html>
