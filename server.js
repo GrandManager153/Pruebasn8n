@@ -178,13 +178,19 @@ app.post('/api/clear-logs', (req, res) => {
 function injectTheme(htmlContent) {
   if (!htmlContent || typeof htmlContent !== 'string') return htmlContent;
 
-  // Eliminar estilos embebidos de n8n (morado/claro) para que mande reports.css
-  let output = htmlContent.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
+  // Eliminar estilos y script embebidos de n8n
+  let output = htmlContent
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script>\s*function showTab[\s\S]*?<\/script>/gi, '');
 
   const headAssets = `
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/reports.css?v=2">
+    <link rel="stylesheet" href="/css/reports.css?v=3">
   `;
+
+  const bodyScripts = `
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="/js/reports.js?v=3"></script>`;
 
   const ambientBg = `
     <div class="report-ambient" aria-hidden="true">
@@ -196,24 +202,6 @@ function injectTheme(htmlContent) {
       <svg class="wave-b" viewBox="0 0 1440 320" preserveAspectRatio="none"><path d="M0,200 C160,260 320,140 480,200 C640,260 800,140 960,200 C1120,260 1280,140 1440,200 L1440,320 L0,320 Z"/></svg>
     </div>
   `;
-
-  const themeScript = `
-  <script>
-    (function () {
-      function applyTheme(theme) {
-        document.body.classList.toggle('light-mode', theme === 'light');
-      }
-      applyTheme(localStorage.getItem('theme') || 'dark');
-      window.addEventListener('message', function (e) {
-        if (e.data === 'theme-light') applyTheme('light');
-        if (e.data === 'theme-dark') applyTheme('dark');
-      });
-      if (window.parent !== window) {
-        var bar = document.querySelector('.report-back-bar');
-        if (bar) bar.style.display = 'none';
-      }
-    })();
-  </script>`;
 
   if (output.includes('</head>')) {
     output = output.replace('</head>', `${headAssets}</head>`);
@@ -229,7 +217,7 @@ function injectTheme(htmlContent) {
   }
 
   if (output.includes('</body>')) {
-    output = output.replace('</body>', `${themeScript}</body>`);
+    output = output.replace('</body>', `${bodyScripts}</body>`);
   }
 
   return output;

@@ -234,9 +234,14 @@ body.light-mode .badge {
     border: 1px solid rgba(244, 63, 94, 0.22) !important;
 }
 
-.status-green .sdot { background: var(--green) !important; }
-.status-yellow .sdot { background: var(--amber) !important; }
-.status-red .sdot { background: var(--crimson) !important; }
+.status-green .sdot { background: var(--green) !important; animation: reportPulse 1.8s infinite; }
+.status-yellow .sdot { background: var(--amber) !important; animation: reportPulse 1.8s infinite; }
+.status-red .sdot { background: var(--crimson) !important; animation: reportPulse 1.8s infinite; }
+
+@keyframes reportPulse {
+    0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+    70% { box-shadow: 0 0 0 6px transparent; opacity: 0.85; }
+}
 
 /* === Tabs (como menú del panel) === */
 .tabs {
@@ -288,6 +293,8 @@ body.light-mode .tabs {
 
 /* === KPIs === */
 .kpi-row {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
     gap: var(--gap-bento) !important;
     margin-bottom: var(--gap-bento) !important;
 }
@@ -300,6 +307,8 @@ body.light-mode .tabs {
     box-shadow: var(--soft-shadow) !important;
     backdrop-filter: blur(12px);
     transition: transform 0.25s ease, border-color 0.25s ease !important;
+    position: relative;
+    overflow: hidden;
 }
 
 .kpi:hover {
@@ -511,15 +520,215 @@ body.light-mode .info-header {
     letter-spacing: 0.3px;
 }
 
-/* === Animaciones de tabs === */
+/* === Tabs y secciones animadas === */
 .tc {
-    animation: reportFadeIn 0.35s ease-out;
+    display: none;
 }
 
-@keyframes reportFadeIn {
-    from { opacity: 0; transform: translateY(8px); }
+.tc.active {
+    display: block;
+}
+
+.tc-enter {
+    animation: reportTabIn 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.tc-leave {
+    animation: reportTabOut 0.22s ease forwards;
+}
+
+@keyframes reportTabIn {
+    from { opacity: 0; transform: translateY(14px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+@keyframes reportTabOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-8px); }
+}
+
+/* === Entrada escalonada de tarjetas (como el panel) === */
+.card-animate {
+    opacity: 0;
+}
+
+.card-animate-run {
+    animation: reportCardDropIn 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes reportCardDropIn {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* === Spotlight hover en tarjetas === */
+.kpi::before,
+.content-block::before,
+.alert-card::before,
+.action-card::before,
+.report-chart-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+        420px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(163, 230, 53, 0.07) 0%,
+        rgba(56, 189, 248, 0.03) 50%,
+        transparent 80%
+    );
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.kpi:hover::before,
+.content-block:hover::before,
+.alert-card:hover::before,
+.action-card:hover::before,
+.report-chart-card:hover::before {
+    opacity: 1;
+}
+
+.kpi > *,
+.content-block > *,
+.alert-card > *,
+.action-card > *,
+.report-chart-card > * {
+    position: relative;
+    z-index: 2;
+}
+
+/* === Tanque líquido en Health Score (KPI #1) === */
+.report-liquid-kpi {
+    --tank-bg: rgba(13, 20, 35, 0.92);
+    --liquid-top: #d4f96a;
+    --liquid-bottom: #84cc16;
+    --fill-level: 0;
+    min-height: 130px;
+}
+
+.report-liquid-kpi.liquid-tone-warn {
+    --liquid-top: #fde68a;
+    --liquid-bottom: #f59e0b;
+}
+
+.report-liquid-kpi.liquid-tone-critical {
+    --liquid-top: #fda4af;
+    --liquid-bottom: #e11d48;
+}
+
+body.light-mode .report-liquid-kpi {
+    --tank-bg: rgba(255, 255, 255, 0.94);
+}
+
+.report-liquid-fill {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(var(--fill-level) * 1%);
+    background: linear-gradient(180deg, var(--liquid-top), var(--liquid-bottom));
+    z-index: 0;
+    overflow: hidden;
+    transition: height 1.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.report-liquid-surface {
+    position: absolute;
+    top: -16px;
+    left: -120%;
+    width: 320%;
+    height: 32px;
+    border-radius: 42%;
+    background: var(--tank-bg);
+    opacity: 0.95;
+}
+
+.report-liquid-surface--1 { animation: reportLiquidSloshA 7s ease-in-out infinite; }
+.report-liquid-surface--2 { top: -20px; opacity: 0.55; animation: reportLiquidSloshB 9s ease-in-out infinite; animation-delay: -2s; }
+
+@keyframes reportLiquidSloshA {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-12%); }
+}
+
+@keyframes reportLiquidSloshB {
+    0%, 100% { transform: translateX(-8%); }
+    50% { transform: translateX(-18%); }
+}
+
+/* === Gráficas del informe === */
+.report-charts-row {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: var(--gap-bento);
+    margin-bottom: var(--gap-bento);
+}
+
+.report-chart-card {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-lg) !important;
+    padding: 22px 24px !important;
+    box-shadow: var(--soft-shadow) !important;
+    backdrop-filter: blur(12px);
+    position: relative;
+    overflow: hidden;
+}
+
+.report-alerts-chart-card {
+    margin-bottom: var(--gap-bento);
+}
+
+.report-chart-title {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-main);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+}
+
+.report-chart-title .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--blue);
+}
+
+.report-chart-title .dot-lime { background: var(--chartreuse); }
+.report-chart-title .dot-crimson { background: var(--crimson); }
+
+.report-chart-wrap {
+    position: relative;
+    height: 220px;
+}
+
+.report-chart-wrap--donut {
+    height: 200px;
+    max-width: 220px;
+    margin: 0 auto;
+}
+
+.report-chart-wrap--bar {
+    height: 180px;
+}
+
+@media (max-width: 900px) {
+    .report-charts-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* === Animaciones de tabs (legacy fallback) === */
 
 /* === Botón volver al panel (inyectado) === */
 .report-back-bar {
