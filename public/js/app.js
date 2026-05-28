@@ -137,6 +137,21 @@ function switchTab(tabId) {
                 if (dashboardData.forecast.seasonal_indices) {
                     renderSeasonalChart(dashboardData.forecast.seasonal_indices);
                 }
+            } else {
+                if (charts.timeseries) { charts.timeseries.reset(); charts.timeseries.update(); }
+                if (charts.seasonal) { charts.seasonal.reset(); charts.seasonal.update(); }
+            }
+        } else if (tabId === 'forecast-rf') {
+            if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.forecast_rf) {
+                renderTimeSeriesChart(dashboardData.forecast_rf, {
+                    canvasId: 'rf-chart-timeseries',
+                    chartKey: 'rfTimeseries',
+                    lineLabel: 'Pronóstico Random Forest',
+                    lineColor: 'rgba(16, 185, 129, 0.75)',
+                });
+            } else if (charts.rfTimeseries) {
+                charts.rfTimeseries.reset();
+                charts.rfTimeseries.update();
             }
         } else if (tabId === 'investment') {
             if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.investment && dashboardData.investment.campaigns) {
@@ -154,6 +169,7 @@ function switchTab(tabId) {
         'dashboard': 'Resumen General',
         'funnel': 'Embudo y Conversiones',
         'forecast': 'Pronósticos y Regímenes',
+        'forecast-rf': 'Pronóstico Random Forest',
         'investment': 'Inversión y Campañas',
         'operations': 'Operaciones Diarias',
         'alerts': 'Alertas de Operación',
@@ -491,15 +507,24 @@ function renderBOS(data) {
     // 6. Render Funnel Page
     renderFunnelDetails(data);
 
-    // 7. Render Forecast Page
-    renderForecastDetails(data.forecast);
+    // 7. Render Forecast Pages (linear + Random Forest)
+    renderForecastDetails(data.forecast || {}, {
+        prefix: '',
+        show14d: true,
+        showChangepoint: true,
+    });
+    renderForecastRfTab(data.forecast_rf);
 
     // 8. Render Interactive Alerts Centre Tab
     renderAlertsCentre(data.system.alerts);
 
     // 9. Initialize and render high-impact Charts
-    renderTimeSeriesChart(data.forecast);
-    renderSeasonalChart(data.forecast.seasonal_indices);
+    renderTimeSeriesChart(data.forecast || {}, {
+        canvasId: 'chart-timeseries',
+        chartKey: 'timeseries',
+        lineLabel: 'Pronóstico Recomendado',
+    });
+    renderSeasonalChart(data.forecast ? data.forecast.seasonal_indices : []);
     renderCampaignChart(data.investment.campaigns);
     renderHourlyChart(data.operations.hourly_distribution);
 
@@ -631,9 +656,13 @@ function renderFunnelDetails(data) {
 //  RENDER FORECAST TAB DETAILS
 // =====================================================================
 
-function renderForecastDetails(forecast) {
-    const cpBanner = document.getElementById('forecast-changepoint-banner');
-    if (cpBanner) {
+function renderForecastDetails(forecast, options = {}) {
+    const prefix = options.prefix || '';
+    const show14d = options.show14d !== false;
+    const showChangepoint = options.showChangepoint !== false;
+
+    const cpBanner = document.getElementById(`${prefix}forecast-changepoint-banner`);
+    if (cpBanner && showChangepoint) {
         if (forecast.changepoint && forecast.changepoint.detected) {
             const cp = forecast.changepoint;
             const isUp = cp.direction === 'upward';
@@ -652,36 +681,45 @@ function renderForecastDetails(forecast) {
         }
     }
 
-    const horizonsGrid = document.getElementById('forecast-horizons-grid');
-    if (horizonsGrid) {
+    const horizonsGrid = document.getElementById(`${prefix}forecast-horizons-grid`);
+    if (horizonsGrid && forecast.horizons) {
         const horizons = forecast.horizons;
-        
-        horizonsGrid.innerHTML = `
+        const h1d = horizons.next_1d || {};
+        const h7d = horizons.next_7d || {};
+        const h14d = horizons.next_14d || {};
+
+        let cardsHtml = `
             <div class="card stat-card-blue card-animate" style="animation-delay: 0.03s;">
                 <div class="card-stat-label">Pronóstico Mañana</div>
-                <div class="card-stat-value" id="forecast-1d-val" data-value="${horizons.next_1d.forecast}">0</div>
-                <div class="card-stat-sub">Rango: ${horizons.next_1d.band_low} a ${horizons.next_1d.band_high} leads</div>
+                <div class="card-stat-value" id="${prefix}forecast-1d-val" data-value="${h1d.forecast ?? 0}">0</div>
+                <div class="card-stat-sub">Rango: ${h1d.band_low ?? 0} a ${h1d.band_high ?? 0} leads</div>
             </div>
             <div class="card stat-card-gold card-animate" style="animation-delay: 0.06s;">
                 <div class="card-stat-label">Pronóstico 7 Días</div>
-                <div class="card-stat-value" id="forecast-7d-val" data-value="${horizons.next_7d.forecast}">0</div>
-                <div class="card-stat-sub">Rango: ${horizons.next_7d.band_low} a ${horizons.next_7d.band_high} leads</div>
-            </div>
+                <div class="card-stat-value" id="${prefix}forecast-7d-val" data-value="${h7d.forecast ?? 0}">0</div>
+                <div class="card-stat-sub">Rango: ${h7d.band_low ?? 0} a ${h7d.band_high ?? 0} leads</div>
+            </div>`;
+
+        if (show14d && horizons.next_14d) {
+            cardsHtml += `
             <div class="card stat-card-green card-animate" style="animation-delay: 0.09s;">
                 <div class="card-stat-label">Pronóstico 14 Días</div>
-                <div class="card-stat-value" id="forecast-14d-val" data-value="${horizons.next_14d.forecast}">0</div>
-                <div class="card-stat-sub">Rango: ${horizons.next_14d.band_low} a ${horizons.next_14d.band_high} leads</div>
-            </div>
-        `;
+                <div class="card-stat-value" id="${prefix}forecast-14d-val" data-value="${h14d.forecast ?? 0}">0</div>
+                <div class="card-stat-sub">Rango: ${h14d.band_low ?? 0} a ${h14d.band_high ?? 0} leads</div>
+            </div>`;
+        }
 
-        // Animate forecast horizon metrics dynamically
-        parseAndAnimate(document.getElementById('forecast-1d-val'), horizons.next_1d.forecast);
-        parseAndAnimate(document.getElementById('forecast-7d-val'), horizons.next_7d.forecast);
-        parseAndAnimate(document.getElementById('forecast-14d-val'), horizons.next_14d.forecast);
+        horizonsGrid.innerHTML = cardsHtml;
+
+        parseAndAnimate(document.getElementById(`${prefix}forecast-1d-val`), h1d.forecast ?? 0);
+        parseAndAnimate(document.getElementById(`${prefix}forecast-7d-val`), h7d.forecast ?? 0);
+        if (show14d && horizons.next_14d) {
+            parseAndAnimate(document.getElementById(`${prefix}forecast-14d-val`), h14d.forecast ?? 0);
+        }
     }
 
-    const modelsBody = document.getElementById('forecast-models-body');
-    if (modelsBody) {
+    const modelsBody = document.getElementById(`${prefix}forecast-models-body`);
+    if (modelsBody && Array.isArray(forecast.backtest_models)) {
         modelsBody.innerHTML = forecast.backtest_models.map(m => {
             const maseColor = m.mase < 0.85 ? 'var(--green)' : m.mase < 1.0 ? 'var(--amber)' : 'var(--red)';
             const stateLabel = m.mase < 1.0 ? 'Aceptable' : 'Subóptimo';
@@ -696,6 +734,61 @@ function renderForecastDetails(forecast) {
             `;
         }).join('');
     }
+}
+
+function renderForecastRfTab(forecastRf) {
+    const content = document.getElementById('rf-forecast-content');
+    const unavailable = document.getElementById('rf-unavailable-state');
+    const metaBanner = document.getElementById('rf-forecast-meta-banner');
+
+    if (!content || !unavailable) return;
+
+    if (!forecastRf || forecastRf.available === false) {
+        content.style.display = 'none';
+        unavailable.style.display = 'block';
+        if (metaBanner) metaBanner.innerHTML = '';
+        unavailable.innerHTML = `
+            <div class="card card-animate" style="padding: 32px; text-align: center; border-left: 4px solid var(--amber);">
+                <h3 style="color: white; font-size: 16px; font-weight: 800; margin: 0 0 12px 0;">Modelo Random Forest no disponible</h3>
+                <p style="color: var(--text-muted); font-size: 13.5px; margin: 0; line-height: 1.6;">
+                    ${cleanTechnicalTerms(forecastRf && forecastRf.reason ? forecastRf.reason : 'La API ML no respondió en esta ejecución. Verifique que uvicorn y ngrok estén activos.')}
+                </p>
+            </div>`;
+        return;
+    }
+
+    content.style.display = 'block';
+    unavailable.style.display = 'none';
+
+    if (metaBanner) {
+        const maseColor = forecastRf.mase < 0.85 ? 'var(--green)' : forecastRf.mase < 1.0 ? 'var(--amber)' : 'var(--red)';
+        metaBanner.innerHTML = `
+            <div class="card card-animate" style="background: linear-gradient(135deg, var(--bg-card), #0a2015) !important; border-left: 4px solid var(--green) !important; padding: 20px 24px;">
+                <div class="v-flex-between" style="flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <h2 class="text-white" style="font-size: 15px; font-weight: 800; margin: 0 0 6px 0;">Random Forest — ${cleanTechnicalTerms(forecastRf.label || 'Forecast activo')}</h2>
+                        <p class="text-muted" style="font-size: 13px; margin: 0;">Confianza: ${forecastRf.confidence || 'N/A'} · Modo: ${cleanTechnicalTerms(forecastRf.mode || 'model')}</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">MASE</div>
+                        <div style="font-family: var(--mono); font-size: 22px; font-weight: 800; color: ${maseColor};">${forecastRf.mase != null ? forecastRf.mase.toFixed(4) : 'N/A'}</div>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    renderForecastDetails(forecastRf, {
+        prefix: 'rf-',
+        show14d: false,
+        showChangepoint: false,
+    });
+
+    renderTimeSeriesChart(forecastRf, {
+        canvasId: 'rf-chart-timeseries',
+        chartKey: 'rfTimeseries',
+        lineLabel: 'Pronóstico Random Forest',
+        lineColor: 'rgba(16, 185, 129, 0.75)',
+    });
 }
 
 // =====================================================================
@@ -818,24 +911,41 @@ function renderAlertsTableList(filteredList) {
 //  CHART.JS PLOTTING INITIALIZERS
 // =====================================================================
 
-function renderTimeSeriesChart(forecast, type) {
-    if (type) timeSeriesType = type;
-    const chartType = timeSeriesType === 'bar' ? 'bar' : 'line';
-    if (charts.timeseries) charts.timeseries.destroy();
-    const element = document.getElementById('chart-timeseries');
-    if (!element) return;
+function renderTimeSeriesChart(forecast, typeOrOptions) {
+    let options = {
+        canvasId: 'chart-timeseries',
+        chartKey: 'timeseries',
+        lineLabel: 'Pronóstico Recomendado',
+    };
+    if (typeof typeOrOptions === 'string') {
+        timeSeriesType = typeOrOptions;
+    } else if (typeOrOptions && typeof typeOrOptions === 'object') {
+        options = { ...options, ...typeOrOptions };
+    }
+
+    const canvasId = options.canvasId;
+    const chartKey = options.chartKey;
+    const isRfChart = chartKey === 'rfTimeseries';
+    const chartType = !isRfChart && timeSeriesType === 'bar' ? 'bar' : 'line';
+
+    if (charts[chartKey]) charts[chartKey].destroy();
+    const element = document.getElementById(canvasId);
+    if (!element || !forecast || !Array.isArray(forecast.time_series)) return;
 
     const isLight = document.body.classList.contains('light-mode');
     const ctx = element.getContext('2d');
     const ts = forecast.time_series;
-    const labels = ts.map(d => { 
-        const dt = new Date(d.date); 
-        return dt.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }); 
+    const labels = ts.map(d => {
+        const dt = new Date(d.date);
+        return dt.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
     });
     const values = ts.map(d => d.value);
     const isBar = chartType === 'bar';
+    const defaultLineColor = isLight ? 'rgba(132, 204, 22, 0.9)' : 'rgba(163, 230, 53, 0.8)';
+    const lineLabel = options.lineLabel || 'Pronóstico Recomendado';
+    const lineColor = options.lineColor || defaultLineColor;
 
-    charts.timeseries = new Chart(ctx, {
+    charts[chartKey] = new Chart(ctx, {
         type: chartType,
         data: {
             labels,
@@ -859,9 +969,9 @@ function renderTimeSeriesChart(forecast, type) {
                 },
                 {
                     type: 'line',
-                    label: `Pronóstico Recomendado`,
+                    label: lineLabel,
                     data: new Array(values.length).fill(forecast.recommended_value),
-                    borderColor: isLight ? 'rgba(132, 204, 22, 0.9)' : 'rgba(163, 230, 53, 0.8)',
+                    borderColor: lineColor,
                     borderDash: [6, 4],
                     borderWidth: 2,
                     pointRadius: 0,
@@ -1339,8 +1449,16 @@ window.toggleTheme = function(event) {
         // Dynamically redraw all loaded active charts with new gridlines, tooltips, and tick colors
         if (dashboardData) {
             renderTimeSeriesChart(dashboardData.forecast);
-            if (dashboardData.forecast.seasonal_indices) {
+            if (dashboardData.forecast && dashboardData.forecast.seasonal_indices) {
                 renderSeasonalChart(dashboardData.forecast.seasonal_indices);
+            }
+            if (dashboardData.forecast_rf) {
+                renderTimeSeriesChart(dashboardData.forecast_rf, {
+                    canvasId: 'rf-chart-timeseries',
+                    chartKey: 'rfTimeseries',
+                    lineLabel: 'Pronóstico Random Forest',
+                    lineColor: 'rgba(16, 185, 129, 0.75)',
+                });
             }
             if (dashboardData.investment && dashboardData.investment.campaigns) {
                 renderCampaignChart(dashboardData.investment.campaigns);
