@@ -4,23 +4,171 @@
    ===================================================================== */
 
 :root {
-    --bg-main: #070d19;
-    --bg-sidebar: #090f20;
-    --bg-card: rgba(17, 29, 53, 0.65);
-    --border: rgba(255, 255, 255, 0.08);
-    --border-hover: rgba(204, 164, 59, 0.45);
-    --gold: #cca43b;
-    --gold-glow: rgba(204, 164, 59, 0.20);
-    --crimson: #a8201a;
-    --crimson-glow: rgba(168, 32, 26, 0.20);
+    --bg-main: #080c14;
+    --bg-sidebar: #05080f;
+    --bg-card: linear-gradient(135deg, rgba(13, 20, 35, 0.8), rgba(7, 10, 17, 0.9));
+    --border: rgba(255, 255, 255, 0.05);
+    --border-hover: rgba(163, 230, 53, 0.35); /* Chartreuse light glow border */
+    --chartreuse: #a3e635; /* Neón Lime green */
+    --chartreuse-glow: rgba(163, 230, 53, 0.15);
+    --blue: #38bdf8; /* Azul eléctrico trading */
+    --blue-glow: rgba(56, 189, 248, 0.15);
+    --crimson: #f43f5e; /* Rojo carmesí neón trading */
+    --crimson-glow: rgba(244, 63, 94, 0.15);
+    --gold: #cca43b; /* Conservar para compatibilidad */
+    --gold-glow: rgba(204, 164, 59, 0.15);
     --text-main: #f8fafc;
     --text-muted: #94a3b8;
     --text-dim: #64748b;
-    --green: #10b981;
-    --red: #ef4444;
-    --amber: #f59e0b;
+    --green: #10b981; /* Verde esmeralda suave */
+    --red: #f43f5e; /* Reemplazado por carmesí neón */
+    --amber: #fbbf24;
     --font: 'Inter', sans-serif;
     --mono: 'JetBrains Mono', monospace;
+
+    /* === Bento / Floating layout language (RETRADE-style) === */
+    --radius-lg: 24px;   /* tarjetas y paneles principales */
+    --radius-md: 16px;   /* botones primarios y módulos medianos */
+    --radius-sm: 12px;   /* chips, sub-bloques */
+    --gap-bento: 22px;   /* separación entre módulos flotantes */
+    --shell-pad: 16px;   /* margen exterior del "shell" flotante */
+    --soft-shadow: 0 14px 40px rgba(0, 0, 0, 0.38), inset 0 1px 1px rgba(255, 255, 255, 0.04);
+}
+
+/* =====================================================================
+   ☀️ Premium Cool Metallic Light Theme Variables
+   ===================================================================== */
+body.light-mode {
+    --bg-main: #f8fafc; /* Cool metallic white */
+    --bg-sidebar: rgba(241, 245, 249, 0.85); /* Cool slate frosted glass */
+    --bg-card: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(241, 245, 249, 0.95)); /* White glass */
+    --border: rgba(15, 23, 42, 0.08); /* Dark slate subtle border */
+    --border-hover: rgba(132, 204, 22, 0.45); /* Lime green border light mode */
+    --chartreuse: #84cc16; /* Lime green adjusted for white contrast */
+    --chartreuse-glow: rgba(132, 204, 22, 0.10);
+    --blue: #0284c7; /* Sky blue trading */
+    --blue-glow: rgba(2, 132, 199, 0.10);
+    --crimson: #e11d48; /* Crimson rose */
+    --crimson-glow: rgba(225, 29, 72, 0.10);
+    --text-main: #0f172a; /* Deep charcoal black */
+    --text-muted: #475569; /* Slate grey */
+    --text-dim: #64748b; /* Muted grey */
+    --gold: #cca43b;
+    --gold-glow: rgba(204, 164, 59, 0.10);
+}
+
+/* Smooth color transitions for theme toggles */
+body {
+    transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+body.light-mode .ambient-nebula {
+    opacity: 0.08; /* Dim nebulas to avoid light saturation */
+}
+
+/* Light Mode specific radial flashlight halo */
+body.light-mode .global-flashlight {
+    background: radial-gradient(
+        750px circle at var(--global-mouse-x, 50%) var(--global-mouse-y, 50%),
+        rgba(56, 189, 248, 0.05) 0%, /* Soft blue */
+        rgba(255, 255, 255, 0.3) 50%, /* Bright light overlay */
+        transparent 100%
+    );
+}
+
+/* Light mode overrides for high readability */
+body.light-mode .sidebar-brand h1,
+body.light-mode .topbar-left h2,
+body.light-mode .section-title,
+body.light-mode .chart-title,
+body.light-mode .list-group-item:hover,
+body.light-mode .custom-table td,
+body.light-mode .health-reasons,
+body.light-mode .action-text {
+    color: #0f172a !important; /* Force true charcoal color for important headings */
+}
+
+body.light-mode .list-group-item.active {
+    color: #080c14 !important; /* Active item keeps dark text on lime background */
+}
+
+body.light-mode .card {
+    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.06), inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
+}
+
+body.light-mode .card:hover {
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08), 0 0 20px rgba(132, 204, 22, 0.1) !important;
+}
+
+body.light-mode .list-group-item:hover {
+    background: rgba(15, 23, 42, 0.03);
+}
+
+body.light-mode .custom-table tr:hover td {
+    background-color: rgba(15, 23, 42, 0.02);
+}
+
+/* =====================================================================
+   🌀 Circular Reveal Transition & Theme Toggle styles
+   ===================================================================== */
+.theme-toggle-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    outline: none;
+}
+
+.theme-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--chartreuse);
+    transform: scale(1.08);
+    border-color: var(--border-hover);
+    box-shadow: 0 0 15px var(--chartreuse-glow);
+}
+
+body.light-mode .theme-toggle-btn {
+    background: rgba(15, 23, 42, 0.03);
+}
+
+body.light-mode .theme-toggle-btn:hover {
+    background: rgba(15, 23, 42, 0.06);
+    color: var(--chartreuse);
+}
+
+/* Circular Ripple Reveal Element */
+.theme-ripple {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 99999; /* Draw on top of absolutely everything */
+    transform: translate(-50%, -50%) scale(0);
+    animation: rippleReveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes rippleReveal {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 1;
+    }
+    40% {
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(150); /* Covers entire screen */
+        opacity: 0;
+    }
 }
 
 * { 
@@ -34,7 +182,7 @@ body {
     background-color: var(--bg-main);
     color: var(--text-main);
     min-height: 100vh;
-    overflow: hidden;
+    overflow-x: hidden;
     position: relative;
 }
 
@@ -63,8 +211,8 @@ body {
     border-radius: 50%;
     pointer-events: none;
     z-index: 1;
-    filter: blur(140px);
-    opacity: 0.28; /* Intensified background cosmic lighting for extra vibrance */
+    filter: blur(160px);
+    opacity: 0.10; /* Atenuado para un look fintech limpio (estilo RETRADE) */
     mix-blend-mode: screen;
     animation: floatNebula 25s infinite alternate ease-in-out;
 }
@@ -98,8 +246,10 @@ body {
     z-index: 1;
     background: radial-gradient(
         750px circle at var(--global-mouse-x, 50%) var(--global-mouse-y, 50%),
-        rgba(204, 164, 59, 0.08), /* Intensified premium gold spotlight cursor glow */
-        transparent 80%
+        rgba(56, 189, 248, 0.04) 0%, /* Cyan eléctrico atenuado */
+        rgba(139, 92, 246, 0.025) 40%, /* Púrpura cósmico atenuado */
+        rgba(163, 230, 53, 0.01) 70%, /* Toque verde limón */
+        transparent 100%
     );
     mix-blend-mode: screen;
 }
@@ -116,42 +266,151 @@ body {
     }
 }
 
+/* === Animated Ocean Wave Background === */
+.wave-bg-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.wave-layer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 200%;
+    height: 100%;
+}
+
+.wave-layer svg {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 40%;
+    min-height: 200px;
+}
+
+/* Wave 1 — Cyan slow drift */
+.wave-1 {
+    animation: waveFlow 22s linear infinite;
+}
+.wave-1 svg path {
+    fill: rgba(56, 189, 248, 0.018);
+}
+
+/* Wave 2 — Lime green counter-flow */
+.wave-2 {
+    animation: waveFlowReverse 18s linear infinite;
+    bottom: -20px;
+}
+.wave-2 svg path {
+    fill: rgba(163, 230, 53, 0.014);
+}
+
+/* Wave 3 — Electric blue deep wave */
+.wave-3 {
+    animation: waveFlow 28s linear infinite;
+    bottom: -40px;
+}
+.wave-3 svg path {
+    fill: rgba(56, 189, 248, 0.012);
+}
+
+/* Wave 4 — White shimmer surface */
+.wave-4 {
+    animation: waveFlowReverse 24s linear infinite;
+    bottom: -10px;
+}
+.wave-4 svg path {
+    fill: rgba(255, 255, 255, 0.008);
+}
+
+@keyframes waveFlow {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+@keyframes waveFlowReverse {
+    0% {
+        transform: translateX(-50%);
+    }
+    100% {
+        transform: translateX(0);
+    }
+}
+
+/* Light mode wave colors */
+body.light-mode .wave-1 svg path {
+    fill: rgba(2, 132, 199, 0.045);
+}
+body.light-mode .wave-2 svg path {
+    fill: rgba(132, 204, 22, 0.035);
+}
+body.light-mode .wave-3 svg path {
+    fill: rgba(2, 132, 199, 0.03);
+}
+body.light-mode .wave-4 svg path {
+    fill: rgba(15, 23, 42, 0.015);
+}
+
 /* === App Container === */
 .app-container {
-    display: flex;
-    height: 100vh;
     width: 100%;
     position: relative;
     z-index: 2;
+}
+
+.app-container.sidebar-layout {
+    display: grid;
+    grid-template-columns: 268px 1fr;
+    gap: var(--shell-pad);
+    padding: var(--shell-pad);
+    min-height: 100vh;
+    width: 100%;
+}
+
+@media (max-width: 992px) {
+    .app-container.sidebar-layout {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* === Custom Vanilla Grid & Layout System === */
 .v-grid-4 {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 24px;
-    margin-bottom: 24px;
+    gap: var(--gap-bento);
+    margin-bottom: var(--gap-bento);
 }
 
 .v-grid-3 {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 24px;
-    margin-bottom: 24px;
+    gap: var(--gap-bento);
+    margin-bottom: var(--gap-bento);
 }
 
 .v-grid-2-1 {
     display: grid;
     grid-template-columns: 2fr 1fr;
-    gap: 24px;
-    margin-bottom: 24px;
+    gap: var(--gap-bento);
+    margin-bottom: var(--gap-bento);
 }
 
 .v-grid-1-1 {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    margin-bottom: 24px;
+    gap: var(--gap-bento);
+    margin-bottom: var(--gap-bento);
 }
 
 @media (max-width: 1100px) {
@@ -189,16 +448,16 @@ body {
 
 /* --- Native Buttons --- */
 .btn-primary {
-    background: linear-gradient(135deg, var(--crimson), var(--gold));
-    color: white !important;
+    background: linear-gradient(135deg, var(--blue), var(--chartreuse));
+    color: #080c14 !important;
     border: none;
     padding: 12px 24px;
-    border-radius: 8px;
-    font-weight: 700;
+    border-radius: var(--radius-md);
+    font-weight: 800;
     font-size: 13.5px;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
-    box-shadow: 0 4px 15px rgba(204, 164, 59, 0.25);
+    box-shadow: 0 4px 15px rgba(163, 230, 53, 0.25);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -208,7 +467,7 @@ body {
 
 .btn-primary:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(204, 164, 59, 0.35);
+    box-shadow: 0 6px 20px rgba(163, 230, 53, 0.35);
 }
 
 .btn-sec {
@@ -216,7 +475,7 @@ body {
     color: var(--text-main) !important;
     border: 1px solid var(--border);
     padding: 8px 16px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     font-weight: 600;
     font-size: 12.5px;
     cursor: pointer;
@@ -250,7 +509,7 @@ body {
 .custom-table-container {
     width: 100%;
     overflow-x: auto;
-    border-radius: 12px;
+    border-radius: var(--radius-sm);
 }
 
 .custom-table {
@@ -286,231 +545,256 @@ body {
 }
 
 /* === Sidebar === */
+/* =====================================================================
+   💎 Centered Layout Hero, Status Bar & Tab Menu
+   ===================================================================== */
+
+/* === Hero Section === */
+.hero {
+    background: linear-gradient(135deg, rgba(13, 20, 35, 0.9), rgba(7, 10, 17, 0.95)) !important;
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border-hover) !important;
+    border-radius: 12px;
+    color: #fff;
+    padding: 30px 36px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--sh);
+    margin-bottom: 16px;
+    margin-top: 16px;
+}
+
+.hero::after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -15%;
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.hero-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.hero-icon {
+    margin-bottom: 8px;
+    color: var(--chartreuse);
+}
+
+.hero h1 {
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+    text-shadow: 0 0 10px rgba(255,255,255,0.1);
+}
+
+.hero .sub {
+    font-size: 13px;
+    opacity: .8;
+    color: var(--text-muted);
+}
+
+/* === Sidebar Menu (Left - Frosted Glass Panel) === */
 .sidebar {
-    width: 290px;
-    background: rgba(9, 15, 32, 0.75) !important;
-    backdrop-filter: blur(20px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-    border-right: 1px solid var(--border);
+    background:
+        linear-gradient(180deg, rgba(56, 189, 248, 0.04) 0%, rgba(163, 230, 53, 0.03) 30%, rgba(5, 8, 15, 0.0) 60%, rgba(56, 189, 248, 0.03) 100%),
+        linear-gradient(135deg, rgba(20, 30, 55, 0.85) 0%, rgba(10, 15, 28, 0.75) 40%, rgba(15, 22, 40, 0.82) 100%) !important;
+    border: 1px solid rgba(56, 189, 248, 0.12);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(28px) saturate(200%);
+    -webkit-backdrop-filter: blur(28px) saturate(200%);
+    padding: 28px 18px;
     display: flex;
     flex-direction: column;
-    flex-shrink: 0;
-    z-index: 10;
-    position: relative;
+    justify-content: space-between;
+    height: calc(100vh - (var(--shell-pad) * 2));
+    position: sticky;
+    top: var(--shell-pad);
+    z-index: 100;
+    box-shadow:
+        0 18px 50px rgba(0, 0, 0, 0.45),
+        inset 0 0 60px rgba(56, 189, 248, 0.02),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transition: transform 0.3s ease, background 0.4s ease;
     overflow: hidden;
 }
 
+/* Glass light refraction shimmer on top edge */
 .sidebar::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(
-        350px circle at var(--sidebar-mouse-x, 0px) var(--sidebar-mouse-y, 0px),
-        rgba(204, 164, 59, 0.08), /* Premium, very subtle gold spotlight glow */
-        transparent 80%
-    );
+    right: 0;
+    height: 120px;
+    background: linear-gradient(180deg, rgba(56, 189, 248, 0.06) 0%, rgba(163, 230, 53, 0.03) 40%, transparent 100%);
     pointer-events: none;
-    z-index: 1;
-    opacity: 0;
-    transition: opacity 0.4s ease;
+    z-index: 0;
 }
 
-.sidebar:hover::before {
-    opacity: 1;
+/* Vertical gradient glow strip on the right edge (oculta en layout flotante) */
+.sidebar::after {
+    content: none;
 }
 
+/* Ensure sidebar children are above pseudo-elements */
 .sidebar > * {
     position: relative;
     z-index: 2;
 }
 
 .sidebar-brand {
-    padding: 24px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 36px;
 }
 
-.brand-logo {
-    width: 42px;
-    height: 42px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, var(--crimson), var(--gold));
+.brand-icon-wrapper {
+    background: rgba(163, 230, 53, 0.06);
+    border: 1px solid rgba(163, 230, 53, 0.18);
+    border-radius: 14px;
+    padding: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
-    font-weight: 900;
-    color: white;
-    box-shadow: 0 4px 15px rgba(168, 32, 26, 0.25);
-    letter-spacing: 0.5px;
+    box-shadow: 0 0 20px rgba(163, 230, 53, 0.08), inset 0 0 8px rgba(163, 230, 53, 0.04);
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.brand-icon-wrapper:hover {
+    box-shadow: 0 0 28px rgba(163, 230, 53, 0.15), inset 0 0 12px rgba(163, 230, 53, 0.06);
+    border-color: rgba(163, 230, 53, 0.35);
 }
 
 .brand-text h1 {
-    font-size: 15px;
-    font-weight: 800;
-    letter-spacing: -0.2px;
-    color: var(--text-main);
-    margin: 0;
+    font-size: 17px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    color: white;
+    line-height: 1.2;
 }
 
 .brand-text p {
-    font-size: 9px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--gold);
-    margin: 0;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 500;
 }
 
 .sidebar-menu-wrapper {
-    padding: 16px;
     flex: 1;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
 }
 
 .menu-header {
     font-size: 10px;
     font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 1px;
     color: var(--text-dim);
-    margin: 18px 0 6px 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 12px;
+    padding-left: 8px;
 }
 
+/* Sidebar Menu Button Item */
 .list-group-item {
-    background-color: transparent !important;
-    color: var(--text-muted) !important;
-    font-weight: 600;
-    font-size: 13.5px;
-    padding: 11px 16px;
-    border-radius: 8px !important;
-    transition: all 0.2s;
-    border: none !important;
-    border-left: 3px solid transparent !important;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid transparent;
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    margin-bottom: 2px;
-    width: 100%;
     text-align: left;
-    display: block;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 4px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: none !important;
 }
 
 .list-group-item:hover {
-    background-color: rgba(255, 255, 255, 0.04) !important;
-    color: var(--gold) !important;
-    text-shadow: 0 0 8px var(--gold-glow);
-    transform: translateX(4px);
+    background: rgba(255, 255, 255, 0.04);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.06);
+    padding-left: 18px; /* micro-slide action */
 }
 
+/* Active state — intense neon bloom glow */
 .list-group-item.active {
-    background-color: rgba(204, 164, 59, 0.08) !important;
-    color: var(--gold) !important;
-    border-left-color: var(--gold) !important;
+    background: var(--chartreuse) !important;
+    color: #080c14 !important;
+    font-weight: 800;
+    box-shadow: 0 0 24px rgba(163, 230, 53, 0.35), 0 4px 16px rgba(163, 230, 53, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+    border-left: 4px solid var(--blue) !important;
+    padding-left: 14px;
 }
 
-/* === Sidebar Cascade Drop-In Animation === */
-.sidebar-menu-wrapper > .list-group > * {
-    opacity: 0;
-    animation: menuDropIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.list-group-item.active:hover {
+    padding-left: 14px; /* lock active item padding */
+    box-shadow: 0 0 32px rgba(163, 230, 53, 0.45), 0 6px 20px rgba(163, 230, 53, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 }
-
-@keyframes menuDropIn {
-    from {
-        opacity: 0;
-        transform: translateY(-16px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.sidebar-menu-wrapper > .list-group > *:nth-child(1) { animation-delay: 0.05s; }
-.sidebar-menu-wrapper > .list-group > *:nth-child(2) { animation-delay: 0.12s; }
-.sidebar-menu-wrapper > .list-group > *:nth-child(3) { animation-delay: 0.19s; }
-.sidebar-menu-wrapper > .list-group > *:nth-child(4) { animation-delay: 0.26s; }
-.sidebar-menu-wrapper > .list-group > *:nth-child(5) { animation-delay: 0.33s; }
-.sidebar-menu-wrapper > .list-group > *:nth-child(6) { animation-delay: 0.40s; }
-.sidebar-menu-wrapper > .list-group > *:nth-child(7) { animation-delay: 0.47s; }
-.sidebar-menu-wrapper > .list-group > *:nth-child(8) { animation-delay: 0.54s; }
-.sidebar-menu-wrapper > .list-group > *:nth-child(9) { animation-delay: 0.61s; }
 
 .sidebar-footer {
-    padding: 20px 24px;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-top: 1px solid rgba(255, 255, 255, 0.03);
+    padding-top: 16px;
+    margin-top: 24px;
+}
+
+.sidebar-footer p {
     font-size: 11px;
     color: var(--text-dim);
+    font-weight: 600;
+    margin-bottom: 4px;
 }
 
-.sidebar-footer a {
-    color: var(--text-muted);
-    text-decoration: none;
-}
-
-.sidebar-footer a:hover {
-    color: var(--gold);
-}
-
-/* === Workspace (Right) === */
+/* === Workspace Context Header === */
 .workspace {
-    flex: 1;
+    width: 100%;
+    background: transparent !important;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    background: transparent !important;
+    min-width: 0; /* prevent layout overflow */
 }
 
-/* === Topbar === */
 .topbar {
-    height: 72px;
-    background: rgba(9, 15, 32, 0.75) !important;
-    backdrop-filter: blur(20px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-    border-bottom: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 32px;
-    flex-shrink: 0;
-    position: relative;
-    overflow: hidden;
-    z-index: 9;
-}
-
-.topbar::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(
-        350px circle at var(--topbar-mouse-x, 0px) var(--topbar-mouse-y, 0px),
-        rgba(204, 164, 59, 0.08), /* Premium, very subtle gold spotlight glow */
-        transparent 80%
-    );
-    pointer-events: none;
-    z-index: 1;
-    opacity: 0;
-    transition: opacity 0.4s ease;
-}
-
-.topbar:hover::before {
-    opacity: 1;
-}
-
-.topbar > * {
-    position: relative;
-    z-index: 2;
+    padding: 20px 28px;
+    background: rgba(8, 12, 20, 0.55);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-lg);
+    position: sticky;
+    top: var(--shell-pad);
+    z-index: 90;
+    margin-bottom: var(--gap-bento);
+    box-shadow: var(--soft-shadow);
+    transition: background 0.4s ease, border-color 0.3s ease;
 }
 
 .topbar-left h2 {
-    font-size: 18px;
-    font-weight: 800;
-    letter-spacing: -0.2px;
-    color: var(--text-main);
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    color: white;
     margin: 0;
+    text-shadow: 0 0 10px rgba(255,255,255,0.05);
 }
 
 .status-pill {
@@ -539,16 +823,49 @@ body {
     70% { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
 }
 
+/* === Status Bar === */
+.sbar {
+    margin: 0 0 var(--gap-bento) 0;
+    padding: 12px 20px;
+    border-radius: var(--radius-md);
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: .3px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--s);
+    transition: background 0.3s, border-color 0.3s, color 0.3s;
+}
+
+.sdot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    animation: pulse-status 1.8s infinite;
+}
+
+@keyframes pulse-status {
+    0%, 100% { box-shadow: 0 0 0 0 currentColor; }
+    70% { box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
+}
+
+.status-green { background: rgba(16, 185, 129, 0.08); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.2); }
+.status-green .sdot { background: var(--green); }
+.status-yellow { background: rgba(251, 191, 36, 0.08); color: var(--amber); border: 1px solid rgba(251, 191, 36, 0.2); }
+.status-yellow .sdot { background: var(--amber); }
+.status-red { background: rgba(244, 63, 94, 0.08); color: var(--crimson); border: 1px solid rgba(244, 63, 94, 0.2); }
+.status-red .sdot { background: var(--crimson); }
+
 /* === Scrollable Content Area === */
 .content-scrollable {
-    flex: 1;
-    overflow-y: auto;
-    padding: 32px;
+    padding: 0 0 24px 0;
 }
 
 .tab-content {
     display: none;
-    max-width: 1440px;
+    max-width: 1200px;
     margin: 0 auto;
     width: 100%;
 }
@@ -561,6 +878,44 @@ body {
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 992px) {
+    .sidebar {
+        height: auto;
+        position: relative;
+        border-right: none;
+        border-bottom: 1px solid rgba(163, 230, 53, 0.12);
+        padding: 20px;
+    }
+    .sidebar-brand {
+        margin-bottom: 18px;
+    }
+    .sidebar-menu-wrapper .list-group {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .menu-header {
+        display: none; /* hide headers in row wrap mobile view */
+    }
+    .list-group-item {
+        width: auto;
+        flex: 1;
+        min-width: 140px;
+        text-align: center;
+        justify-content: center;
+    }
+    .topbar {
+        padding: 16px 20px;
+    }
+    .sbar {
+        margin: 0 20px 24px 20px;
+    }
+    .content-scrollable {
+        padding: 12px 20px 40px 20px;
+    }
 }
 
 /* === LOADING & ERROR STATES === */
@@ -610,23 +965,23 @@ body {
 
 /* === Glassmorphic Cards === */
 .card {
-    background: linear-gradient(135deg, rgba(22, 38, 70, 0.75), rgba(9, 15, 32, 0.60)) !important;
+    background: var(--bg-card) !important;
     backdrop-filter: blur(16px) saturate(200%) !important;
     -webkit-backdrop-filter: blur(16px) saturate(200%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    border-radius: 16px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-lg) !important;
     color: var(--text-main) !important;
-    padding: 24px;
+    padding: 26px;
     transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s, opacity 0.6s ease;
     position: relative;
     overflow: hidden;
-    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.12), 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+    box-shadow: var(--soft-shadow) !important;
 }
 
 .card:hover {
     transform: translateY(-4px);
     border-color: var(--border-hover) !important;
-    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.2), 0 16px 36px rgba(0, 0, 0, 0.45), 0 0 20px var(--gold-glow) !important;
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1), 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 20px var(--chartreuse-glow) !important;
 }
 
 /* Sequential Entry Animations for Dashboard Cards */
@@ -660,7 +1015,8 @@ body {
     height: 100%;
     background: radial-gradient(
         450px circle at var(--mouse-x, 0px) var(--mouse-y, 0px),
-        rgba(204, 164, 59, 0.09),
+        rgba(163, 230, 53, 0.07) 0%,
+        rgba(56, 189, 248, 0.03) 50%,
         transparent 80%
     );
     opacity: 0;
@@ -680,7 +1036,7 @@ body {
     left: 0;
     width: 100%;
     height: 2px;
-    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    background: linear-gradient(90deg, transparent, var(--border-hover), transparent);
     opacity: 0;
     transition: opacity 0.3s;
     z-index: 2;
@@ -720,28 +1076,47 @@ body {
 }
 
 .stat-card-gold {
-    background: linear-gradient(135deg, rgba(25, 42, 75, 0.82), rgba(120, 95, 30, 0.35)) !important;
-    border-color: rgba(204, 164, 59, 0.28) !important;
+    background: linear-gradient(135deg, rgba(20, 30, 48, 0.85), rgba(80, 65, 20, 0.25)) !important;
+    border-color: rgba(234, 179, 8, 0.25) !important;
 }
-.stat-card-gold .card-stat-value { color: var(--gold); }
+.stat-card-gold .card-stat-value { color: var(--amber); }
 
 .stat-card-crimson {
-    background: linear-gradient(135deg, rgba(25, 42, 75, 0.82), rgba(140, 32, 26, 0.35)) !important;
-    border-color: rgba(168, 32, 26, 0.28) !important;
+    background: linear-gradient(135deg, rgba(20, 30, 48, 0.85), rgba(90, 20, 30, 0.25)) !important;
+    border-color: rgba(244, 63, 94, 0.25) !important;
 }
-.stat-card-crimson .card-stat-value { color: #f43f5e; }
+.stat-card-crimson .card-stat-value { color: var(--crimson); }
 
 .stat-card-green {
-    background: linear-gradient(135deg, rgba(25, 42, 75, 0.82), rgba(16, 120, 80, 0.35)) !important;
-    border-color: rgba(16, 185, 129, 0.28) !important;
+    background: linear-gradient(135deg, rgba(20, 30, 48, 0.85), rgba(16, 80, 50, 0.25)) !important;
+    border-color: rgba(163, 230, 53, 0.25) !important;
 }
-.stat-card-green .card-stat-value { color: var(--green); }
+.stat-card-green .card-stat-value { color: var(--chartreuse); }
 
 .stat-card-blue {
-    background: linear-gradient(135deg, rgba(25, 42, 75, 0.82), rgba(45, 95, 170, 0.35)) !important;
-    border-color: rgba(59, 130, 246, 0.28) !important;
+    background: linear-gradient(135deg, rgba(20, 30, 48, 0.85), rgba(30, 60, 110, 0.25)) !important;
+    border-color: rgba(56, 189, 248, 0.25) !important;
 }
-.stat-card-blue .card-stat-value { color: #3b82f6; }
+.stat-card-blue .card-stat-value { color: var(--blue); }
+
+/* === KPI principal con bloque de acento lima (estilo RETRADE) === */
+#dashboard-kpis .card:first-child {
+    background: linear-gradient(135deg, var(--chartreuse), #c5f24f) !important;
+    border-color: rgba(163, 230, 53, 0.55) !important;
+    box-shadow: 0 18px 44px rgba(163, 230, 53, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+#dashboard-kpis .card:first-child .card-stat-label,
+#dashboard-kpis .card:first-child .card-stat-sub {
+    color: rgba(8, 12, 20, 0.7) !important;
+}
+#dashboard-kpis .card:first-child .card-stat-value {
+    color: #06120b !important;
+}
+#dashboard-kpis .card:first-child .card-stat-label:hover,
+#dashboard-kpis .card:first-child .card-stat-value:hover {
+    color: #06120b !important;
+    text-shadow: none !important;
+}
 
 /* --- Section Titles & Chart wrappers --- */
 .section-header {
@@ -765,7 +1140,7 @@ body {
     width: 4px;
     height: 18px;
     border-radius: 2px;
-    background: linear-gradient(to bottom, var(--crimson), var(--gold));
+    background: linear-gradient(to bottom, var(--blue), var(--chartreuse));
 }
 
 .chart-title {
@@ -774,10 +1149,65 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--text-main);
-    display: flex;
+    display: inline-flex;
+    width: fit-content;
     align-items: center;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 18px;
+    padding: 7px 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+body.light-mode .chart-title {
+    background: rgba(15, 23, 42, 0.04);
+}
+
+/* === Toolbar flotante reutilizable sobre charts (estilo RETRADE) === */
+.chart-toolbar {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px;
+    background: rgba(8, 12, 20, 0.6);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    backdrop-filter: blur(10px) saturate(160%);
+    -webkit-backdrop-filter: blur(10px) saturate(160%);
+}
+
+.chart-tool-btn {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chart-tool-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-main);
+}
+
+.chart-tool-btn.active {
+    background: var(--chartreuse);
+    color: #080c14;
+    box-shadow: 0 0 14px rgba(163, 230, 53, 0.35);
 }
 
 .chart-title .dot {
@@ -1067,14 +1497,14 @@ body {
 
 /* === Dynamic Text Hover Glow Highlights === */
 
-/* Titles and labels glow gold when hovered */
+/* Titles and labels glow chartreuse when hovered */
 .card-stat-label, .chart-title, .section-title, .brand-text h1, .brand-text p, .topbar-left h2, .action-text {
     transition: color 0.3s ease, text-shadow 0.3s ease;
 }
 
 .card-stat-label:hover, .chart-title:hover, .section-title:hover, .brand-text h1:hover, .brand-text p:hover, .topbar-left h2:hover, .action-text:hover {
-    color: var(--gold) !important;
-    text-shadow: 0 0 8px rgba(204, 164, 59, 0.5);
+    color: var(--chartreuse) !important;
+    text-shadow: 0 0 8px rgba(163, 230, 53, 0.5);
 }
 
 /* Statistics numbers scale up and glow with their respective themed colors */
@@ -1091,10 +1521,10 @@ body {
     text-shadow: 0 0 14px currentColor;
 }
 
-.stat-card-gold .card-stat-value:hover { text-shadow: 0 0 14px rgba(204, 164, 59, 0.65); }
+.stat-card-gold .card-stat-value:hover { text-shadow: 0 0 14px rgba(251, 191, 36, 0.65); }
 .stat-card-crimson .card-stat-value:hover { text-shadow: 0 0 14px rgba(244, 63, 94, 0.65); }
-.stat-card-green .card-stat-value:hover { text-shadow: 0 0 14px rgba(16, 185, 129, 0.65); }
-.stat-card-blue .card-stat-value:hover { text-shadow: 0 0 14px rgba(59, 130, 246, 0.65); }
+.stat-card-green .card-stat-value:hover { text-shadow: 0 0 14px rgba(163, 230, 53, 0.65); }
+.stat-card-blue .card-stat-value:hover { text-shadow: 0 0 14px rgba(56, 189, 248, 0.65); }
 
 /* Table cells light up to pure white with text shadow on row hover */
 .custom-table td {
@@ -1108,6 +1538,227 @@ body {
 
 /* Specific highlight for Campaign names in the table */
 .custom-table tr:hover td:first-child {
-    color: var(--gold) !important;
-    text-shadow: 0 0 6px rgba(204, 164, 59, 0.4);
+    color: var(--chartreuse) !important;
+    text-shadow: 0 0 6px rgba(163, 230, 53, 0.4);
+}
+
+/* =====================================================================
+   ☀️ Premium Light Mode Visual & Contrast Corrections
+   ===================================================================== */
+
+/* 1. Main Hero Card (Salud de la Operación) Override */
+body.light-mode .health-hero {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(241, 245, 249, 0.95)) !important;
+    border-color: rgba(15, 23, 42, 0.08) !important;
+    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
+    color: #0f172a !important;
+}
+
+body.light-mode .health-hero .text-white,
+body.light-mode .health-hero h2,
+body.light-mode .health-hero .health-score-text .num {
+    color: #0f172a !important;
+}
+
+body.light-mode .health-ring .bg-ring {
+    stroke: rgba(15, 23, 42, 0.06) !important;
+}
+
+body.light-mode .health-reason {
+    background: rgba(15, 23, 42, 0.02) !important;
+    border: 1px solid rgba(15, 23, 42, 0.05) !important;
+    color: var(--text-muted) !important;
+}
+
+/* 2. Themed Stat Cards Overrides */
+body.light-mode .stat-card-gold {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(254, 243, 199, 0.45)) !important;
+    border-color: rgba(217, 119, 6, 0.18) !important;
+    box-shadow: 0 8px 24px rgba(217, 119, 6, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
+}
+
+body.light-mode .stat-card-crimson {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 228, 230, 0.45)) !important;
+    border-color: rgba(225, 29, 72, 0.18) !important;
+    box-shadow: 0 8px 24px rgba(225, 29, 72, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
+}
+
+body.light-mode .stat-card-green {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(240, 253, 244, 0.45)) !important;
+    border-color: rgba(132, 204, 22, 0.22) !important;
+    box-shadow: 0 8px 24px rgba(132, 204, 22, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
+}
+
+body.light-mode .stat-card-blue {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(224, 242, 254, 0.45)) !important;
+    border-color: rgba(2, 132, 199, 0.18) !important;
+    box-shadow: 0 8px 24px rgba(2, 132, 199, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
+}
+
+body.light-mode .stat-card-gold:hover { border-color: rgba(217, 119, 6, 0.35) !important; }
+body.light-mode .stat-card-crimson:hover { border-color: rgba(225, 29, 72, 0.35) !important; }
+body.light-mode .stat-card-green:hover { border-color: rgba(132, 204, 22, 0.45) !important; }
+body.light-mode .stat-card-blue:hover { border-color: rgba(2, 132, 199, 0.35) !important; }
+
+/* 3. Custom Table Text Visibility on Hover (Avoid text turning white on light rows) */
+body.light-mode .custom-table tr:hover td {
+    color: #0f172a !important;
+    text-shadow: none !important;
+    background-color: rgba(15, 23, 42, 0.03) !important;
+}
+
+body.light-mode .custom-table tr:hover td:first-child {
+    color: var(--chartreuse) !important;
+}
+
+/* 4. Target Hardcoded Inline white/fff Text Colors */
+body.light-mode .card [style*="color: white"],
+body.light-mode .card [style*="color:white"],
+body.light-mode .card [style*="color: #fff"],
+body.light-mode .card [style*="color:#fff"],
+body.light-mode .custom-table td[style*="color: white"],
+body.light-mode .custom-table td[style*="color:white"],
+body.light-mode .custom-table td[style*="color: #fff"],
+body.light-mode .custom-table td[style*="color:#fff"] {
+    color: #0f172a !important;
+}
+
+/* 5. Custom Tab Banners & Inlined Gradients Overrides */
+body.light-mode #tab-funnel > .card:first-child {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(240, 253, 244, 0.45)) !important;
+    border-color: rgba(132, 204, 22, 0.22) !important;
+}
+
+body.light-mode #tab-funnel > .card:first-child h2 {
+    color: #0f172a !important;
+}
+
+body.light-mode #tab-funnel .card .card {
+    background: rgba(15, 23, 42, 0.02) !important;
+    border-color: rgba(15, 23, 42, 0.05) !important;
+}
+
+body.light-mode #tab-funnel #funnel-feeders-list .card-animate,
+body.light-mode #tab-funnel #funnel-leaks-list .card-animate {
+    background: rgba(15, 23, 42, 0.02) !important;
+    border-color: rgba(15, 23, 42, 0.05) !important;
+}
+
+body.light-mode #tab-funnel #funnel-feeders-list span,
+body.light-mode #tab-funnel #funnel-leaks-list span {
+    color: #0f172a !important;
+}
+
+body.light-mode #tab-funnel #funnel-feeders-list .progress-bar-fill {
+    background: var(--green) !important;
+}
+
+body.light-mode #tab-funnel #funnel-leaks-list .progress-bar-fill {
+    background: var(--red) !important;
+}
+
+body.light-mode #tab-funnel #funnel-feeders-list .progress-bar-val {
+    color: var(--green) !important;
+}
+
+body.light-mode #tab-funnel #funnel-leaks-list .progress-bar-val {
+    color: var(--red) !important;
+}
+
+body.light-mode #tab-funnel #funnel-feeders-list .card-animate > div:nth-child(2),
+body.light-mode #tab-funnel #funnel-leaks-list .card-animate > div:nth-child(2) {
+    background: rgba(15, 23, 42, 0.05) !important;
+}
+
+body.light-mode #forecast-changepoint-banner .card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(254, 243, 199, 0.4)) !important;
+    border-color: rgba(217, 119, 6, 0.2) !important;
+}
+
+body.light-mode #forecast-changepoint-banner .card h2 {
+    color: #0f172a !important;
+}
+
+body.light-mode #forecast-changepoint-banner .card p {
+    color: var(--text-muted) !important;
+}
+
+/* 6. Sidebar & Topbar Background & Text Overrides */
+body.light-mode .sidebar {
+    background:
+        linear-gradient(180deg, rgba(2, 132, 199, 0.04) 0%, rgba(132, 204, 22, 0.03) 30%, transparent 60%, rgba(2, 132, 199, 0.03) 100%),
+        linear-gradient(135deg, rgba(241, 245, 249, 0.92) 0%, rgba(226, 232, 240, 0.88) 40%, rgba(241, 245, 249, 0.9) 100%) !important;
+    border-right: 1px solid rgba(2, 132, 199, 0.1) !important;
+    backdrop-filter: blur(28px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
+    box-shadow: 4px 0 32px rgba(15, 23, 42, 0.06), inset 0 0 40px rgba(2, 132, 199, 0.02), inset -1px 0 0 rgba(255, 255, 255, 0.6) !important;
+}
+
+body.light-mode .sidebar::before {
+    background: linear-gradient(180deg, rgba(2, 132, 199, 0.05) 0%, rgba(132, 204, 22, 0.03) 40%, transparent 100%) !important;
+}
+
+body.light-mode .sidebar::after {
+    background: linear-gradient(180deg, rgba(2, 132, 199, 0.2) 0%, rgba(132, 204, 22, 0.22) 50%, rgba(2, 132, 199, 0.1) 100%) !important;
+    box-shadow: 0 0 6px rgba(2, 132, 199, 0.1), 0 0 16px rgba(132, 204, 22, 0.06) !important;
+}
+
+body.light-mode .topbar {
+    background:
+        linear-gradient(90deg, rgba(2, 132, 199, 0.03) 0%, transparent 50%, rgba(132, 204, 22, 0.02) 100%),
+        rgba(248, 250, 252, 0.88) !important;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06) !important;
+    backdrop-filter: blur(24px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+}
+
+body.light-mode .brand-text h1,
+body.light-mode .sidebar-brand h1 {
+    color: #0f172a !important;
+}
+
+body.light-mode .brand-text p,
+body.light-mode .sidebar-footer p,
+body.light-mode .sidebar-footer a {
+    color: #475569 !important;
+}
+
+body.light-mode .menu-header {
+    color: #64748b !important;
+}
+
+/* 7. Menu Item Colors & States */
+body.light-mode .list-group-item {
+    color: #475569 !important;
+}
+
+body.light-mode .list-group-item:hover {
+    background: rgba(15, 23, 42, 0.04) !important;
+    color: #0f172a !important;
+    border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+body.light-mode .list-group-item.active {
+    background: var(--chartreuse) !important;
+    color: #080c14 !important;
+    box-shadow: 0 0 20px rgba(132, 204, 22, 0.3), 0 4px 14px rgba(132, 204, 22, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+    border-left: 4px solid var(--blue) !important;
+}
+
+body.light-mode .status-pill {
+    background: rgba(16, 185, 129, 0.06) !important;
+    border-color: rgba(16, 185, 129, 0.18) !important;
+    color: var(--green) !important;
+}
+
+/* 8. Text Glow in Light Mode (Adapt chartreuse neon glow to corporate blue) */
+body.light-mode .card-stat-label:hover, 
+body.light-mode .chart-title:hover, 
+body.light-mode .section-title:hover, 
+body.light-mode .brand-text h1:hover, 
+body.light-mode .brand-text p:hover, 
+body.light-mode .topbar-left h2:hover, 
+body.light-mode .action-text:hover {
+    color: var(--blue) !important;
+    text-shadow: 0 0 8px rgba(2, 132, 199, 0.3) !important;
 }

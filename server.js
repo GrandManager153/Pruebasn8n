@@ -174,6 +174,210 @@ app.post('/api/clear-logs', (req, res) => {
   res.json({ success: true, message: 'Logs limpiados con éxito.' });
 });
 
+// Dynamic Theme injection script helper for served HTML reports
+function injectTheme(htmlContent) {
+  if (!htmlContent || typeof htmlContent !== 'string') return htmlContent;
+  
+  const themeScript = `
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      const style = document.createElement('style');
+      if (savedTheme === 'dark') {
+        style.innerHTML = \`
+          :root {
+            --bg: #080c14 !important;
+            --c: linear-gradient(135deg, rgba(13, 20, 35, 0.8), rgba(7, 10, 17, 0.9)) !important;
+            --t: #f8fafc !important;
+            --m: #94a3b8 !important;
+            --b: rgba(255, 255, 255, 0.05) !important;
+            --p: #05080f !important;
+            --a: #38bdf8 !important;
+            --l: rgba(56, 189, 248, 0.1) !important;
+            --s: inset 0 1px 1px rgba(255, 255, 255, 0.05), 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+            --sh: inset 0 1px 2px rgba(255, 255, 255, 0.1), 0 16px 36px rgba(0, 0, 0, 0.6) !important;
+          }
+          body {
+            background-color: #080c14 !important;
+            color: #f8fafc !important;
+          }
+          .hero {
+            background: linear-gradient(135deg, rgba(13, 20, 35, 0.9), rgba(7, 10, 17, 0.95)) !important;
+            border: 1px solid rgba(163, 230, 53, 0.2) !important;
+          }
+          .hero h1, .hero .sub, .hero-top {
+            color: #fff !important;
+          }
+          .tabs {
+            background: rgba(13, 20, 35, 0.8) !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+          }
+          .tab {
+            color: #94a3b8 !important;
+          }
+          .tab.active {
+            background: #a3e635 !important;
+            color: #080c14 !important;
+          }
+          .kpi {
+            background: rgba(13, 20, 35, 0.8) !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+          }
+          .kpi-value {
+            color: #38bdf8 !important;
+          }
+          .content-block {
+            background: rgba(13, 20, 35, 0.8) !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            color: #f8fafc !important;
+          }
+          .content-block p, .content-block li, .content-block strong {
+            color: #f8fafc !important;
+          }
+          .content-block strong {
+            color: #a3e635 !important;
+          }
+          .content-block td {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important;
+            color: #f8fafc !important;
+          }
+          .content-block tr:nth-child(even) td {
+            background: rgba(255, 255, 255, 0.01) !important;
+          }
+          .action-card {
+            background: rgba(13, 20, 35, 0.8) !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            color: #f8fafc !important;
+          }
+          .action-text {
+            color: #f8fafc !important;
+          }
+          .action-num {
+            background: #38bdf8 !important;
+          }
+          .alert-card {
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+          }
+          .alert-title {
+            color: #f8fafc !important;
+          }
+          .info-section {
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+          }
+          .info-header {
+            background: rgba(13, 20, 35, 0.8) !important;
+            color: #94a3b8 !important;
+          }
+          .info-header:hover {
+            background: rgba(255, 255, 255, 0.03) !important;
+          }
+          .info-item {
+            border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+            color: #f8fafc !important;
+          }
+        \`;
+      } else {
+        style.innerHTML = \`
+          :root {
+            --bg: #f8fafc !important;
+            --c: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(241, 245, 249, 0.95)) !important;
+            --t: #0f172a !important;
+            --m: #475569 !important;
+            --b: rgba(15, 23, 42, 0.08) !important;
+            --p: #0284c7 !important;
+            --a: #0284c7 !important;
+            --l: rgba(2, 132, 199, 0.08) !important;
+            --s: 0 8px 32px rgba(15, 23, 42, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
+            --sh: 0 16px 36px rgba(15, 23, 42, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
+          }
+          body {
+            background-color: #f8fafc !important;
+            color: #0f172a !important;
+          }
+          .hero {
+            background: linear-gradient(135deg, #0284c7, #84cc16) !important;
+            border: 1px solid rgba(132, 204, 22, 0.22) !important;
+            color: #fff !important;
+          }
+          .hero h1, .hero .sub, .hero-top {
+            color: #fff !important;
+          }
+          .tabs {
+            background: rgba(255, 255, 255, 0.85) !important;
+            border: 1px solid rgba(15, 23, 42, 0.08) !important;
+          }
+          .tab {
+            color: #475569 !important;
+          }
+          .tab.active {
+            background: #0284c7 !important;
+            color: #fff !important;
+          }
+          .kpi {
+            background: rgba(255, 255, 255, 0.85) !important;
+            border: 1px solid rgba(15, 23, 42, 0.08) !important;
+          }
+          .kpi-value {
+            color: #0284c7 !important;
+          }
+          .content-block {
+            background: rgba(255, 255, 255, 0.85) !important;
+            border: 1px solid rgba(15, 23, 42, 0.08) !important;
+            color: #0f172a !important;
+          }
+          .content-block p, .content-block li, .content-block strong {
+            color: #0f172a !important;
+          }
+          .content-block strong {
+            color: #0284c7 !important;
+          }
+          .content-block td {
+            border-bottom: 1px solid rgba(15, 23, 42, 0.04) !important;
+            color: #0f172a !important;
+          }
+          .content-block tr:nth-child(even) td {
+            background: rgba(15, 23, 42, 0.01) !important;
+          }
+          .action-card {
+            background: rgba(255, 255, 255, 0.85) !important;
+            border: 1px solid rgba(15, 23, 42, 0.08) !important;
+            color: #0f172a !important;
+          }
+          .action-text {
+            color: #0f172a !important;
+          }
+          .action-num {
+            background: #0284c7 !important;
+          }
+          .alert-card {
+            border: 1px solid rgba(15, 23, 42, 0.08) !important;
+          }
+          .alert-title {
+            color: #0f172a !important;
+          }
+          .info-section {
+            border: 1px solid rgba(15, 23, 42, 0.08) !important;
+          }
+          .info-header {
+            background: rgba(255, 255, 255, 0.85) !important;
+            color: #475569 !important;
+          }
+          .info-header:hover {
+            background: rgba(15, 23, 42, 0.02) !important;
+          }
+          .info-item {
+            border-top: 1px solid rgba(15, 23, 42, 0.08) !important;
+            color: #0f172a !important;
+          }
+        \`;
+      }
+      document.head.appendChild(style);
+    });
+  </script>
+  `;
+  return htmlContent.replace('</body>', `${themeScript}</body>`);
+}
+
 // Servir reportes HTML interactivos
 app.get('/reports/:audience', (req, res) => {
   const audience = req.params.audience;
@@ -184,7 +388,7 @@ app.get('/reports/:audience', (req, res) => {
     try {
       const htmlContent = fs.readFileSync(reportPath, 'utf-8');
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      return res.send(htmlContent);
+      return res.send(injectTheme(htmlContent));
     } catch (err) {
       console.log(`⚠️ Error leyendo reporte ${audience} desde disco:`, err.message);
     }
@@ -192,7 +396,7 @@ app.get('/reports/:audience', (req, res) => {
 
   if (activeReports[audience]) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(activeReports[audience]);
+    res.send(injectTheme(activeReports[audience]));
   } else {
     res.status(404).send(`
       <div style="font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif; text-align: center; padding: 60px; background: #050409; color: #ffffff; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">

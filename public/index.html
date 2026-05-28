@@ -25,12 +25,42 @@
     <div class="ambient-nebula nebula-crimson"></div>
     <div class="global-flashlight"></div>
 
-    <div class="app-container">
-        <!-- Sidebar Menu (Left) -->
+    <!-- Animated Ocean Wave Background -->
+    <div class="wave-bg-container">
+        <div class="wave-layer wave-1">
+            <svg viewBox="0 0 1440 320" preserveAspectRatio="none">
+                <path d="M0,160 C180,220 360,100 540,160 C720,220 900,100 1080,160 C1260,220 1440,100 1440,160 L1440,320 L0,320 Z" />
+            </svg>
+        </div>
+        <div class="wave-layer wave-2">
+            <svg viewBox="0 0 1440 320" preserveAspectRatio="none">
+                <path d="M0,200 C160,260 320,140 480,200 C640,260 800,140 960,200 C1120,260 1280,140 1440,200 L1440,320 L0,320 Z" />
+            </svg>
+        </div>
+        <div class="wave-layer wave-3">
+            <svg viewBox="0 0 1440 320" preserveAspectRatio="none">
+                <path d="M0,180 C200,240 400,120 600,180 C800,240 1000,120 1200,180 C1400,240 1440,180 1440,180 L1440,320 L0,320 Z" />
+            </svg>
+        </div>
+        <div class="wave-layer wave-4">
+            <svg viewBox="0 0 1440 320" preserveAspectRatio="none">
+                <path d="M0,220 C140,280 280,160 420,220 C560,280 700,160 840,220 C980,280 1120,160 1260,220 C1400,280 1440,220 1440,220 L1440,320 L0,320 Z" />
+            </svg>
+        </div>
+    </div>
+
+    <div class="app-container sidebar-layout">
+        <!-- Sidebar Menu (Left - Option A) -->
         <aside class="sidebar">
             <div class="sidebar-brand">
-                <div class="v-flex-row">
-                    <div class="brand-logo">MANUEL SOLIS</div>
+                <div class="brand-icon-wrapper">
+                    <svg viewBox="0 0 24 24" style="width: 28px; height: 28px; fill: none; stroke: var(--chartreuse); stroke-width: 2.5;">
+                        <path d="M3 3v18h18M7 17v-4M11 17V9M15 17V5M19 17v-8"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <h1>BOS Panel</h1>
+                    <p>Manuel Solis Law Offices</p>
                 </div>
             </div>
 
@@ -56,7 +86,7 @@
                         Alertas de Operación
                     </button>
 
-                    <div class="menu-header">Informes Operativos</div>
+                    <div class="menu-header" style="margin-top: 24px;">Informes Operativos</div>
                     <button class="list-group-item" data-tab="reports" onclick="switchTab('reports')">
                         Informes Corporativos
                     </button>
@@ -65,24 +95,41 @@
 
             <div class="sidebar-footer">
                 <p>BOS System v7.2</p>
-                <a href="#" style="font-size: 10px; opacity: 0.7;">Términos y Privacidad</a>
+                <a href="#" style="font-size: 10px; opacity: 0.7; color: var(--text-muted); text-decoration: none; transition: color 0.2s;">Términos y Privacidad</a>
             </div>
         </aside>
 
         <!-- Main Workspace (Right) -->
         <main class="workspace">
-            <!-- Top Header -->
+            <!-- Top Header (Contextual Header) -->
             <header class="topbar">
                 <div class="topbar-left">
                     <h2 id="topbar-section-title">Resumen General</h2>
                 </div>
-                <div class="topbar-right">
-                    <div id="last-update" style="font-size: 11.5px; color: var(--text-muted); font-weight: 500;"></div>
+                <div class="topbar-right" style="display: flex; align-items: center; gap: 14px;">
+                    <!-- Theme Toggle Button (Circular Reveal) -->
+                    <button id="theme-toggle" class="theme-toggle-btn" onclick="toggleTheme(event)" title="Alternar Modo Claro / Oscuro">
+                        <svg viewBox="0 0 24 24" class="theme-icon-svg" style="width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; transition: transform 0.5s ease;">
+                            <!-- Moon Icon -->
+                            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                        </svg>
+                    </button>
                     <div class="status-pill">
                         <div class="pulse-dot"></div> Manuel Solis
                     </div>
                 </div>
             </header>
+
+            <!-- Dynamic Horizontal Status Bar -->
+            <div class="sbar" id="main-sbar">
+                <span class="sdot"></span>
+                <span id="main-sbar-text">Auditoría del BOS en curso...</span>
+            </div>
+
+            <!-- Header Sync Info -->
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 16px; margin-right: 8px;">
+                <div id="last-update" style="font-size: 11.5px; color: var(--text-muted); font-weight: 500;">Cargando...</div>
+            </div>
 
             <!-- Dashboard Content Container (Scrollable) -->
             <div class="content-scrollable">
@@ -195,7 +242,15 @@
                         <div class="card card-animate" style="animation-delay: 0.08s;">
                             <div class="chart-title"><span class="dot" style="background: #3b82f6"></span> Histórico de
                                 Leads y Predicción Temporal</div>
-                            <div class="chart-wrapper"><canvas id="chart-timeseries"></canvas></div>
+                            <div class="chart-wrapper">
+                                <div class="chart-toolbar">
+                                    <button class="chart-tool-btn active" data-ts-type="line"
+                                        onclick="setTimeSeriesType('line', event)" title="Vista de línea">∿</button>
+                                    <button class="chart-tool-btn" data-ts-type="bar"
+                                        onclick="setTimeSeriesType('bar', event)" title="Vista de barras">▮</button>
+                                </div>
+                                <canvas id="chart-timeseries"></canvas>
+                            </div>
                         </div>
                         <div class="card card-animate" style="animation-delay: 0.10s;">
                             <div class="chart-title"><span class="dot" style="background: var(--gold)"></span>
