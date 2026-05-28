@@ -51,7 +51,7 @@ function cleanTechnicalTerms(str) {
 function restartHealthRing() {
     const ring = document.getElementById('health-fg-ring');
     const numVal = document.getElementById('health-num-val');
-    if (!dashboardData) return;
+    if (!dashboardData || !dashboardData.system) return;
     
     const scoreVal = dashboardData.system.health_score;
     const circumference = 2 * Math.PI * 58;
@@ -61,12 +61,26 @@ function restartHealthRing() {
         ring.style.transition = 'none';
         ring.style.strokeDashoffset = circumference;
         void ring.offsetWidth; // Force reflow
-        ring.style.transition = 'stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1)';
-        ring.style.strokeDashoffset = dashOffset;
+        
+        requestAnimationFrame(() => {
+            ring.style.transition = 'stroke-dashoffset 0.85s cubic-bezier(0.16, 1, 0.3, 1)';
+            ring.style.strokeDashoffset = dashOffset;
+        });
     }
     
     if (numVal) {
-        parseAndAnimate(numVal, scoreVal, 700);
+        numVal.textContent = '0';
+        parseAndAnimate(numVal, scoreVal, 750);
+    }
+
+    const tank = document.querySelector('.liquid-tank');
+    if (tank) {
+        const target = Number(tank.dataset.fillTarget) || scoreVal;
+        tank.style.setProperty('--fill-level', 0);
+        void tank.offsetWidth;
+        requestAnimationFrame(() => {
+            tank.style.setProperty('--fill-level', target);
+        });
     }
 }
 
@@ -104,6 +118,19 @@ function switchTab(tabId) {
         // Specialized resets for specific tabs
         if (tabId === 'dashboard') {
             setTimeout(restartHealthRing, 60);
+            setTimeout(() => {
+                const wave = document.querySelector('.card-wave-bg');
+                if (wave) {
+                    wave.style.transition = 'none';
+                    wave.style.height = '0%';
+                    void wave.offsetWidth; // Force reflow
+                    
+                    requestAnimationFrame(() => {
+                        wave.style.transition = 'height 1.5s cubic-bezier(0.16, 1, 0.3, 1)';
+                        wave.style.height = wave.getAttribute('data-target-height');
+                    });
+                }
+            }, 100);
         } else if (tabId === 'forecast') {
             if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.forecast) {
                 renderTimeSeriesChart(dashboardData.forecast);
@@ -374,18 +401,49 @@ function renderBOS(data) {
         return { ...k, label, sub };
     });
 
-    kpisGrid.innerHTML = cleanedKpis.map((kpi, idx) => `
-        <div class="card stat-card-${kpi.color || 'blue'} card-animate" style="animation-delay: ${idx * 0.025}s;">
-            <div class="card-stat-label">${kpi.label}</div>
-            <div class="card-stat-value" id="kpi-val-${idx}" data-value="${kpi.value}">0</div>
-            <div class="card-stat-sub">${kpi.sub || '&nbsp;'}</div>
-        </div>
-    `).join('');
+    const healthScore = Math.min(100, Math.max(0, Number(data.system.health_score) || 0));
+    const liquidTone = healthScore >= 80 ? 'good' : healthScore >= 60 ? 'warn' : 'critical';
 
-    // Trigger dynamic count animations for general KPIs
+    kpisGrid.innerHTML = cleanedKpis.map((kpi, idx) => {
+        const isHealth = idx === 0;
+        if (isHealth) {
+            return `
+                <div class="card liquid-tank liquid-tone-${liquidTone} card-animate"
+                    style="--fill-level: 0; animation-delay: ${idx * 0.025}s;"
+                    data-fill-target="${healthScore}">
+                    <div class="liquid-tank__fill" aria-hidden="true">
+                        <div class="liquid-tank__surface liquid-tank__surface--1"></div>
+                        <div class="liquid-tank__surface liquid-tank__surface--2"></div>
+                    </div>
+                    <div class="liquid-tank__content">
+                        <div class="card-stat-label">${kpi.label}</div>
+                        <div class="card-stat-value" id="kpi-val-${idx}" data-value="${kpi.value}">0</div>
+                        <div class="card-stat-sub">${kpi.sub || '&nbsp;'}</div>
+                    </div>
+                </div>
+            `;
+        }
+        return `
+            <div class="card stat-card-${kpi.color || 'blue'} card-animate" style="animation-delay: ${idx * 0.025}s;">
+                <div class="card-stat-label">${kpi.label}</div>
+                <div class="card-stat-value" id="kpi-val-${idx}" data-value="${kpi.value}">0</div>
+                <div class="card-stat-sub">${kpi.sub || '&nbsp;'}</div>
+            </div>
+        `;
+    }).join('');
+
+    // Trigger dynamic count animations and liquid fill rising for KPIs
     cleanedKpis.forEach((kpi, idx) => {
         const element = document.getElementById(`kpi-val-${idx}`);
         parseAndAnimate(element, kpi.value);
+    });
+
+    requestAnimationFrame(() => {
+        const tank = document.querySelector('.liquid-tank');
+        if (tank) {
+            const target = Number(tank.dataset.fillTarget) || 0;
+            tank.style.setProperty('--fill-level', target);
+        }
     });
 
     // 3. Render Action Cards in Dashboard Tab
@@ -1150,7 +1208,7 @@ function loadReportInViewer(url, title, event) {
     // Switch view states
     placeholder.style.display = 'none';
     iframe.style.display = 'block';
-    iframe.src = url;
+    iframe.src = url + (url.includes('?') ? '&' : '?') + '_=' + Date.now();
     
     // Show control buttons
     if (openLink) {
@@ -1272,6 +1330,11 @@ window.toggleTheme = function(event) {
         }
         
         updateThemeIcon(nextThemeIsLight);
+
+        const reportIframe = document.getElementById('viewer-iframe');
+        if (reportIframe && reportIframe.contentWindow && reportIframe.src) {
+            reportIframe.contentWindow.postMessage(nextThemeIsLight ? 'theme-light' : 'theme-dark', '*');
+        }
 
         // Dynamically redraw all loaded active charts with new gridlines, tooltips, and tick colors
         if (dashboardData) {

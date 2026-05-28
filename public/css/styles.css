@@ -751,7 +751,7 @@ body.light-mode .wave-4 svg path {
 .sidebar-footer {
     border-top: 1px solid rgba(255, 255, 255, 0.03);
     padding-top: 16px;
-    margin-top: 24px;
+    margin-top: auto; /* Dynamically absorb all vertical space to maintain perfect separation gap */
 }
 
 .sidebar-footer p {
@@ -1099,23 +1099,146 @@ body.light-mode .wave-4 svg path {
 }
 .stat-card-blue .card-stat-value { color: var(--blue); }
 
-/* === KPI principal con bloque de acento lima (estilo RETRADE) === */
-#dashboard-kpis .card:first-child {
-    background: linear-gradient(135deg, var(--chartreuse), #c5f24f) !important;
-    border-color: rgba(163, 230, 53, 0.55) !important;
-    box-shadow: 0 18px 44px rgba(163, 230, 53, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+/* === KPI Salud del Sistema — tanque líquido animado (0–100) === */
+.liquid-tank {
+    --tank-bg: rgba(13, 20, 35, 0.92);
+    --tank-border: rgba(163, 230, 53, 0.35);
+    --liquid-top: #d4f96a;
+    --liquid-bottom: #84cc16;
+    --liquid-glow: rgba(163, 230, 53, 0.35);
+    --fill-level: 0;
+    background: var(--tank-bg) !important;
+    border: 2px solid var(--tank-border) !important;
+    border-radius: var(--radius-lg) !important;
+    overflow: hidden !important;
+    position: relative;
+    min-height: 148px;
+    box-shadow:
+        0 16px 40px rgba(0, 0, 0, 0.45),
+        inset 0 0 18px rgba(163, 230, 53, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
 }
-#dashboard-kpis .card:first-child .card-stat-label,
-#dashboard-kpis .card:first-child .card-stat-sub {
-    color: rgba(8, 12, 20, 0.7) !important;
+
+.liquid-tank.liquid-tone-warn {
+    --tank-border: rgba(251, 191, 36, 0.4);
+    --liquid-top: #fde68a;
+    --liquid-bottom: #f59e0b;
+    --liquid-glow: rgba(251, 191, 36, 0.35);
 }
-#dashboard-kpis .card:first-child .card-stat-value {
-    color: #06120b !important;
+
+.liquid-tank.liquid-tone-critical {
+    --tank-border: rgba(244, 63, 94, 0.45);
+    --liquid-top: #fda4af;
+    --liquid-bottom: #e11d48;
+    --liquid-glow: rgba(244, 63, 94, 0.35);
 }
-#dashboard-kpis .card:first-child .card-stat-label:hover,
-#dashboard-kpis .card:first-child .card-stat-value:hover {
-    color: #06120b !important;
-    text-shadow: none !important;
+
+body.light-mode .liquid-tank {
+    --tank-bg: rgba(255, 255, 255, 0.94);
+    --tank-border: rgba(132, 204, 22, 0.35);
+    box-shadow:
+        0 12px 30px rgba(15, 23, 42, 0.07),
+        inset 0 0 16px rgba(132, 204, 22, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+body.light-mode .liquid-tank.liquid-tone-warn {
+    --tank-border: rgba(217, 119, 6, 0.35);
+}
+
+body.light-mode .liquid-tank.liquid-tone-critical {
+    --tank-border: rgba(225, 29, 72, 0.35);
+}
+
+.liquid-tank__fill {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(var(--fill-level) * 1%);
+    background: linear-gradient(180deg, var(--liquid-top) 0%, var(--liquid-bottom) 100%);
+    z-index: 1;
+    overflow: hidden;
+    pointer-events: none;
+    transition: height 1.8s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: inset 0 8px 24px rgba(255, 255, 255, 0.18);
+}
+
+.liquid-tank__surface {
+    position: absolute;
+    top: -18px;
+    left: -120%;
+    width: 320%;
+    height: 36px;
+    border-radius: 42%;
+    background: var(--tank-bg);
+    opacity: 0.95;
+}
+
+.liquid-tank__surface--1 {
+    animation: liquidSloshA 7s ease-in-out infinite;
+}
+
+.liquid-tank__surface--2 {
+    top: -22px;
+    opacity: 0.55;
+    animation: liquidSloshB 9.5s ease-in-out infinite;
+    animation-delay: -2.2s;
+}
+
+.liquid-tank__content {
+    position: relative;
+    z-index: 3;
+}
+
+.liquid-tank .card-stat-label,
+.liquid-tank .card-stat-value,
+.liquid-tank .card-stat-sub {
+    color: var(--text-main) !important;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
+}
+
+body.light-mode .liquid-tank .card-stat-label,
+body.light-mode .liquid-tank .card-stat-value,
+body.light-mode .liquid-tank .card-stat-sub {
+    color: #0f172a !important;
+    text-shadow: 0 1px 6px rgba(255, 255, 255, 0.65);
+}
+
+.liquid-tank .card-stat-value {
+    font-size: 34px;
+}
+
+.liquid-tank::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, transparent 45%, rgba(255, 255, 255, 0.03) 100%);
+    pointer-events: none;
+    z-index: 2;
+}
+
+@keyframes liquidSloshA {
+    0%, 100% { transform: translateX(0) rotate(0deg); }
+    25% { transform: translateX(-8%) rotate(-2deg); }
+    50% { transform: translateX(-15%) rotate(0deg); }
+    75% { transform: translateX(-6%) rotate(2deg); }
+}
+
+@keyframes liquidSloshB {
+    0%, 100% { transform: translateX(-10%) rotate(1deg); }
+    33% { transform: translateX(-4%) rotate(-1.5deg); }
+    66% { transform: translateX(-18%) rotate(1.5deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .liquid-tank__fill {
+        transition-duration: 0.01ms;
+    }
+    .liquid-tank__surface--1,
+    .liquid-tank__surface--2 {
+        animation: none;
+    }
 }
 
 /* --- Section Titles & Chart wrappers --- */
@@ -1762,3 +1885,26 @@ body.light-mode .action-text:hover {
     color: var(--blue) !important;
     text-shadow: 0 0 8px rgba(2, 132, 199, 0.3) !important;
 }
+
+/* 9. Chart Toolbar Light Mode Overrides */
+body.light-mode .chart-toolbar {
+    background: rgba(248, 250, 252, 0.88) !important;
+    border-color: rgba(15, 23, 42, 0.08) !important;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04) !important;
+}
+
+body.light-mode .chart-tool-btn {
+    color: #475569 !important;
+}
+
+body.light-mode .chart-tool-btn:hover {
+    background: rgba(15, 23, 42, 0.05) !important;
+    color: #0f172a !important;
+}
+
+body.light-mode .chart-tool-btn.active {
+    background: var(--chartreuse) !important;
+    color: #080c14 !important;
+    box-shadow: 0 0 10px rgba(132, 204, 22, 0.3) !important;
+}
+
