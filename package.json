@@ -1,0 +1,17 @@
+{
+  "name": "api-local",
+  "version": "1.0.0",
+  "description": "Local API server with interactive dashboard and ngrok integration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "pm2:start": "pm2 start server.js --name sleek-api --watch --ignore-watch=\"data node_modules\"",
+    "pm2:stop": "pm2 stop sleek-api",
+    "pm2:logs": "pm2 logs sleek-api"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
+  }
+}

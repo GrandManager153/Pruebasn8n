@@ -1,0 +1,1177 @@
+{
+  "name": "Mkt_BI_IA_v7",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        200,
+        1200
+      ],
+      "id": "a0000001-0000-0000-0000-000000000001",
+      "name": "Schedule_Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = new Date();\nconst monthNames = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];\n\nreturn [{\n  json: {\n    campaign_prefix: monthNames[today.getMonth()] + '_',\n    lookback_days: 42,\n    sla_first_contact_min: 15,\n    report_date: today.toISOString().split('T')[0],\n    generated_at: today.toISOString(),\n\n    conversion_info: 3.0,\n    conversion_warning: 2.5,\n    conversion_critical: 1.5,\n    cv_warning: 30,\n    cv_critical: 45,\n    mase_critical: 1.0,\n    mase_good: 0.75,\n    coverage_floor: 70,\n    hhi_warning: 0.15,\n    hhi_critical: 0.25,\n    ticket_promedio: 500,\n    max_system_capacity: 4000,\n    overcontact_max: 7,\n    speed_to_lead_critical_min: 30,\n    step_cv_critical: 1.5,\n    cpl_wow_warning: 20,\n    revenue_at_risk_critical: 5000,\n    trap_threshold_leads: 200,\n    spread_alert_pct: 80,\n    leak_critical_pct: 25,\n    leak_warning_pct: 10,\n    wow_drop_warning: -15,\n    wow_spike_warning: 30,\n    shs_green: 80,\n    shs_yellow: 65\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        1200
+      ],
+      "id": "a0000001-0000-0000-0000-000000000002",
+      "name": "RuntimeConfig"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": {
+          "__rl": true,
+          "value": "modelos_regresion",
+          "mode": "list",
+          "cachedResultName": "modelos_regresion"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        800,
+        300
+      ],
+      "id": "a0000001-0000-0000-0000-000000000010",
+      "name": "Src_Regresion",
+      "credentials": {
+        "mySql": {
+          "id": "FVLM2tWmbTJNG1hW",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": {
+          "__rl": true,
+          "value": "modelos_ema",
+          "mode": "list",
+          "cachedResultName": "modelos_ema"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        800,
+        600
+      ],
+      "id": "a0000001-0000-0000-0000-000000000011",
+      "name": "Src_Ema",
+      "credentials": {
+        "mySql": {
+          "id": "FVLM2tWmbTJNG1hW",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": {
+          "__rl": true,
+          "value": "vw_markov_transitions_campaign",
+          "mode": "list",
+          "cachedResultName": "vw_markov_transitions_campaign"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        800,
+        900
+      ],
+      "id": "a0000001-0000-0000-0000-000000000012",
+      "name": "Src_Markov",
+      "credentials": {
+        "mySql": {
+          "id": "0T8OluXwgumnOytq",
+          "name": "loomspot_espejo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COUNT(*) AS total_records, COUNT(DISTINCT contact_id) AS unique_contacts, AVG(call_duration) AS call_duration_avg, MIN(call_duration) AS call_duration_min, MAX(call_duration) AS call_duration_max, STDDEV(call_duration) AS call_duration_std, AVG(minutes_since_prev) AS minutes_since_prev_avg, MIN(minutes_since_prev) AS minutes_since_prev_min, MAX(minutes_since_prev) AS minutes_since_prev_max, AVG(call_rank) AS call_rank_avg, MIN(call_rank) AS call_rank_min, MAX(call_rank) AS call_rank_max, SUM(CASE WHEN call_rank = 1 THEN 1 ELSE 0 END) AS first_attempts, SUM(CASE WHEN call_rank <= 3 THEN 1 ELSE 0 END) AS attempts_1_to_3, SUM(CASE WHEN call_rank <= 5 THEN 1 ELSE 0 END) AS attempts_1_to_5, SUM(CASE WHEN call_rank > 7 THEN 1 ELSE 0 END) AS overcontact_calls FROM vw_call_intervals_utm",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        800,
+        1200
+      ],
+      "id": "a0000001-0000-0000-0000-000000000013",
+      "name": "Src_Llamadas",
+      "credentials": {
+        "mySql": {
+          "id": "0T8OluXwgumnOytq",
+          "name": "loomspot_espejo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT count(uuid) as contactos, date(created_at) as fecha FROM crm.vw_contacts_utm WHERE date(created_at) >= DATE_SUB(CURDATE(), INTERVAL {{ $json.lookback_days }} DAY) AND date(created_at) < CURDATE() GROUP BY date(created_at) ORDER BY fecha",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        800,
+        1500
+      ],
+      "id": "a0000001-0000-0000-0000-000000000014",
+      "name": "Src_Llegadas",
+      "credentials": {
+        "mySql": {
+          "id": "0T8OluXwgumnOytq",
+          "name": "loomspot_espejo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": {
+          "__rl": true,
+          "value": "vw_probabilidad_leads_por_hora",
+          "mode": "list",
+          "cachedResultName": "vw_probabilidad_leads_por_hora"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        800,
+        1800
+      ],
+      "id": "a0000001-0000-0000-0000-000000000015",
+      "name": "Src_Horarios",
+      "credentials": {
+        "mySql": {
+          "id": "0T8OluXwgumnOytq",
+          "name": "loomspot_espejo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT campaign, source, datasource, DATE(created_at) as fecha_gasto, SUM(spend) as spend, COUNT(*) as records FROM inversiones_campañas WHERE created_at >= (SELECT MAX(created_at) - INTERVAL {{ $json.lookback_days }} DAY FROM inversiones_campañas) GROUP BY campaign, source, datasource, DATE(created_at) ORDER BY fecha_gasto, spend DESC",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        800,
+        2100
+      ],
+      "id": "a0000001-0000-0000-0000-000000000016",
+      "name": "Src_Inversiones",
+      "credentials": {
+        "mySql": {
+          "id": "FVLM2tWmbTJNG1hW",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1200,
+        450
+      ],
+      "id": "a0000001-0000-0000-0000-000000000020",
+      "name": "Merge_Reg_Ema"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1200,
+        1050
+      ],
+      "id": "a0000001-0000-0000-0000-000000000021",
+      "name": "Merge_Markov_Calls"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1200,
+        1650
+      ],
+      "id": "a0000001-0000-0000-0000-000000000022",
+      "name": "Merge_Arrivals_Hours"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1500,
+        750
+      ],
+      "id": "a0000001-0000-0000-0000-000000000023",
+      "name": "Merge_Left"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1500,
+        1875
+      ],
+      "id": "a0000001-0000-0000-0000-000000000024",
+      "name": "Merge_Right"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1800,
+        1200
+      ],
+      "id": "a0000001-0000-0000-0000-000000000025",
+      "name": "Merge_All"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === SOURCE VALIDATOR v6 ===\n// Validates all 7 sources, logs quality, provides graceful fallbacks.\n\nconst _errs = [];\nconst _warns = [];\nconst all = items.map(i => i.json);\n\ntry {\n  const src = {\n    regresion: all.filter(r => r.pendiente !== undefined && r.r2 !== undefined),\n    ema: all.filter(r => r.ema_ultimo !== undefined || (r.p5 !== undefined && r.p50 !== undefined)),\n    markov: all.filter(r => r.status_from !== undefined && r.status_to !== undefined),\n    llegadas: all.filter(r => r.contactos !== undefined && r.fecha !== undefined),\n    inversiones: [],\n    llamadas: [],\n    horarios: []\n  };\n  const matched = new Set([...src.regresion, ...src.ema, ...src.markov, ...src.llegadas]);\n  all.filter(r => !matched.has(r)).forEach(r => {\n    const keys = Object.keys(r).join('|').toLowerCase();\n    if (r.campaign !== undefined) src.inversiones.push(r);\n    else if (keys.includes('hora') || keys.includes('hour') || keys.includes('probabilidad')) src.horarios.push(r);\n    else src.llamadas.push(r);\n  });\n\n  const checks = [\n    { name: 'regresion', min: 1, data: src.regresion },\n    { name: 'ema', min: 1, data: src.ema },\n    { name: 'markov', min: 10, data: src.markov },\n    { name: 'llegadas', min: 7, data: src.llegadas },\n    { name: 'inversiones', min: 1, data: src.inversiones },\n    { name: 'llamadas', min: 1, data: src.llamadas },\n    { name: 'horarios', min: 1, data: src.horarios }\n  ];\n\n  checks.forEach(c => {\n    if (c.data.length === 0) _warns.push(c.name + ': SIN DATOS (0 registros)');\n    else if (c.data.length < c.min) _warns.push(c.name + ': datos insuficientes (' + c.data.length + '/' + c.min + ')');\n  });\n\n  const validation = {\n    total_items: all.length,\n    sources: Object.fromEntries(Object.entries(src).map(([k, v]) => [k, v.length])),\n    all_sources_have_data: Object.values(src).every(v => v.length > 0),\n    errors: _errs,\n    warnings: _warns,\n    validated_at: new Date().toISOString()\n  };\n\n  return items.map(i => ({ json: { ...i.json, _source_validation: validation } }));\n} catch(e) {\n  _errs.push('SourceValidator crash: ' + e.message);\n  return items.map(i => ({ json: { ...i.json, _source_validation: { total_items: all.length, errors: _errs, warnings: _warns, validated_at: new Date().toISOString() } } }));\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1950,
+        1200
+      ],
+      "id": "a0000001-0000-0000-0000-000000000026",
+      "name": "SourceValidator"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === FACTS BUILDER v7 ===\n// Receives ALL items from ALL 7 MySQL sources (concatenated via merge tree).\n// Each computational section wrapped in try/catch for resilience.\n\nconst _fb_errors = [];\nconst all = items.map(i => i.json);\n\n// --- Source identification by field signatures ---\nconst src = {\n  regresion: all.filter(r => r.pendiente !== undefined && r.r2 !== undefined),\n  ema: all.filter(r => r.ema_ultimo !== undefined || (r.p5 !== undefined && r.p50 !== undefined)),\n  markov: all.filter(r => r.status_from !== undefined && r.status_to !== undefined),\n  llegadas: all.filter(r => r.contactos !== undefined && r.fecha !== undefined),\n  inversiones: [],\n  llamadas: [],\n  horarios: []\n};\n\nconst matched = new Set([...src.regresion, ...src.ema, ...src.markov, ...src.llegadas]);\nconst unmatched = all.filter(r => !matched.has(r));\n\nunmatched.forEach(r => {\n  const keys = Object.keys(r).join('|').toLowerCase();\n  if (r.campaign !== undefined) {\n    src.inversiones.push(r);\n  } else if (keys.includes('hora') || keys.includes('hour') || keys.includes('probabilidad')) {\n    src.horarios.push(r);\n  } else {\n    src.llamadas.push(r);\n  }\n});\n\nconst quality = {\n  total_items: all.length,\n  sources: Object.fromEntries(Object.entries(src).map(([k, v]) => [k, v.length])),\n  all_sources_have_data: Object.values(src).every(v => v.length > 0)\n};\n\n// --- PROJECTIONS ---\nconst projections = { available: false };\nif (src.regresion.length > 0) {\n  projections.available = true;\n  const latest = src.regresion[src.regresion.length - 1];\n  projections.slope = parseFloat(latest.pendiente) || 0;\n  projections.intercept = parseFloat(latest.intercepto) || 0;\n  projections.r2 = parseFloat(latest.r2) || 0;\n  projections.r2_label = projections.r2 >= 0.85 ? 'fuerte' : projections.r2 >= 0.6 ? 'moderado' : 'debil';\n  projections.direction = projections.slope > 0.5 ? 'creciente' : projections.slope < -0.5 ? 'decreciente' : 'estable';\n  if (src.regresion.length > 1) {\n    const prev = src.regresion[src.regresion.length - 2];\n    const delta = projections.slope - (parseFloat(prev.pendiente) || 0);\n    projections.acceleration = delta > 0.1 ? 'acelerando' : delta < -0.1 ? 'desacelerando' : 'constante';\n  }\n  projections.history_points = src.regresion.length;\n}\nif (src.ema.length > 0) {\n  const latestEma = src.ema[src.ema.length - 1];\n  projections.ema_current = parseFloat(latestEma.ema_ultimo) || 0;\n  projections.p5 = parseFloat(latestEma.p5) || 0;\n  projections.p50 = parseFloat(latestEma.p50) || 0;\n  projections.p95 = parseFloat(latestEma.p95) || 0;\n  projections.spread = projections.p95 - projections.p5;\n  projections.spread_pct = projections.p50 > 0 ? Math.round(projections.spread / projections.p50 * 10000) / 100 : 0;\n  projections.confidence = projections.spread_pct < 50 ? 'alta' : projections.spread_pct < 80 ? 'media' : 'baja';\n}\n\n\n  // --- Matrix algebra utilities (for Fourier regression + Markov Fundamental) ---\n  function _matInv(m) {\n    const n = m.length;\n    const a = m.map((r, i) => [...r, ...Array(n).fill(0).map((_, j) => i === j ? 1 : 0)]);\n    for (let c = 0; c < n; c++) {\n      let mx = c;\n      for (let r = c + 1; r < n; r++) if (Math.abs(a[r][c]) > Math.abs(a[mx][c])) mx = r;\n      [a[c], a[mx]] = [a[mx], a[c]];\n      if (Math.abs(a[c][c]) < 1e-10) return null;\n      const pv = a[c][c];\n      for (let j = 0; j < 2 * n; j++) a[c][j] /= pv;\n      for (let r = 0; r < n; r++) { if (r === c) continue; const f = a[r][c]; for (let j = 0; j < 2 * n; j++) a[r][j] -= f * a[c][j]; }\n    }\n    return a.map(r => r.slice(n));\n  }\n  function _matMul(A, B) {\n    return A.map((row, i) => B[0].map((_, j) => row.reduce((s, a, k) => s + a * B[k][j], 0)));\n  }\n  function _matVecMul(A, v) {\n    return A.map(row => row.reduce((s, a, k) => s + a * v[k], 0));\n  }\n\n// --- FUNNEL ---\nconst funnel = { available: false };\nif (src.markov.length > 0) {\n  funnel.available = true;\n  const sample = src.markov[0];\n  const pF = ['transition_pct','pct','percentage','percent'].find(f => sample[f] !== undefined) || 'pct';\n  const cF = ['cnt','count','total'].find(f => sample[f] !== undefined) || 'cnt';\n\n  const byFrom = {};\n  src.markov.forEach(r => {\n    const from = r.status_from || '';\n    if (!byFrom[from]) byFrom[from] = [];\n    byFrom[from].push({ to: r.status_to || '', pct: parseFloat(r[pF]) || 0, cnt: parseInt(r[cF]) || 0 });\n  });\n\n  const _toStatesSet = new Set(src.markov.map(r => r.status_to || '').filter(s => s));\n  funnel.states = [...new Set([...Object.keys(byFrom), ..._toStatesSet])];\n  funnel.transition_count = src.markov.length;\n\n  // Biggest leaks (transitions to loss states)\n  const leaks = [];\n  src.markov.forEach(r => {\n    const to = (r.status_to || '').toLowerCase();\n    if (to.includes('lost') || to.includes('no show') || to.includes('disqualif')) {\n      leaks.push({ from: r.status_from, to: r.status_to, pct: parseFloat(r[pF]) || 0, cnt: parseInt(r[cF]) || 0 });\n    }\n  });\n  leaks.sort((a, b) => b.cnt - a.cnt);\n  funnel.top_leaks = leaks.slice(0, 5);\n  funnel.biggest_leak = leaks[0] || null;\n\n  // Trap states (self-loop > 50%)\n  funnel.trap_states = [];\n  Object.entries(byFrom).forEach(([from, trans]) => {\n    const self = trans.find(t => t.to === from);\n    if (self && self.pct > 50) funnel.trap_states.push({ state: from, self_pct: self.pct, leads: self.cnt });\n  });\n\n  // Feeders to conversion\n  const convState = funnel.states.find(s => s.toLowerCase().includes('consult booked') || s.toLowerCase().includes('won'));\n  funnel.conversion_target = convState || 'Consult Booked';\n  funnel.feeders = [];\n  Object.entries(byFrom).forEach(([from, trans]) => {\n    const hit = trans.find(t => t.to === funnel.conversion_target);\n    if (hit) funnel.feeders.push({ from, pct: hit.pct, cnt: hit.cnt });\n  });\n  funnel.feeders.sort((a, b) => b.pct - a.pct);\n\n  // Summary per state\n  funnel.summary = Object.entries(byFrom).map(([from, trans]) => ({\n    from, top: trans.sort((a, b) => b.pct - a.pct).slice(0, 5)\n  }));\n\n  // --- Absorbing Markov Chain: Fundamental Matrix N = (I-Q)^-1 ---\n  const _absorbingNames = [];\n  const _transitoryNames = [];\n  const _allStates = funnel.states;\n\n  _allStates.forEach(s => {\n    const sl = s.toLowerCase();\n    const _ABS_SET = new Set(['consult booked', 'won', 'closed lost', 'no show', 'disqualified', 'cancelled']);\n    const _slNorm = sl.replace(/[^a-z0-9 ]/g, ' ').replace(/ +/g, ' ').trim();\n    const isAbsorbing = _ABS_SET.has(sl) || _ABS_SET.has(_slNorm);\n    if (isAbsorbing) _absorbingNames.push(s);\n    else _transitoryNames.push(s);\n  });\n\n  funnel.markov_analysis = { available: false };\n\n  if (_transitoryNames.length > 0 && _transitoryNames.length <= 25 && _absorbingNames.length > 0) {\n    const _tN = _transitoryNames.length;\n    const _aN = _absorbingNames.length;\n\n    const _Q = Array.from({length: _tN}, () => Array(_tN).fill(0));\n    const _R = Array.from({length: _tN}, () => Array(_aN).fill(0));\n\n    _transitoryNames.forEach((from, fi) => {\n      const trans = byFrom[from] || [];\n      const totalPct = trans.reduce((s, t) => s + t.pct, 0);\n      const scale = totalPct > 0 ? 100 / totalPct : 1;\n      trans.forEach(t => {\n        const tiIdx = _transitoryNames.indexOf(t.to);\n        const aiIdx = _absorbingNames.indexOf(t.to);\n        const prob = (t.pct / 100) * (scale > 0 ? 100 / totalPct : 1);\n        if (tiIdx >= 0) _Q[fi][tiIdx] = t.pct / totalPct;\n        if (aiIdx >= 0) _R[fi][aiIdx] = t.pct / totalPct;\n      });\n    });\n\n    const _ImQ = Array.from({length: _tN}, (_, i) =>\n      Array.from({length: _tN}, (_, j) => (i === j ? 1 : 0) - _Q[i][j])\n    );\n\n    const _N = _matInv(_ImQ);\n\n    if (_N) {\n      const _B = _matMul(_N, _R);\n      const _ones = Array(_tN).fill(1);\n      const _expSteps = _matVecMul(_N, _ones);\n\n      const convAbsIdx = _absorbingNames.findIndex(s =>\n        s.toLowerCase().includes('consult booked') || s.toLowerCase().includes('won')\n      );\n\n      funnel.markov_analysis = {\n        available: true,\n        transitory_states: _transitoryNames,\n        absorbing_states: _absorbingNames,\n        conversion_absorbing: convAbsIdx >= 0 ? _absorbingNames[convAbsIdx] : null,\n        absorption_probabilities: _transitoryNames.map((s, i) => ({\n          state: s,\n          prob_conversion: convAbsIdx >= 0 ? Math.round(_B[i][convAbsIdx] * 10000) / 10000 : null,\n          prob_loss: convAbsIdx >= 0 ? Math.round((1 - _B[i][convAbsIdx]) * 10000) / 10000 : null,\n          expected_steps: Math.round(_expSteps[i] * 100) / 100\n        })),\n        entry_state_conversion: null\n      };\n\n      const entryIdx = _transitoryNames.findIndex(s =>\n        s.toLowerCase().includes('new lead') || s.toLowerCase().includes('open') || s.toLowerCase().includes('new') || s.toLowerCase().includes('entrada') || s.toLowerCase().includes('fresh')\n      );\n      if (entryIdx >= 0 && convAbsIdx >= 0) {\n        funnel.markov_analysis.entry_state_conversion = Math.round(_B[entryIdx][convAbsIdx] * 10000) / 10000;\n        funnel.markov_analysis.entry_expected_steps = Math.round(_expSteps[entryIdx] * 100) / 100;\n\n      // --- Research v3: Absorption time variance ---\n      const _tVarVec = [];\n      for (let _vi = 0; _vi < _tN; _vi++) {\n        let _nds = 0;\n        for (let _vj = 0; _vj < _tN; _vj++) _nds += _N[_vi][_vj] * _N[_vj][_vj];\n        _tVarVec.push(Math.max(0, (2 * _nds) - _expSteps[_vi] - Math.pow(_expSteps[_vi], 2)));\n      }\n      if (entryIdx >= 0) {\n        const _eVar = _tVarVec[entryIdx];\n        const _eStd = Math.sqrt(_eVar);\n        funnel.markov_analysis.entry_step_variance = Math.round(_eVar * 100) / 100;\n        funnel.markov_analysis.entry_step_stddev = Math.round(_eStd * 100) / 100;\n        funnel.markov_analysis.entry_step_cv = _expSteps[entryIdx] > 0 ? Math.round((_eStd / _expSteps[entryIdx]) * 1000) / 1000 : 0;\n      }\n      funnel.markov_analysis.absorption_probabilities.forEach(function(_ap, _ai) {\n        _ap.step_variance = Math.round(_tVarVec[_ai] * 100) / 100;\n        _ap.step_stddev = Math.round(Math.sqrt(_tVarVec[_ai]) * 100) / 100;\n      });\n      }\n    }\n  }\n}\n\n// --- OPERATIONS ---\nconst operations = { available: false };\nif (src.llegadas.length > 0) {\n  operations.available = true;\n  const sorted = [...src.llegadas].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));\n  const vols = sorted.map(r => parseInt(r.contactos) || 0);\n  const total = vols.reduce((a, b) => a + b, 0);\n  operations.total_days = vols.length;\n  operations.total_leads = total;\n  operations.avg_daily = Math.round(total / vols.length * 100) / 100;\n  operations.latest = { date: sorted[sorted.length-1].fecha, leads: vols[vols.length-1] };\n  operations.min_daily = Math.min(...vols);\n  operations.max_daily = Math.max(...vols);\n  if (vols.length >= 14) {\n    const w1 = vols.slice(-7), w2 = vols.slice(-14, -7);\n    const a1 = w1.reduce((a,b)=>a+b,0)/7, a2 = w2.reduce((a,b)=>a+b,0)/7;\n    operations.last_7d_avg = Math.round(a1*100)/100;\n    operations.prev_7d_avg = Math.round(a2*100)/100;\n    operations.wow_change_pct = Math.round((a1-a2)/a2*10000)/100;\n  }\n  operations.recent_trend = vols.length >= 6 ?\n    (vols.slice(-3).reduce((a,b)=>a+b,0)/3 > vols.slice(-6,-3).reduce((a,b)=>a+b,0)/3*1.1 ? 'creciente' : vols.slice(-3).reduce((a,b)=>a+b,0)/3 < vols.slice(-6,-3).reduce((a,b)=>a+b,0)/3*0.9 ? 'decreciente' : 'estable') : 'sin_datos';\n}\n\nif (src.horarios.length > 0) {\n  const hKeys = Object.keys(src.horarios[0]);\n  const hF = hKeys.find(k => k.toLowerCase().includes('hora') || k.toLowerCase().includes('hour')) || hKeys[0];\n  const vF = hKeys.find(k => k !== hF && typeof src.horarios[0][k] === 'number') || hKeys[1];\n  const ranked = src.horarios.map(h => ({ hour: h[hF], value: parseFloat(h[vF])||0 })).sort((a,b) => b.value - a.value);\n  operations.peak_hour = ranked[0]?.hour;\n  operations.valley_hour = ranked[ranked.length-1]?.hour;\n  operations.hourly_top3 = ranked.slice(0,3);\n}\n\nif (src.llamadas.length > 0) {\n  var _cr = src.llamadas[0];\n  if (_cr.total_records !== undefined) {\n    operations.call_records = parseInt(_cr.total_records) || 0;\n    operations.call_rows_returned = src.llamadas.length;\n    operations.call_data_note = 'Pre-agregado: ' + operations.call_records + ' registros en ' + src.llamadas.length + ' fila(s) SQL';\n    operations.unique_contacts = parseInt(_cr.unique_contacts) || 0;\n    operations.call_metrics = {\n      call_duration: { min: parseFloat(_cr.call_duration_min)||0, avg: Math.round((parseFloat(_cr.call_duration_avg)||0)*100)/100, max: parseFloat(_cr.call_duration_max)||0, std: Math.round((parseFloat(_cr.call_duration_std)||0)*100)/100 },\n      minutes_since_prev: { min: parseFloat(_cr.minutes_since_prev_min)||0, avg: Math.round((parseFloat(_cr.minutes_since_prev_avg)||0)*100)/100, max: parseFloat(_cr.minutes_since_prev_max)||0 },\n      call_rank: { min: parseFloat(_cr.call_rank_min)||0, avg: Math.round((parseFloat(_cr.call_rank_avg)||0)*100)/100, max: parseFloat(_cr.call_rank_max)||0 }\n    };\n    operations.contact_distribution = {\n      first_attempts: parseInt(_cr.first_attempts)||0,\n      attempts_1_to_3: parseInt(_cr.attempts_1_to_3)||0,\n      attempts_1_to_5: parseInt(_cr.attempts_1_to_5)||0,\n      overcontact_calls: parseInt(_cr.overcontact_calls)||0,\n      overcontact_pct: operations.call_records > 0 ? Math.round((parseInt(_cr.overcontact_calls)||0) / operations.call_records * 10000) / 100 : 0\n    };\n  } else {\n    operations.call_records = src.llamadas.length;\n    var _ckF = Object.keys(src.llamadas[0]).filter(function(k) { return typeof src.llamadas[0][k] === 'number'; });\n    operations.call_metrics = {};\n    _ckF.forEach(function(f) {\n      var vals = src.llamadas.map(function(r) { return parseFloat(r[f]); }).filter(function(v) { return !isNaN(v); });\n      if (vals.length) operations.call_metrics[f] = { min: Math.min.apply(null, vals), avg: Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length*100)/100, max: Math.max.apply(null, vals) };\n    });\n  }\n}\n\n// --- INVESTMENT (spend-only: inversiones_campanas has no leads column) ---\nconst investment = { available: false, cpl_available: false };\nif (src.inversiones.length > 0) {\n  investment.available = true;\n  const byCamp = {};\n  src.inversiones.forEach(c => {\n    const name = c.campaign || 'unknown';\n    const sp = parseFloat(c.spend) || 0;\n    if (!byCamp[name]) byCamp[name] = { name, spend: 0, records: 0, source: c.source || c.datasource || '' };\n    byCamp[name].spend += sp;\n    byCamp[name].records++;\n  });\n  investment.campaigns = Object.values(byCamp).sort((a, b) => b.spend - a.spend);\n  investment.total_spend = investment.campaigns.reduce((s, c) => s + c.spend, 0);\n  investment.campaign_count = investment.campaigns.length;\n  if (investment.total_spend > 0) {\n    investment.campaigns.forEach(c => { c.pct_of_total = Math.round(c.spend / investment.total_spend * 10000) / 100; });\n    investment.top_spender = investment.campaigns[0];\n    investment.lowest_spender = investment.campaigns[investment.campaigns.length - 1];\n    investment.top_concentration_pct = investment.campaigns[0].pct_of_total;\n  }\n\n  // --- Marketing Mix Model (Adstock + Hill + Granger + Ridge) ---\n  investment.mmm = { available: false };\n\n  const _invDaily = {};\n  src.inversiones.forEach(r => {\n    const camp = r.campaign || 'unknown';\n    const fecha = r.fecha_gasto || r.fecha || null;\n    const spend = parseFloat(r.spend) || 0;\n    if (!fecha || spend <= 0) return;\n    const dateStr = typeof fecha === 'string' ? fecha.split('T')[0] : new Date(fecha).toISOString().split('T')[0];\n    if (!_invDaily[camp]) _invDaily[camp] = {};\n    _invDaily[camp][dateStr] = (_invDaily[camp][dateStr] || 0) + spend;\n  });\n\n  const _campNames = Object.keys(_invDaily);\n  const _hasDailySpend = _campNames.length > 0 && _campNames.some(c => Object.keys(_invDaily[c]).length >= 7);\n\n  if (_hasDailySpend && src.llegadas.length >= 14) {\n    const _leadsSorted = [...src.llegadas].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));\n    const _leadDates = _leadsSorted.map(r => {\n      const f = r.fecha;\n      return typeof f === 'string' ? f.split('T')[0] : new Date(f).toISOString().split('T')[0];\n    });\n    const _leadVols = _leadsSorted.map(r => parseInt(r.contactos) || 0);\n    const _nLead = _leadVols.length;\n\n    // Build aligned daily spend vectors per campaign\n    const _campSpend = {};\n    _campNames.forEach(camp => {\n      _campSpend[camp] = _leadDates.map(d => _invDaily[camp][d] || 0);\n    });\n\n    // Adstock transformation: A_t = spend_t + theta * A_{t-1}\n    function _adstock(series, theta) {\n      const out = [series[0]];\n      for (let t = 1; t < series.length; t++) {\n        out.push(series[t] + theta * out[t - 1]);\n      }\n      return out;\n    }\n\n    // Hill saturation: S = A^gamma / (A^gamma + K^gamma)\n    function _hill(series, gamma, K) {\n      return series.map(a => {\n        if (a <= 0) return 0;\n        const ag = Math.pow(a, gamma);\n        return ag / (ag + Math.pow(K, gamma));\n      });\n    }\n\n    // Apply Adstock with theta=0.3 (3-day half-life) and Hill with auto K\n    const _thetaDecay = 0.3;\n    const _gammaHill = 0.8;\n    const _campTransformed = {};\n    _campNames.forEach(camp => {\n      const raw = _campSpend[camp];\n      const adstocked = _adstock(raw, _thetaDecay);\n      const maxAd = Math.max(...adstocked);\n      const K = maxAd > 0 ? maxAd * 0.5 : 1;\n      _campTransformed[camp] = _hill(adstocked, _gammaHill, K);\n    });\n\n    // --- Simplified Granger Causality via F-test ---\n    // Restricted model: leads_t ~ intercept + lag1_leads + lag7_leads\n    // Unrestricted model: leads_t ~ intercept + lag1_leads + lag7_leads + sum(spend_lags)\n    // F = ((RSS_r - RSS_u) / q) / (RSS_u / (n - p))\n    const _grangerResults = {};\n    const _minLag = 7;\n\n    if (_nLead > _minLag + 10) {\n      // Build restricted model (leads only)\n      const _yG = [], _XrG = [];\n      for (let t = _minLag; t < _nLead; t++) {\n        _yG.push(_leadVols[t]);\n        _XrG.push([1, _leadVols[t - 1], _leadVols[t - 7]]);\n      }\n      const _nG = _yG.length;\n      const _pR = 3;\n\n      // OLS for restricted\n      function _olsRSS(X, y) {\n        const p = X[0].length;\n        const Xt = Array.from({length: p}, (_, i) => X.map(r => r[i]));\n        const XtX = Array.from({length: p}, (_, i) =>\n          Array.from({length: p}, (_, j) => Xt[i].reduce((s, _, k) => s + Xt[i][k] * Xt[j][k], 0))\n        );\n        const XtY = Xt.map(col => col.reduce((s, v, k) => s + v * y[k], 0));\n        const inv = _matInv(XtX);\n        if (!inv) return { rss: Infinity, beta: null };\n        const beta = _matVecMul(inv, XtY);\n        let rss = 0;\n        for (let i = 0; i < y.length; i++) {\n          const pred = X[i].reduce((s, x, j) => s + x * beta[j], 0);\n          rss += Math.pow(y[i] - pred, 2);\n        }\n        return { rss, beta };\n      }\n\n      const _rssRestricted = _olsRSS(_XrG, _yG).rss;\n\n      _campNames.forEach(camp => {\n        const trans = _campTransformed[camp];\n        if (!trans) return;\n        const _XuG = [];\n        for (let t = _minLag; t < _nLead; t++) {\n          _XuG.push([1, _leadVols[t - 1], _leadVols[t - 7], trans[t], trans[Math.max(0, t - 1)]]);\n        }\n        const _pU = 5;\n        const _q = _pU - _pR;\n        const _rssU = _olsRSS(_XuG, _yG).rss;\n\n        if (_rssU < _rssRestricted && _rssU > 0) {\n          const _fStat = ((_rssRestricted - _rssU) / _q) / (_rssU / (_nG - _pU));\n          _grangerResults[camp] = {\n            f_statistic: Math.round(_fStat * 100) / 100,\n            rss_restricted: Math.round(_rssRestricted),\n            rss_unrestricted: Math.round(_rssU),\n            rss_improvement_pct: Math.round((_rssRestricted - _rssU) / _rssRestricted * 10000) / 100,\n            likely_causal: _fStat > 3.0\n          };\n        } else {\n          _grangerResults[camp] = { f_statistic: 0, likely_causal: false, rss_improvement_pct: 0 };\n        }\n      });\n\n      // --- Ridge Regression for Attribution ---\n      // y = intercept + sum(beta_i * transformed_spend_i) + lag_controls\n      // (X'X + lambda*I)^-1 X'y\n      const _lambda = 10;\n      const _attrCamps = _campNames.filter(c => _grangerResults[c] && _grangerResults[c].rss_improvement_pct > 0);\n\n      if (_attrCamps.length > 0) {\n        const _yA = [], _XA = [];\n        for (let t = _minLag; t < _nLead; t++) {\n          const row = [1, _leadVols[t - 1], _leadVols[t - 7]];\n          _attrCamps.forEach(c => row.push(_campTransformed[c][t]));\n          _XA.push(row);\n          _yA.push(_leadVols[t]);\n        }\n        const _pA = _XA[0].length;\n        const _XtA = Array.from({length: _pA}, (_, i) => _XA.map(r => r[i]));\n        const _XtXA = Array.from({length: _pA}, (_, i) =>\n          Array.from({length: _pA}, (_, j) =>\n            _XtA[i].reduce((s, _, k) => s + _XtA[i][k] * _XtA[j][k], 0) + (i === j && i >= 3 ? _lambda : 0)\n          )\n        );\n        const _XtYA = _XtA.map(col => col.reduce((s, v, k) => s + v * _yA[k], 0));\n        const _invA = _matInv(_XtXA);\n\n        if (_invA) {\n          const _betaA = _matVecMul(_invA, _XtYA);\n          const _campCoefs = _attrCamps.map((c, i) => ({\n            campaign: c,\n            coefficient: Math.round(_betaA[3 + i] * 1000) / 1000,\n            granger_f: _grangerResults[c].f_statistic,\n            likely_causal: _grangerResults[c].likely_causal,\n            rss_improvement_pct: _grangerResults[c].rss_improvement_pct\n          }));\n          _campCoefs.sort((a, b) => Math.abs(b.coefficient) - Math.abs(a.coefficient));\n\n          // Total variance explained by spend vs autoregressive\n          let _rssBase = 0, _rssFull = 0;\n          for (let t = 0; t < _yA.length; t++) {\n            const predBase = _XA[t][0] * _betaA[0] + _XA[t][1] * _betaA[1] + _XA[t][2] * _betaA[2];\n            const predFull = _XA[t].reduce((s, x, j) => s + x * _betaA[j], 0);\n            _rssBase += Math.pow(_yA[t] - predBase, 2);\n            _rssFull += Math.pow(_yA[t] - predFull, 2);\n          }\n          const _spendContrib = _rssBase > 0 ? Math.round((_rssBase - _rssFull) / _rssBase * 10000) / 100 : 0;\n\n          // HHI concentration index\n          const _shares = investment.campaigns.map(c => c.pct_of_total / 100);\n          const _hhi = Math.round(_shares.reduce((s, sh) => s + sh * sh, 0) * 10000) / 10000;\n\n          investment.mmm = {\n            available: true,\n            method: 'Ridge_Adstock_Hill',\n            adstock_theta: _thetaDecay,\n            hill_gamma: _gammaHill,\n            ridge_lambda: _lambda,\n            hhi_index: _hhi,\n            hhi_label: _hhi > 0.25 ? 'alta_concentracion' : _hhi > 0.15 ? 'moderada' : 'diversificada',\n            spend_variance_contribution_pct: _spendContrib,\n            campaign_attribution: _campCoefs,\n            granger_results: _grangerResults,\n            causal_campaigns: _campCoefs.filter(c => c.likely_causal).map(c => c.campaign),\n            non_causal_campaigns: _campCoefs.filter(c => !c.likely_causal).map(c => c.campaign),\n            recommendation: _hhi > 0.25\n              ? 'Alta concentracion de gasto (HHI=' + _hhi + '). Diversificar para reducir riesgo.'\n              : 'Concentracion de gasto aceptable (HHI=' + _hhi + ').'\n          };\n        }\n      }\n\n      if (!investment.mmm.available) {\n        investment.mmm = {\n          available: false,\n          reason: 'Datos insuficientes: se necesitan >= 7 dias de gasto diario por campana con variacion',\n          hhi_index: null\n        };\n        const _shares = investment.campaigns.map(c => (c.pct_of_total || 0) / 100);\n        investment.mmm.hhi_index = Math.round(_shares.reduce((s, sh) => s + sh * sh, 0) * 10000) / 10000;\n        investment.mmm.hhi_label = investment.mmm.hhi_index > 0.25 ? 'alta_concentracion' : investment.mmm.hhi_index > 0.15 ? 'moderada' : 'diversificada';\n      }\n    }\n  }\n}\n\n\n// --- PREDICTION ENGINE V3 ---\n// Multi-model forecasting with rolling backtest, MASE selection, empirical intervals.\n// Primary source: src.llegadas. projections/ema are auxiliary cross-checks only.\n\nconst predictionV2 = { mode: 'unavailable' };\n\nif (src.llegadas.length >= 14) {\n  const _sorted = [...src.llegadas].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));\n  const _dates = _sorted.map(r => new Date(r.fecha));\n  const _vols = _sorted.map(r => parseInt(r.contactos) || 0);\n  const _n = _vols.length;\n\n  const _volMean = _vols.reduce((a, b) => a + b, 0) / _n;\n  const _volVar = _vols.reduce((s, v) => s + Math.pow(v - _volMean, 2), 0) / _n;\n  const _volStd = Math.sqrt(_volVar);\n  const _volCV = _volMean > 0 ? _volStd / _volMean : 0;\n\n  predictionV2.volatility = {\n    mean: Math.round(_volMean * 100) / 100,\n    stddev: Math.round(_volStd * 100) / 100,\n    cv_pct: Math.round(_volCV * 10000) / 100,\n    label: _volCV < 0.15 ? 'muy_estable' : _volCV < 0.3 ? 'estable' : _volCV < 0.5 ? 'moderada' : 'alta'\n  };\n\n  // Day-of-week seasonal indices\n  const _dowS = [0,0,0,0,0,0,0], _dowC = [0,0,0,0,0,0,0];\n  for (let i = 0; i < _n; i++) { const d = _dates[i].getDay(); _dowS[d] += _vols[i]; _dowC[d]++; }\n  const _dowA = _dowS.map((s, i) => _dowC[i] > 0 ? s / _dowC[i] : _volMean);\n  const _dowGM = _dowA.reduce((a, b) => a + b, 0) / 7;\n  const _sIdx = _dowA.map(a => _dowGM > 0 ? a / _dowGM : 1);\n\n  // ---- Model definitions (all pure JS, no imports) ----\n  function _mMean7(h, idx) {\n    if (idx < 7) return null;\n    return h.slice(idx - 7, idx).reduce((a, b) => a + b, 0) / 7;\n  }\n  function _mSNaive(h, idx) {\n    return idx >= 7 ? h[idx - 7] : null;\n  }\n  function _mEWMA(h, idx) {\n    if (idx < 2) return null;\n    let e = h[0]; const alpha = 0.3;\n    for (let i = 1; i < idx; i++) e = alpha * h[i] + (1 - alpha) * e;\n    return e;\n  }\n  function _mTheta(h, idx, ds, si) {\n    if (idx < 14) return null;\n    const w = h.slice(0, idx);\n    const dw = w.map((v, i) => { const d = ds[i].getDay(); return si[d] > 0 ? v / si[d] : v; });\n    const wn = dw.length;\n    let sx = 0, sy = 0, sxy = 0, sx2 = 0;\n    for (let i = 0; i < wn; i++) { sx += i; sy += dw[i]; sxy += i * dw[i]; sx2 += i * i; }\n    const sl = (wn * sxy - sx * sy) / (wn * sx2 - sx * sx || 1);\n    const ic = (sy - sl * sx) / wn;\n    const tz = ic + sl * wn;\n    let ses = dw[0]; const sa = 0.2;\n    for (let i = 1; i < wn; i++) ses = sa * dw[i] + (1 - sa) * ses;\n    const combined = (tz + ses) / 2;\n    const _tgtDate = idx < ds.length ? ds[idx] : new Date(ds[ds.length - 1].getTime() + 86400000);\n    return combined * si[_tgtDate.getDay()];\n  }\n  function _mTSBlend(h, idx, ds, si) {\n    if (idx < 7) return null;\n    const r3 = idx >= 3 ? h.slice(idx - 3, idx).reduce((a, b) => a + b, 0) / 3 : h[idx - 1];\n    const _bDate = idx < ds.length ? ds[idx] : new Date(ds[ds.length - 1].getTime() + 86400000);\n    return r3 * si[_bDate.getDay()];\n  }\n\n  // --- Fourier Harmonic Regression (sin/cos + lag7 + OLS normal equations) ---\n  function _mFourier(h, idx, ds) {\n    if (idx < 14) return null;\n    const P = 7, K = 2;\n    const rows = [];\n    const yVec = [];\n    for (let t = 7; t < idx; t++) {\n      const dow = ds[t].getDay();\n      rows.push([\n        1,\n        Math.sin(2 * Math.PI * 1 * dow / P),\n        Math.cos(2 * Math.PI * 1 * dow / P),\n        Math.sin(2 * Math.PI * 2 * dow / P),\n        Math.cos(2 * Math.PI * 2 * dow / P),\n        h[t - 7]\n      ]);\n      yVec.push(h[t]);\n    }\n    if (rows.length < 10) return null;\n    const nf = 6;\n    const Xt = Array.from({length: nf}, (_, i) => rows.map(r => r[i]));\n    const XtX = Array.from({length: nf}, (_, i) =>\n      Array.from({length: nf}, (_, j) =>\n        Xt[i].reduce((s, _, k) => s + Xt[i][k] * Xt[j][k], 0)\n      )\n    );\n    const XtY = Xt.map(col => col.reduce((s, v, k) => s + v * yVec[k], 0));\n    const inv = _matInv(XtX);\n    if (!inv) return null;\n    const beta = _matVecMul(inv, XtY);\n    const _fDate = idx < ds.length ? ds[idx] : new Date(ds[ds.length - 1].getTime() + 86400000);\n    const tgtDow = _fDate.getDay();\n    const xNew = [\n      1,\n      Math.sin(2 * Math.PI * 1 * tgtDow / P),\n      Math.cos(2 * Math.PI * 1 * tgtDow / P),\n      Math.sin(2 * Math.PI * 2 * tgtDow / P),\n      Math.cos(2 * Math.PI * 2 * tgtDow / P),\n      h[idx - 7]\n    ];\n    return xNew.reduce((s, x, i) => s + x * beta[i], 0);\n  }\n\n  // --- Holt-Winters Additive (level + trend + weekly seasonality) ---\n  function _mHW(h, idx) {\n    if (idx < 14) return null;\n    const P = 7;\n    const w = h.slice(0, idx);\n    const wn = w.length;\n    const fw = w.slice(0, P);\n    let L = fw.reduce((a, b) => a + b, 0) / P;\n    let T = 0;\n    if (wn >= 2 * P) {\n      const sw = w.slice(P, 2 * P);\n      T = (sw.reduce((a, b) => a + b, 0) / P - L) / P;\n    }\n    const S = fw.map(v => v - L);\n    const alpha = 0.3, beta2 = 0.1, gamma2 = 0.2;\n    for (let t = P; t < wn; t++) {\n      const si = t % P;\n      const y = w[t];\n      const Ln = alpha * (y - S[si]) + (1 - alpha) * (L + T);\n      const Tn = beta2 * (Ln - L) + (1 - beta2) * T;\n      S[si] = gamma2 * (y - Ln) + (1 - gamma2) * S[si];\n      L = Ln; T = Tn;\n    }\n    return L + T + S[wn % P];\n  }\n\n  const _models = [\n    { name: 'mean_7d',           fn: (h, i) => _mMean7(h, i) },\n    { name: 'seasonal_naive',    fn: (h, i) => _mSNaive(h, i) },\n    { name: 'ewma',              fn: (h, i) => _mEWMA(h, i) },\n    { name: 'theta_lite',        fn: (h, i) => _mTheta(h, i, _dates, _sIdx) },\n    { name: 'trend_season',      fn: (h, i) => _mTSBlend(h, i, _dates, _sIdx) },\n    { name: 'fourier_regression', fn: (h, i) => _mFourier(h, i, _dates) },\n    { name: 'holt_winters',      fn: (h, i) => _mHW(h, i) }\n  ];\n\n  // ---- Rolling backtest (last 14 days, 1-step-ahead) ----\n  const _btWin = Math.min(14, _n - 14);\n  const _btStart = _n - _btWin;\n  const _mRes = _models.map(m => ({ name: m.name, errors: [], abs: [], preds: [], acts: [] }));\n  const _naiveErr = [];\n\n  for (let i = _btStart; i < _n; i++) {\n    if (i >= 7) _naiveErr.push(Math.abs(_vols[i] - _vols[i - 7]));\n    for (let mi = 0; mi < _models.length; mi++) {\n      const p = _models[mi].fn(_vols, i);\n      if (p !== null && !isNaN(p)) {\n        const e = _vols[i] - p;\n        _mRes[mi].errors.push(e);\n        _mRes[mi].abs.push(Math.abs(e));\n        _mRes[mi].preds.push(Math.round(p));\n        _mRes[mi].acts.push(_vols[i]);\n      }\n    }\n  }\n\n  const _naiveMAE = _naiveErr.length > 0 ? _naiveErr.reduce((a, b) => a + b, 0) / _naiveErr.length : _volStd;\n\n  _mRes.forEach(mr => {\n    if (mr.abs.length > 0) {\n      mr.mae  = mr.abs.reduce((a, b) => a + b, 0) / mr.abs.length;\n      mr.mase = _naiveMAE > 0 ? mr.mae / _naiveMAE : 999;\n      mr.rmse = Math.sqrt(mr.errors.reduce((s, e) => s + e * e, 0) / mr.errors.length);\n    } else { mr.mae = 999; mr.mase = 999; mr.rmse = 999; }\n  });\n\n  const _ranked = [..._mRes].sort((a, b) => a.mase - b.mase);\n  const _best = _ranked[0];\n\n  // ---- Ensemble (inverse-MASE weighted, top 3) ----\n  const _top3 = _ranked.filter(m => m.mase < 999).slice(0, 3);\n  const _totalInv = _top3.reduce((s, m) => s + 1 / Math.max(m.mase, 0.01), 0);\n  const _ensW = _top3.map(m => ({\n    name: m.name,\n    weight: Math.round((1 / Math.max(m.mase, 0.01)) / _totalInv * 1000) / 1000\n  }));\n\n  const _fcasts = {};\n  _models.forEach(m => {\n    const p = m.fn(_vols, _n);\n    if (p !== null && !isNaN(p)) _fcasts[m.name] = Math.round(Math.max(0, p));\n  });\n\n  let _ensFc = 0;\n  _ensW.forEach(ew => { if (_fcasts[ew.name] !== undefined) _ensFc += _fcasts[ew.name] * ew.weight; });\n  _ensFc = Math.round(Math.max(0, _ensFc));\n\n  const _bestFc = _fcasts[_best.name] || _ensFc;\n  const _useEns = _top3.length >= 2 && (_top3[1].mase / _top3[0].mase) < 1.2;\n  const _selFc = _useEns ? _ensFc : _bestFc;\n  const _selMethod = _useEns ? 'ensemble_weighted' : _best.name;\n\n  // ---- Empirical intervals from backtest residuals ----\n  const _residuals = _useEns\n    ? _mRes.filter(m => _ensW.some(ew => ew.name === m.name)).flatMap(m => m.abs)\n    : (_mRes.find(m => m.name === _best.name) || _mRes[0]).abs;\n\n  const _sortedR = [..._residuals].sort((a, b) => a - b);\n\n  function _quantile(sorted, q) {\n    if (sorted.length === 0) return _volStd;\n    const pos = (sorted.length - 1) * q;\n    const lo = Math.floor(pos), hi = Math.ceil(pos);\n    return lo === hi ? sorted[lo] : sorted[lo] + (pos - lo) * (sorted[hi] - sorted[lo]);\n  }\n\n  const _q50 = _quantile(_sortedR, 0.50);\n  const _q80 = _quantile(_sortedR, 0.80);\n  const _q95 = _quantile(_sortedR, 0.95);\n\n  const _intervals = {\n    band_50: { low: Math.round(Math.max(0, _selFc - _q50)), high: Math.round(_selFc + _q50) },\n    band_80: { low: Math.round(Math.max(0, _selFc - _q80)), high: Math.round(_selFc + _q80) },\n    band_95: { low: Math.round(Math.max(0, _selFc - _q95)), high: Math.round(_selFc + _q95) },\n    residual_points: _sortedR.length\n  };\n\n  const _bestRes = _mRes.find(m => m.name === _best.name) || _mRes[0];\n  let _covHits = 0;\n  for (let i = 0; i < _bestRes.preds.length; i++) {\n    if (Math.abs(_bestRes.acts[i] - _bestRes.preds[i]) <= _q80) _covHits++;\n  }\n  const _empCov = _bestRes.preds.length > 0 ? Math.round(_covHits / _bestRes.preds.length * 100) : 0;\n\n  // --- Adaptive Conformal Inference (ACI) within backtest window ---\n  let _aciAlpha = 0.2;\n  const _aciGamma = 0.05;\n  const _aciTargetAlpha = 0.2;\n  const _aciResiduals = [..._sortedR];\n\n  for (let bi = 0; bi < _bestRes.preds.length; bi++) {\n    const _aciQ = _quantile(_aciResiduals, 1 - _aciAlpha);\n    const _aciErr = Math.abs(_bestRes.acts[bi] - _bestRes.preds[bi]) > _aciQ ? 1 : 0;\n    _aciAlpha = Math.max(0.01, Math.min(0.5, _aciAlpha + _aciGamma * (_aciTargetAlpha - _aciErr)));\n  }\n\n  const _aciQ80 = _quantile(_sortedR, 1 - _aciAlpha);\n  const _aciIntervals = {\n    aci_alpha: Math.round(_aciAlpha * 1000) / 1000,\n    aci_band: { low: Math.round(Math.max(0, _selFc - _aciQ80)), high: Math.round(_selFc + _aciQ80) },\n    aci_width_pct: _selFc > 0 ? Math.round(2 * _aciQ80 / _selFc * 10000) / 100 : 0,\n    aci_vs_fixed: Math.round((2 * _aciQ80 - (_intervals.band_80.high - _intervals.band_80.low)) / Math.max(1, _intervals.band_80.high - _intervals.band_80.low) * 10000) / 100\n  };\n\n  // ---- Forecast horizons ----\n  const _todayDow = new Date().getDay();\n  const _horizons = {};\n  _horizons.next_1d = {\n    forecast: _selFc, band_low: _intervals.band_80.low, band_high: _intervals.band_80.high,\n    confidence_pct: _empCov, method: _selMethod\n  };\n  let _s7 = 0; for (let d = 0; d < 7; d++) _s7 += _selFc * _sIdx[(_todayDow + d + 1) % 7];\n  _s7 = Math.round(_s7);\n  const _u7 = _q80 * Math.sqrt(7);\n  _horizons.next_7d = {\n    forecast: _s7, band_low: Math.round(Math.max(0, _s7 - _u7)),\n    band_high: Math.round(_s7 + _u7), method: _selMethod + '+seasonal'\n  };\n  let _s14 = 0; for (let d = 0; d < 14; d++) _s14 += _selFc * _sIdx[(_todayDow + d + 1) % 7];\n  _s14 = Math.round(_s14);\n  const _u14 = _q80 * Math.sqrt(14);\n  _horizons.next_14d = {\n    forecast: _s14, band_low: Math.round(Math.max(0, _s14 - _u14)),\n    band_high: Math.round(_s14 + _u14), method: _selMethod + '+seasonal'\n  };\n\n  // ---- Mode and confidence from backtest quality ----\n  const _bMASE = _best.mase;\n  if (_bMASE < 0.8) {\n    predictionV2.mode = 'model'; predictionV2.confidence = 'alta';\n    predictionV2.label = 'Forecast favorable vs baseline (' + _selMethod + ', MASE: ' + (Math.round(_bMASE * 100) / 100) + ')';\n  } else if (_bMASE < 1.0) {\n    predictionV2.mode = 'weak_model'; predictionV2.confidence = 'media';\n    predictionV2.label = 'Forecast orientativo (' + _selMethod + ', MASE: ' + (Math.round(_bMASE * 100) / 100) + ')';\n  } else {\n    predictionV2.mode = 'observed_fallback'; predictionV2.confidence = 'baja';\n    predictionV2.label = 'Forecast limitado - modelos no superan baseline (' + _selMethod + ', MASE: ' + (Math.round(_bMASE * 100) / 100) + ')';\n    predictionV2.warning = 'Ningun modelo supera el baseline estacional (MASE >= 1.0). Se usa ' + _best.name + ' con confianza baja.';\n  }\n\n  predictionV2.recommended_value = _selFc;\n  predictionV2.model_name = _selMethod;\n  predictionV2.observed_forecast = {\n    next_day: _selFc, band_low: _intervals.band_80.low, band_mid: _selFc,\n    band_high: _intervals.band_80.high, next_7d_total: _horizons.next_7d.forecast, method: _selMethod\n  };\n  predictionV2.forecast_horizons = _horizons;\n  predictionV2.intervals = _intervals;\n  predictionV2.empirical_coverage_pct = _empCov;\n  predictionV2.backtest = {\n    window_days: _btWin, naive_mae: Math.round(_naiveMAE * 100) / 100,\n    models: _ranked.map(m => ({ name: m.name, mae: Math.round(m.mae * 100) / 100, mase: Math.round(m.mase * 1000) / 1000, rmse: Math.round(m.rmse * 100) / 100 })),\n    selected: _selMethod, ensemble_weights: _useEns ? _ensW : null\n  };\n  predictionV2.seasonal_indices = _sIdx.map((s, i) => ({ day: ['Dom','Lun','Mar','Mie','Jue','Vie','Sab'][i], index: Math.round(s * 1000) / 1000 }));\n  predictionV2.diagnostics = {\n    total_history_days: _n, backtest_days: _btWin, best_model: _best.name,\n    best_mase: Math.round(_best.mase * 1000) / 1000, ensemble_used: _useEns,\n    coverage_80: _empCov,\n    interval_width_pct: _selFc > 0 ? Math.round((_intervals.band_80.high - _intervals.band_80.low) / _selFc * 10000) / 100 : 0\n  };\n  if (projections.p50 > 0) {\n    predictionV2.ema_crosscheck = {\n      p5: projections.p5, p50: projections.p50, p95: projections.p95,\n      within_range: _selFc >= projections.p5 && _selFc <= projections.p95\n    };\n  }\n\n\n  // --- CUSUM Changepoint Detection ---\n  const _cusumData = { detected: false };\n  if (_n >= 14) {\n    const _cusTarget = _volMean;\n    let _cusPos = 0, _cusNeg = 0;\n    const _cusK = 0.5 * _volStd;\n    const _cusH = 4 * _volStd;\n    let _cusChangeIdx = -1, _cusDir = '';\n\n    for (let ci = 0; ci < _n; ci++) {\n      _cusPos = Math.max(0, _cusPos + _vols[ci] - _cusTarget - _cusK);\n      _cusNeg = Math.max(0, _cusNeg - _vols[ci] + _cusTarget - _cusK);\n      if (_cusPos > _cusH) { _cusChangeIdx = ci; _cusDir = 'upward'; _cusPos = 0; }\n      if (_cusNeg > _cusH) { _cusChangeIdx = ci; _cusDir = 'downward'; _cusNeg = 0; }\n    }\n\n    if (_cusChangeIdx >= _n - 10) {\n      _cusumData.detected = true;\n      _cusumData.change_date = _dates[_cusChangeIdx].toISOString().split('T')[0];\n      _cusumData.direction = _cusDir;\n      const _preCus = _vols.slice(Math.max(0, _cusChangeIdx - 7), _cusChangeIdx);\n      const _postCus = _vols.slice(_cusChangeIdx);\n      _cusumData.pre_mean = _preCus.length > 0 ? Math.round(_preCus.reduce((a, b) => a + b, 0) / _preCus.length) : 0;\n      _cusumData.post_mean = _postCus.length > 0 ? Math.round(_postCus.reduce((a, b) => a + b, 0) / _postCus.length) : 0;\n      _cusumData.shift_pct = _cusumData.pre_mean > 0 ? Math.round((_cusumData.post_mean - _cusumData.pre_mean) / _cusumData.pre_mean * 100) : 0;\n      // v6 fix: override CUSUM label with actual mean comparison\n      if (_cusumData.post_mean > _cusumData.pre_mean) _cusumData.direction = 'upward';\n      else if (_cusumData.post_mean < _cusumData.pre_mean) _cusumData.direction = 'downward';\n    }\n  }\n  predictionV2.changepoint = _cusumData;\n  predictionV2.aci = _aciIntervals;\n\n  // v6: unified prediction quality assessment (MASE primary, R² secondary)\n  var _pqLabel = 'sin_evaluacion';\n  var _pqNote = '';\n  if (_best && _best.mase !== undefined) {\n    if (_best.mase < 0.75) {\n      _pqLabel = 'superior';\n      _pqNote = 'MASE ' + (Math.round(_best.mase * 1000) / 1000) + ' supera baseline. Forecast confiable independientemente de R2.';\n    } else if (_best.mase < 1.0) {\n      _pqLabel = 'aceptable';\n      _pqNote = 'MASE ' + (Math.round(_best.mase * 1000) / 1000) + ' agrega valor vs naive, pero con margen limitado.';\n    } else {\n      _pqLabel = 'insuficiente';\n      _pqNote = 'MASE >= 1.0: modelo no supera baseline estacional.';\n    }\n  }\n  predictionV2.quality_label = _pqLabel;\n  predictionV2.quality_note = _pqNote;\n\n} else if (src.llegadas.length >= 7) {\n  const _sorted = [...src.llegadas].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));\n  const _vols = _sorted.map(r => parseInt(r.contactos) || 0);\n  const _r7 = _vols.slice(-7);\n  const _avg = _r7.reduce((a, b) => a + b, 0) / 7;\n  const _vm = _vols.reduce((a, b) => a + b, 0) / _vols.length;\n  const _vs = Math.sqrt(_vols.reduce((s, v) => s + Math.pow(v - _vm, 2), 0) / _vols.length);\n  const _vc = _vm > 0 ? _vs / _vm : 0;\n  predictionV2.mode = 'observed_fallback'; predictionV2.confidence = 'baja';\n  predictionV2.label = 'Solo observacion reciente (historia insuficiente para backtest)';\n  predictionV2.recommended_value = Math.round(_avg); predictionV2.model_name = 'mean_7d';\n  predictionV2.warning = 'Solo ' + _vols.length + ' dias de historia. Se necesitan >= 14 para backtest.';\n  predictionV2.volatility = { mean: Math.round(_vm * 100) / 100, stddev: Math.round(_vs * 100) / 100, cv_pct: Math.round(_vc * 10000) / 100, label: _vc < 0.15 ? 'muy_estable' : _vc < 0.3 ? 'estable' : _vc < 0.5 ? 'moderada' : 'alta' };\n  predictionV2.observed_forecast = { next_day: Math.round(_avg), band_low: Math.round(Math.max(0, _avg - 1.5 * _vs)), band_mid: Math.round(_avg), band_high: Math.round(_avg + 1.5 * _vs), next_7d_total: Math.round(_avg * 7), method: 'mean_7d' };\n  predictionV2.diagnostics = { total_history_days: _vols.length, backtest_days: 0, best_model: 'mean_7d', best_mase: null, ensemble_used: false, fallback_reason: 'insufficient_history' };\n}\n\n\n\n// === Research v3: Top-level derived metrics ===\n\n// Global conversion pct\nif (funnel.markov_analysis && funnel.markov_analysis.available && funnel.markov_analysis.entry_state_conversion !== null) {\n  funnel.global_conversion_pct = Math.round(funnel.markov_analysis.entry_state_conversion * 10000) / 100;\n} else {\n  funnel.global_conversion_pct = null;\n}\n\n// Revenue at Risk from top leaks\nconst _rar_ticket = 500;\nif (funnel.available && funnel.top_leaks && funnel.global_conversion_pct !== null) {\n  funnel.revenue_at_risk = funnel.top_leaks.slice(0, 5).map(function(_lk) {\n    var _potConv = _lk.cnt * (funnel.global_conversion_pct / 100);\n    return { from: _lk.from, to: _lk.to, leads_lost: _lk.cnt, pct: _lk.pct, revenue_at_risk: Math.round(_potConv * _rar_ticket) };\n  });\n  funnel.total_revenue_at_risk = funnel.revenue_at_risk.reduce(function(_s, _r) { return _s + _r.revenue_at_risk; }, 0);\n}\n\n// Little's Law\nvar littles_law = { available: false };\nif (operations.available && funnel.markov_analysis && funnel.markov_analysis.available && funnel.markov_analysis.entry_expected_steps) {\n  var _ll_lambda = operations.avg_daily;\n  var _ll_W = funnel.markov_analysis.entry_expected_steps;\n  var _ll_L = Math.round(_ll_lambda * _ll_W);\n  var _ll_cap = 4000;\n  littles_law = {\n    available: true,\n    lambda: _ll_lambda,\n    W_steps: _ll_W,\n    L_wip: _ll_L,\n    max_capacity: _ll_cap,\n    capacity_utilization_pct: Math.round(_ll_L / _ll_cap * 10000) / 100,\n    saturated: _ll_L > _ll_cap\n  };\n}\n\n// CPL implicit (cross-source: inversiones + llegadas)\nvar cpl_analysis = { available: false };\nif (src.inversiones.length > 0 && src.llegadas.length > 0) {\n  var _cpl_totalSpend = src.inversiones.reduce(function(_s, _r) { return _s + (parseFloat(_r.spend) || 0); }, 0);\n  var _cpl_totalLeads = src.llegadas.reduce(function(_s, _r) { return _s + (parseInt(_r.contactos) || 0); }, 0);\n  if (_cpl_totalLeads > 0 && _cpl_totalSpend > 0) {\n    cpl_analysis.available = true;\n    cpl_analysis.global_cpl = Math.round(_cpl_totalSpend / _cpl_totalLeads * 100) / 100;\n    cpl_analysis.total_spend = _cpl_totalSpend;\n    cpl_analysis.total_leads = _cpl_totalLeads;\n    var _cpl_byDate = {};\n    src.inversiones.forEach(function(_r) {\n      var _f = _r.fecha_gasto || _r.fecha || null;\n      if (!_f) return;\n      var _d = typeof _f === 'string' ? _f.split('T')[0] : new Date(_f).toISOString().split('T')[0];\n      _cpl_byDate[_d] = (_cpl_byDate[_d] || 0) + (parseFloat(_r.spend) || 0);\n    });\n    var _leads_byDate = {};\n    src.llegadas.forEach(function(_r) {\n      var _d = typeof _r.fecha === 'string' ? _r.fecha.split('T')[0] : new Date(_r.fecha).toISOString().split('T')[0];\n      _leads_byDate[_d] = parseInt(_r.contactos) || 0;\n    });\n    var _cpl_daily = [];\n    Object.keys(_cpl_byDate).forEach(function(_d) {\n      if (_leads_byDate[_d] && _leads_byDate[_d] > 0) _cpl_daily.push({ fecha: _d, cpl: _cpl_byDate[_d] / _leads_byDate[_d] });\n    });\n    _cpl_daily.sort(function(a, b) { return a.fecha.localeCompare(b.fecha); });\n    if (_cpl_daily.length >= 14) {\n      var _cpl_l7 = _cpl_daily.slice(-7), _cpl_p7 = _cpl_daily.slice(-14, -7);\n      var _cpl_a7 = _cpl_l7.reduce(function(_s, _c) { return _s + _c.cpl; }, 0) / 7;\n      var _cpl_ap7 = _cpl_p7.reduce(function(_s, _c) { return _s + _c.cpl; }, 0) / 7;\n      cpl_analysis.cpl_7d_avg = Math.round(_cpl_a7 * 100) / 100;\n      cpl_analysis.cpl_prev_7d_avg = Math.round(_cpl_ap7 * 100) / 100;\n      cpl_analysis.cpl_wow_change_pct = _cpl_ap7 > 0 ? Math.round((_cpl_a7 - _cpl_ap7) / _cpl_ap7 * 10000) / 100 : 0;\n    }\n  }\n}\n\n// Lead CV surfaced at operations level\nif (predictionV2.volatility) {\n  operations.lead_cv_pct = predictionV2.volatility.cv_pct;\n  operations.lead_cv_label = predictionV2.volatility.label;\n}\n\n// v7: Expose raw data for dashboard visualization\nconst raw_time_series = src.llegadas.length > 0 \n  ? [...src.llegadas].sort((a, b) => new Date(a.fecha) - new Date(b.fecha)).map(r => ({\n      date: typeof r.fecha === 'string' ? r.fecha.split('T')[0] : new Date(r.fecha).toISOString().split('T')[0],\n      value: parseInt(r.contactos) || 0\n    }))\n  : [];\n\nconst raw_hourly = src.horarios.length > 0 ? src.horarios : [];\n\nconst raw_transitions = src.markov.length > 0 ? src.markov.map(r => ({\n  from: r.status_from || '',\n  to: r.status_to || '',\n  pct: parseFloat(r[Object.keys(r).find(k => ['transition_pct','pct','percentage','percent'].includes(k)) || 'pct']) || 0,\n  cnt: parseInt(r[Object.keys(r).find(k => ['cnt','count','total'].includes(k)) || 'cnt']) || 0\n})) : [];\n\nconst raw_daily_spend = src.inversiones.length > 0 ? src.inversiones.map(r => ({\n  campaign: r.campaign || 'unknown',\n  date: r.fecha_gasto || r.fecha || null,\n  spend: parseFloat(r.spend) || 0\n})) : [];\n\nreturn [{ json: {\n  generated_at: new Date().toISOString(),\n  data_quality: quality,\n  projections,\n  funnel,\n  operations,\n  investment,\n  predictionV2,\n  littles_law,\n  cpl_analysis,\n  raw_time_series,\n  raw_hourly,\n  raw_transitions,\n  raw_daily_spend,\n  _fb_errors: _fb_errors\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        1200
+      ],
+      "id": "a0000001-0000-0000-0000-000000000030",
+      "name": "FactsBuilder"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === RULES ENGINE v6 — Explicit feeders/fugas semantics, RPN scoring, System Health Score ===\n\nvar facts = $input.first().json;\nvar p = facts.projections || {};\nvar f = facts.funnel || {};\nvar o = facts.operations || {};\nvar inv = facts.investment || {};\nvar pv2 = facts.predictionV2 || { mode: 'unavailable' };\nvar ll = facts.littles_law || {};\nvar cpl = facts.cpl_analysis || {};\n\n// --- Load thresholds from RuntimeConfig (with defaults) ---\nvar cfg = {};\ntry { cfg = $('RuntimeConfig').first().json; } catch(e) { cfg = {}; }\n\nvar TH = {\n  conversion_info:     cfg.conversion_info     || 3.0,\n  conversion_warning:  cfg.conversion_warning  || 2.5,\n  conversion_critical: cfg.conversion_critical || 1.5,\n  cv_warning:          cfg.cv_warning          || 30,\n  cv_critical:         cfg.cv_critical         || 45,\n  mase_critical:       cfg.mase_critical       || 1.0,\n  mase_good:           cfg.mase_good           || 0.75,\n  coverage_floor:      cfg.coverage_floor      || 70,\n  hhi_warning:         cfg.hhi_warning         || 0.15,\n  hhi_critical:        cfg.hhi_critical        || 0.25,\n  ticket_promedio:     cfg.ticket_promedio     || 500,\n  max_system_capacity: cfg.max_system_capacity || 4000,\n  overcontact_max:     cfg.overcontact_max     || 7,\n  step_cv_critical:    cfg.step_cv_critical    || 1.5,\n  cpl_wow_warning:     cfg.cpl_wow_warning     || 20,\n  rar_critical:        cfg.revenue_at_risk_critical || 5000,\n  trap_leads:          cfg.trap_threshold_leads || 200,\n  spread_alert_pct:    cfg.spread_alert_pct    || 80,\n  leak_critical_pct:   cfg.leak_critical_pct   || 25,\n  leak_warning_pct:    cfg.leak_warning_pct    || 10,\n  wow_drop:            cfg.wow_drop_warning    || -15,\n  wow_spike:           cfg.wow_spike_warning   || 30,\n  shs_green:           cfg.shs_green           || 80,\n  shs_yellow:          cfg.shs_yellow          || 65\n};\n\nvar alerts = [];\nvar actions = [];\nvar alertId = 0;\nfunction mkId() { return 'A' + String(++alertId).padStart(3,'0'); }\n\n// --- RPN helper: Severity(1-10) * Occurrence(1-10) * Detection(1-10) ---\nfunction rpn(s, o, d) { return s * o * d; }\nfunction rpnUrgency(score) {\n  if (score > 500) return 'immediate';\n  if (score > 300) return 'immediate';\n  if (score > 100) return 'this_week';\n  return 'this_month';\n}\nfunction rpnSeverity(score) {\n  if (score > 300) return 'critical';\n  if (score > 100) return 'warning';\n  return 'info';\n}\n\n// ==================================================================\n// CATEGORY 1: FUNNEL / CONVERSION (weight: highest)\n// ==================================================================\n\n// Rule 1: Global conversion vs benchmark\nif (f.global_conversion_pct !== undefined && f.global_conversion_pct !== null) {\n  var convPct = f.global_conversion_pct;\n  if (convPct < TH.conversion_critical) {\n    var _r = rpn(9, 8, 7);\n    alerts.push({ id: mkId(), severity: rpnSeverity(_r), cat: 'funnel', rpn_score: _r,\n      title: 'Conversion global critica: ' + convPct + '% (benchmark minimo: ' + TH.conversion_critical + '%)',\n      metric: 'global_conversion_pct', actual: convPct, threshold: TH.conversion_critical,\n      impact: 'Conversion por debajo del minimo viable para B2C. Deterioro severo del embudo.' });\n    actions.push({ id: mkId(), urgency: rpnUrgency(_r), action: 'Investigar causa de conversion en ' + convPct + '% y priorizar estados con mayor fuga',\n      reason: 'Conversion debajo de ' + TH.conversion_critical + '% benchmark B2C', evidence: 'Conversion global: ' + convPct + '%',\n      impact_est: 'Cada punto de conversion = ~' + Math.round(o.avg_daily * 30 * 0.01 * TH.ticket_promedio) + '$/mes adicional',\n      owner: 'RevOps Manager', horizon: '0-3 dias' });\n  } else if (convPct < TH.conversion_warning) {\n    var _r2 = rpn(6, 6, 6);\n    alerts.push({ id: mkId(), severity: rpnSeverity(_r2), cat: 'funnel', rpn_score: _r2,\n      title: 'Conversion global en zona de atencion: ' + convPct + '% (benchmark saludable: >' + TH.conversion_info + '%)',\n      metric: 'global_conversion_pct', actual: convPct, threshold: TH.conversion_warning,\n      impact: 'Acercandose al limite inferior del mercado B2C.' });\n  } else {\n    alerts.push({ id: mkId(), severity: 'info', cat: 'funnel', rpn_score: rpn(1,1,1),\n      title: 'Conversion global saludable: ' + convPct + '% (benchmark B2C: >' + TH.conversion_info + '%)',\n      metric: 'global_conversion_pct', actual: convPct, threshold: TH.conversion_info,\n      impact: 'Rendimiento en el percentil superior para servicios B2C.' });\n  }\n}\n\n// Rule 2: Funnel consistency (step variance)\nif (f.markov_analysis && f.markov_analysis.available && f.markov_analysis.entry_step_cv !== undefined) {\n  var stepCV = f.markov_analysis.entry_step_cv;\n  if (stepCV > TH.step_cv_critical) {\n    var _r3 = rpn(7, 7, 8);\n    alerts.push({ id: mkId(), severity: rpnSeverity(_r3), cat: 'funnel', rpn_score: _r3,\n      title: 'Embudo altamente inconsistente: CV de pasos = ' + stepCV + ' (umbral: ' + TH.step_cv_critical + ')',\n      metric: 'step_cv', actual: stepCV, threshold: TH.step_cv_critical,\n      impact: 'El ciclo de resolucion de leads tiene varianza extrema (~' + f.markov_analysis.entry_step_stddev + ' pasos de desviacion). Leads atrapados en ciclos iterativos.' });\n    actions.push({ id: mkId(), urgency: 'this_week', action: 'Revisar estados con mayor varianza de permanencia y estandarizar el proceso de avance',\n      reason: 'CV de pasos = ' + stepCV, evidence: 'Pasos esperados: ' + f.markov_analysis.entry_expected_steps + ' ± ' + f.markov_analysis.entry_step_stddev,\n      impact_est: 'Reducir varianza mejora predictibilidad del pipeline', owner: 'RevOps Manager', horizon: '1-2 semanas' });\n  }\n}\n\n// Rule 3: Revenue at Risk\nif (f.total_revenue_at_risk && f.total_revenue_at_risk > TH.rar_critical) {\n  var _r4 = rpn(9, 9, 6);\n  alerts.push({ id: mkId(), severity: rpnSeverity(_r4), cat: 'funnel', rpn_score: _r4,\n    title: 'Revenue at Risk: $' + f.total_revenue_at_risk.toLocaleString() + ' en fugas del embudo',\n    metric: 'total_revenue_at_risk', actual: f.total_revenue_at_risk, threshold: TH.rar_critical,\n    impact: 'Leads que se pierden en transiciones criticas representan $' + f.total_revenue_at_risk.toLocaleString() + ' de ingreso potencial no capturado.' });\n  if (f.revenue_at_risk && f.revenue_at_risk[0]) {\n    actions.push({ id: mkId(), urgency: rpnUrgency(_r4),\n      action: 'Priorizar reduccion de fuga en ' + f.revenue_at_risk[0].from + ' -> ' + f.revenue_at_risk[0].to + ' ($' + f.revenue_at_risk[0].revenue_at_risk.toLocaleString() + ' en riesgo)',\n      reason: 'Mayor revenue at risk en este punto', evidence: f.revenue_at_risk[0].leads_lost + ' leads, ' + f.revenue_at_risk[0].pct + '% de fuga',\n      impact_est: 'Reducir esta fuga 5pp = ~$' + Math.round(f.revenue_at_risk[0].revenue_at_risk * 0.05 / (f.revenue_at_risk[0].pct / 100) * 12) + '/ano',\n      owner: 'RevOps Manager', horizon: '0-3 dias' });\n  }\n}\n\n// Rule 4: Biggest leak (tiered)\nif (f.available && f.biggest_leak) {\n  if (f.biggest_leak.pct > TH.leak_critical_pct) {\n    var _r5 = rpn(10, 10, 5);\n    alerts.push({ id: mkId(), severity: rpnSeverity(_r5), cat: 'funnel', rpn_score: _r5,\n      title: 'Fuga critica: ' + f.biggest_leak.from + ' -> ' + f.biggest_leak.to + ' (' + f.biggest_leak.pct + '%)',\n      metric: 'biggest_leak_pct', actual: f.biggest_leak.pct, threshold: TH.leak_critical_pct,\n      impact: f.biggest_leak.cnt + ' leads se pierden en esta transicion' });\n    actions.push({ id: mkId(), urgency: 'immediate',\n      action: 'Investigar y corregir la fuga de ' + f.biggest_leak.from + ' a ' + f.biggest_leak.to,\n      reason: f.biggest_leak.cnt + ' leads perdidos (' + f.biggest_leak.pct + '%)',\n      evidence: 'Transicion ' + f.biggest_leak.from + '->' + f.biggest_leak.to + ': ' + f.biggest_leak.pct + '%',\n      impact_est: 'Reducir esta fuga 5pp = mas conversiones/mes', owner: 'RevOps Manager', horizon: '0-3 dias' });\n  } else if (f.biggest_leak.pct > TH.leak_warning_pct) {\n    var _r6 = rpn(6, 8, 5);\n    alerts.push({ id: mkId(), severity: rpnSeverity(_r6), cat: 'funnel', rpn_score: _r6,\n      title: 'Fuga significativa: ' + f.biggest_leak.from + ' -> ' + f.biggest_leak.to + ' (' + f.biggest_leak.pct + '%)',\n      metric: 'biggest_leak_pct', actual: f.biggest_leak.pct, threshold: TH.leak_warning_pct,\n      impact: f.biggest_leak.cnt + ' leads se pierden en esta transicion' });\n    actions.push({ id: mkId(), urgency: 'this_week',\n      action: 'Revisar por que leads van de ' + f.biggest_leak.from + ' a ' + f.biggest_leak.to + ' y reducir esta fuga',\n      reason: f.biggest_leak.cnt + ' leads perdidos',\n      evidence: 'Transicion ' + f.biggest_leak.from + '->' + f.biggest_leak.to + ': ' + f.biggest_leak.pct + '%',\n      impact_est: 'Cada punto de mejora recupera leads hacia conversion', owner: 'RevOps Manager', horizon: '1 semana' });\n  }\n}\n\n// Always report top 3 leaks and feeders as info context\nif (f.available && f.top_leaks) {\n  f.top_leaks.slice(0, 3).forEach(function(leak) {\n    alerts.push({ id: mkId(), severity: 'info', cat: 'funnel', rpn_score: rpn(1,1,1),\n      title: 'Fuga: ' + leak.from + ' -> ' + leak.to + ' (' + leak.pct + '%, ' + leak.cnt + ' leads)',\n      metric: 'leak_info', actual: leak.pct, threshold: 0, impact: leak.cnt + ' leads van a ' + leak.to });\n  });\n}\nif (f.available && f.feeders) {\n  f.feeders.slice(0, 3).forEach(function(fe) {\n    alerts.push({ id: mkId(), severity: 'info', cat: 'funnel', rpn_score: rpn(1,1,1),\n      title: 'Feeder a conversion: ' + fe.from + ' aporta ' + fe.pct + '% (' + fe.cnt + ' leads)',\n      metric: 'feeder_info', actual: fe.pct, threshold: 0, impact: fe.cnt + ' leads llegan a conversion desde ' + fe.from });\n  });\n}\n\n// Rule 5: Trap states\nif (f.available && f.trap_states) {\n  f.trap_states.forEach(function(t) {\n    if (t.leads > 50) {\n      var _rT = t.leads > TH.trap_leads ? rpn(8, 9, 7) : rpn(5, 7, 6);\n      alerts.push({ id: mkId(), severity: rpnSeverity(_rT), cat: 'funnel', rpn_score: _rT,\n        title: 'Estado trampa: ' + t.state + ' (' + t.self_pct + '% auto-loop, ' + t.leads + ' leads)',\n        metric: 'trap_state', actual: t.leads, threshold: 50,\n        impact: t.leads + ' leads atrapados sin avanzar en ' + t.state });\n      actions.push({ id: mkId(), urgency: rpnUrgency(_rT),\n        action: 'Revisar ' + t.leads + ' leads atrapados en \"' + t.state + '\" y decidir re-asignacion o cierre',\n        reason: t.leads + ' leads con ' + t.self_pct + '% de auto-transicion',\n        evidence: 'Estado ' + t.state + ': ' + t.leads + ' leads en loop',\n        impact_est: 'Liberar pipeline y capacidad de agentes', owner: 'Supervisor de turno',\n        horizon: rpnUrgency(_rT) === 'immediate' ? '0-3 dias' : '1-2 semanas' });\n    }\n  });\n}\n\n// ==================================================================\n// CATEGORY 2: OPERATIONS\n// ==================================================================\n\n// Rule 6: Lead volatility (calibrated CV thresholds)\nif (o.lead_cv_pct !== undefined) {\n  if (o.lead_cv_pct > TH.cv_critical) {\n    var _rV = rpn(8, 7, 8);\n    alerts.push({ id: mkId(), severity: rpnSeverity(_rV), cat: 'operations', rpn_score: _rV,\n      title: 'Volatilidad extrema en volumen diario: CV ' + o.lead_cv_pct + '% (umbral critico: ' + TH.cv_critical + '%)',\n      metric: 'cv_pct', actual: o.lead_cv_pct, threshold: TH.cv_critical,\n      impact: 'Imposible planificar turnos y capacidad con esta variabilidad.' });\n    actions.push({ id: mkId(), urgency: 'immediate',\n      action: 'Recalibrar asignacion de turnos y capacidad por volatilidad extrema (CV: ' + o.lead_cv_pct + '%)',\n      reason: 'CV supera umbral critico de ' + TH.cv_critical + '%',\n      evidence: 'Promedio: ' + o.avg_daily + ', StdDev: ~' + Math.round(o.avg_daily * o.lead_cv_pct / 100),\n      impact_est: 'Evitar sub/sobre-staffing', owner: 'Supervisor de turno', horizon: '0-3 dias' });\n  } else if (o.lead_cv_pct > TH.cv_warning) {\n    var _rV2 = rpn(5, 6, 7);\n    alerts.push({ id: mkId(), severity: rpnSeverity(_rV2), cat: 'operations', rpn_score: _rV2,\n      title: 'Alta volatilidad en volumen diario: CV ' + o.lead_cv_pct + '% (umbral: ' + TH.cv_warning + '%)',\n      metric: 'cv_pct', actual: o.lead_cv_pct, threshold: TH.cv_warning,\n      impact: 'El volumen diario varia significativamente, dificultando la planificacion.' });\n    actions.push({ id: mkId(), urgency: 'this_week',\n      action: 'Revisar asignacion de turnos por alta variabilidad de volumen (CV: ' + o.lead_cv_pct + '%)',\n      reason: 'CV supera umbral de atencion de ' + TH.cv_warning + '%',\n      evidence: 'Promedio: ' + o.avg_daily + ' leads/dia con CV ' + o.lead_cv_pct + '%',\n      impact_est: 'Ajustar capacidad preventivamente', owner: 'Supervisor de turno', horizon: '1 semana' });\n  }\n}\n\n// Rule 7: WoW volume changes\nif (o.available && o.wow_change_pct !== undefined) {\n  if (o.wow_change_pct < TH.wow_drop) {\n    var _rW = rpn(6, 5, 5);\n    alerts.push({ id: mkId(), severity: rpnSeverity(_rW), cat: 'operations', rpn_score: _rW,\n      title: 'Volumen de leads cayo ' + Math.abs(o.wow_change_pct) + '% vs semana anterior',\n      metric: 'wow_change_pct', actual: o.wow_change_pct, threshold: TH.wow_drop,\n      impact: 'Menor volumen entrante afecta pipeline futuro.' });\n    actions.push({ id: mkId(), urgency: 'this_week',\n      action: 'Investigar caida de volumen (' + Math.abs(o.wow_change_pct) + '% WoW) — revisar campanas activas y fuentes de trafico',\n      reason: 'Volumen cayo ' + Math.abs(o.wow_change_pct) + '% vs semana anterior',\n      evidence: 'Promedio 7d: ' + o.last_7d_avg + ' vs anterior: ' + o.prev_7d_avg,\n      impact_est: 'Detectar interrupciones de campana o cambios de mercado tempranamente', owner: 'Marketing Manager', horizon: '1 semana' });\n  }\n  if (o.wow_change_pct > TH.wow_spike) {\n    var _rW2 = rpn(6, 5, 4);\n    alerts.push({ id: mkId(), severity: rpnSeverity(_rW2), cat: 'operations', rpn_score: _rW2,\n      title: 'Pico de volumen: +' + o.wow_change_pct + '% vs semana anterior',\n      metric: 'wow_change_pct', actual: o.wow_change_pct, threshold: TH.wow_spike,\n      impact: 'Riesgo de saturacion del equipo si no se ajusta capacidad.' });\n    actions.push({ id: mkId(), urgency: 'immediate',\n      action: 'Activar capacidad adicional o priorizar leads de mayor calidad',\n      reason: 'Volumen subio ' + o.wow_change_pct + '% WoW',\n      evidence: 'Promedio 7d: ' + o.last_7d_avg + ', previo: ' + o.prev_7d_avg,\n      impact_est: 'Evitar degradacion de tiempo a primer contacto', owner: 'Supervisor de turno', horizon: 'hoy' });\n  }\n}\n\n// Rule 8: Little's Law saturation\nif (ll.available) {\n  if (ll.saturated) {\n    var _rL = rpn(9, 4, 8);\n    alerts.push({ id: mkId(), severity: rpnSeverity(_rL), cat: 'operations', rpn_score: _rL,\n      title: 'Saturacion operativa detectada (Little\\'s Law): ' + ll.L_wip + ' leads en sistema vs capacidad de ' + ll.max_capacity,\n      metric: 'littles_law_wip', actual: ll.L_wip, threshold: ll.max_capacity,\n      impact: 'El sistema tiene mas leads activos (' + ll.L_wip + ') que la capacidad maxima (' + ll.max_capacity + '). Leads se acumulan sin atencion.' });\n    actions.push({ id: mkId(), urgency: 'immediate',\n      action: 'Aumentar capacidad de procesamiento o reducir tasa de entrada de leads',\n      reason: 'WIP ' + ll.L_wip + ' excede capacidad ' + ll.max_capacity + ' (' + ll.capacity_utilization_pct + '% utiliz.)',\n      evidence: 'lambda=' + ll.lambda + ' leads/dia, W=' + ll.W_steps + ' pasos',\n      impact_est: 'Sin accion, el backlog crece indefinidamente', owner: 'RevOps Manager', horizon: '0-3 dias' });\n  } else if (ll.capacity_utilization_pct > 85) {\n    var _rL2 = rpn(6, 5, 8);\n    alerts.push({ id: mkId(), severity: rpnSeverity(_rL2), cat: 'operations', rpn_score: _rL2,\n      title: 'Capacidad operativa al ' + ll.capacity_utilization_pct + '% (WIP: ' + ll.L_wip + '/' + ll.max_capacity + ')',\n      metric: 'capacity_utilization', actual: ll.capacity_utilization_pct, threshold: 85,\n      impact: 'Acercandose a saturacion. Un incremento de volumen o lentitud en el funnel puede desbordar la capacidad.' });\n    actions.push({ id: mkId(), urgency: 'this_week',\n      action: 'Monitorear capacidad operativa (' + ll.capacity_utilization_pct + '%) — preparar plan de contingencia si volumen sube',\n      reason: 'WIP ' + ll.L_wip + '/' + ll.max_capacity + ' (' + ll.capacity_utilization_pct + '%)',\n      evidence: 'lambda=' + ll.lambda + ' leads/dia, W=' + ll.W_steps + ' pasos promedio',\n      impact_est: 'Prevenir saturacion y degradacion de speed-to-lead', owner: 'RevOps Manager', horizon: '1 semana' });\n  }\n}\n\n// ==================================================================\n// CATEGORY 3: PREDICTION\n// ==================================================================\n\n// Rule 9: MASE-based model quality (research-calibrated)\nif (pv2.mode !== 'unavailable' && pv2.diagnostics) {\n  var mase = pv2.diagnostics.best_mase;\n  if (mase !== null && mase !== undefined) {\n    if (mase > TH.mase_critical) {\n      var _rM = rpn(7, 6, 9);\n      alerts.push({ id: mkId(), severity: rpnSeverity(_rM), cat: 'projections', rpn_score: _rM,\n        title: 'Modelo predictivo no supera baseline estacional (MASE: ' + mase + ')',\n        metric: 'mase', actual: mase, threshold: TH.mase_critical,\n        impact: 'El forecast no aporta valor sobre un metodo ingenuo. Confianza baja.' });\n      actions.push({ id: mkId(), urgency: 'this_week',\n        action: 'Revisar calidad de datos de entrada y considerar ampliar ventana de historia (>90 dias)',\n        reason: 'MASE ' + mase + ' no supera baseline', evidence: 'Modelo: ' + (pv2.model_name || 'N/A'),\n        impact_est: 'Mejor forecast = mejor planificacion de capacidad', owner: 'BI / Data Science', horizon: '1-2 semanas' });\n    } else if (mase < TH.mase_good) {\n      alerts.push({ id: mkId(), severity: 'info', cat: 'projections', rpn_score: rpn(1,1,1),\n        title: 'Rendimiento predictivo superior (MASE: ' + mase + ', metodo: ' + (pv2.model_name || '') + ')',\n        metric: 'mase', actual: mase, threshold: TH.mase_good,\n        impact: 'El ensemble supera significativamente al baseline. Forecast confiable.' });\n    }\n  }\n}\n\n// Rule 10: Coverage floor (research: 70%, not 60%)\nif (pv2.diagnostics && pv2.diagnostics.coverage_80 !== undefined && pv2.diagnostics.coverage_80 < TH.coverage_floor) {\n  var _rC = rpn(5, 5, 9);\n  alerts.push({ id: mkId(), severity: rpnSeverity(_rC), cat: 'projections', rpn_score: _rC,\n    title: 'Cobertura empirica baja: ' + pv2.diagnostics.coverage_80 + '% (piso: ' + TH.coverage_floor + '%)',\n    metric: 'coverage_80', actual: pv2.diagnostics.coverage_80, threshold: TH.coverage_floor,\n    impact: 'Los intervalos de prediccion son sub-dispersos — capturan menos realidad de la esperada.' });\n  actions.push({ id: mkId(), urgency: 'this_month',\n    action: 'Revisar calidad del forecast — cobertura empirica (' + pv2.diagnostics.coverage_80 + '%) por debajo del piso (' + TH.coverage_floor + '%)',\n    reason: 'Intervalos capturan menos del ' + TH.coverage_floor + '% de la variacion real',\n    evidence: 'Cobertura: ' + pv2.diagnostics.coverage_80 + '% vs piso: ' + TH.coverage_floor + '%',\n    impact_est: 'Mejorar la confiabilidad de la planificacion de capacidad', owner: 'BI / Data Science', horizon: '2-4 semanas' });\n  // end coverage action\n  var _cov = true; /* cleaned */\n  if (false) alerts.push({ severity: 'info',\n    impact: 'n/a — capturan menos realidad de la esperada.' });\n}\n\n// Rule 11: Changepoint detection\nif (pv2.changepoint && pv2.changepoint.detected) {\n  var _rCH = rpn(9, 3, 9);\n  alerts.push({ id: mkId(), severity: rpnSeverity(_rCH), cat: 'projections', rpn_score: _rCH,\n    title: 'Cambio de regimen detectado (CUSUM) el ' + pv2.changepoint.change_date + ' - ' + pv2.changepoint.direction,\n    metric: 'cusum_change', actual: pv2.changepoint.shift_pct, threshold: 0,\n    impact: 'Volumen cambio de ~' + pv2.changepoint.pre_mean + ' a ~' + pv2.changepoint.post_mean + ' leads/dia (' + (pv2.changepoint.shift_pct >= 0 ? '+' : '') + pv2.changepoint.shift_pct + '%).' });\n  actions.push({ id: mkId(), urgency: 'immediate',\n    action: 'Investigar causa del cambio de regimen del ' + pv2.changepoint.change_date,\n    reason: 'Cambio estructural ' + pv2.changepoint.direction + ' de ' + pv2.changepoint.shift_pct + '%',\n    evidence: 'CUSUM: media pre=' + pv2.changepoint.pre_mean + ', post=' + pv2.changepoint.post_mean,\n    impact_est: 'Recalibrar forecasts y capacidad operativa', owner: 'RevOps Manager', horizon: '0-3 dias' });\n}\n\n// Rule 12: EMA spread — v6: only alert if MASE is NOT favorable\nvar _maseFavorable = pv2.diagnostics && pv2.diagnostics.best_mase !== null && pv2.diagnostics.best_mase < (TH.mase_good || 0.75);\nif (p.available && p.spread_pct > TH.spread_alert_pct && !_maseFavorable) {\n  var _rS = rpn(4, 6, 5);\n  alerts.push({ id: mkId(), severity: rpnSeverity(_rS), cat: 'projections', rpn_score: _rS,\n    title: 'Alta incertidumbre en escenarios EMA (spread: ' + p.spread_pct + '%)',\n    metric: 'spread_pct', actual: p.spread_pct, threshold: TH.spread_alert_pct,\n    impact: 'La diferencia entre escenario optimista y pesimista es muy grande.' });\n}\n\n// Forecast info\nif (pv2.mode !== 'unavailable' && pv2.recommended_value) {\n  alerts.push({ id: mkId(), severity: 'info', cat: 'projections', rpn_score: rpn(1,1,1),\n    title: 'Prevision diaria: ~' + pv2.recommended_value + ' leads/dia (banda 80%: ' + (pv2.observed_forecast ? pv2.observed_forecast.band_low + '-' + pv2.observed_forecast.band_high : 'N/A') + ')',\n    metric: 'forecast', actual: pv2.recommended_value, threshold: 0,\n    impact: 'Basado en ' + (pv2.model_name || 'mejor modelo disponible') + ' | confianza: ' + (pv2.confidence || 'N/A') });\n}\n\n// ==================================================================\n// CATEGORY 4: INVESTMENT\n// ==================================================================\n\n// Rule 13: HHI two-tier (research calibration)\nvar hhi = (inv.mmm && inv.mmm.hhi_index) || null;\nif (hhi !== null) {\n  if (hhi > TH.hhi_critical) {\n    var _rH = rpn(7, 7, 4);\n    alerts.push({ id: mkId(), severity: rpnSeverity(_rH), cat: 'investment', rpn_score: _rH,\n      title: 'Alta concentracion de inversion (HHI: ' + hhi + ')',\n      metric: 'hhi', actual: hhi, threshold: TH.hhi_critical,\n      impact: 'Riesgo de dependencia: si la campana principal falla, no hay diversificacion suficiente.' });\n    actions.push({ id: mkId(), urgency: 'this_week',\n      action: 'Evaluar diversificacion del presupuesto publicitario (HHI: ' + hhi + ')',\n      reason: 'Concentracion alta', evidence: 'HHI: ' + hhi,\n      impact_est: 'Reducir riesgo de dependencia en un solo canal', owner: 'Marketing Manager', horizon: '1-2 semanas' });\n  } else if (hhi > TH.hhi_warning) {\n    var _rH2 = rpn(4, 6, 4);\n    alerts.push({ id: mkId(), severity: rpnSeverity(_rH2), cat: 'investment', rpn_score: _rH2,\n      title: 'Concentracion moderada de inversion (HHI: ' + hhi + ')',\n      metric: 'hhi', actual: hhi, threshold: TH.hhi_warning,\n      impact: 'La diversificacion del portafolio publicitario es limitada.' });\n  }\n}\n\n// Rule 14: Non-causal campaigns (Granger)\nif (inv.mmm && inv.mmm.available && inv.mmm.non_causal_campaigns && inv.mmm.non_causal_campaigns.length > 0) {\n  var _rG = rpn(6, 7, 8);\n  alerts.push({ id: mkId(), severity: rpnSeverity(_rG), cat: 'investment', rpn_score: _rG,\n    title: 'Campanas sin evidencia causal: ' + inv.mmm.non_causal_campaigns.join(', '),\n    metric: 'granger_causal', actual: inv.mmm.non_causal_campaigns.length, threshold: 0,\n    impact: 'El gasto en estas campanas no muestra relacion estadistica con el volumen de leads.' });\n  actions.push({ id: mkId(), urgency: 'this_month',\n    action: 'Auditar campanas sin evidencia causal (' + inv.mmm.non_causal_campaigns.join(', ') + ') — evaluar reasignacion de presupuesto',\n    reason: inv.mmm.non_causal_campaigns.length + ' campanas no muestran impacto causal en leads (test de Granger)',\n    evidence: 'Campanas: ' + inv.mmm.non_causal_campaigns.join(', '),\n    impact_est: 'Redirigir gasto hacia canales con evidencia de causalidad', owner: 'Marketing Manager', horizon: '2-4 semanas' });\n}\n\n// Rule 15: CPL surge\nif (cpl.available && cpl.cpl_wow_change_pct !== undefined && cpl.cpl_wow_change_pct > TH.cpl_wow_warning) {\n  var _rCPL = rpn(7, 5, 7);\n  alerts.push({ id: mkId(), severity: rpnSeverity(_rCPL), cat: 'investment', rpn_score: _rCPL,\n    title: 'CPL implicito subio ' + cpl.cpl_wow_change_pct + '% WoW (actual: $' + cpl.cpl_7d_avg + ', anterior: $' + cpl.cpl_prev_7d_avg + ')',\n    metric: 'cpl_wow_change', actual: cpl.cpl_wow_change_pct, threshold: TH.cpl_wow_warning,\n    impact: 'El costo de adquisicion se esta encareciendo. Posible saturacion de canales o perdida de eficiencia publicitaria.' });\n  actions.push({ id: mkId(), urgency: 'this_week',\n    action: 'Revisar eficiencia de campanas activas — CPL subio ' + cpl.cpl_wow_change_pct + '% esta semana',\n    reason: 'CPL $' + cpl.cpl_7d_avg + ' vs $' + cpl.cpl_prev_7d_avg + ' semana anterior',\n    evidence: 'Incremento WoW: ' + cpl.cpl_wow_change_pct + '%',\n    impact_est: 'Optimizar bid o reasignar presupuesto', owner: 'Marketing Manager', horizon: '1 semana' });\n}\n\n// CPL global info\nif (cpl.available && cpl.global_cpl) {\n  alerts.push({ id: mkId(), severity: 'info', cat: 'investment', rpn_score: rpn(1,1,1),\n    title: 'CPL implicito global: $' + cpl.global_cpl + ' (' + cpl.total_leads + ' leads / $' + Math.round(cpl.total_spend).toLocaleString() + ' gasto)',\n    metric: 'cpl_global', actual: cpl.global_cpl, threshold: 0,\n    impact: 'Costo promedio por lead considerando gasto total vs leads totales del periodo.' });\n}\n\n// ==================================================================\n// CATEGORY 5: OPERATIONAL EFFICIENCY (speed-to-lead, overcontact)\n// ==================================================================\n\n// Rule 16: Overcontact detection\nif (o.contact_distribution && o.contact_distribution.overcontact_pct > 0) {\n  var _ocPct = o.contact_distribution.overcontact_pct;\n  var _ocMax = TH.overcontact_max || 7;\n  if (_ocPct > 15) {\n    var _rOC = rpn(6, 8, 7);\n    alerts.push({ id: mkId(), severity: rpnSeverity(_rOC), cat: 'operations', rpn_score: _rOC,\n      title: 'Sobre-contacto excesivo: ' + _ocPct + '% de llamadas superan ' + _ocMax + ' intentos',\n      metric: 'overcontact_pct', actual: _ocPct, threshold: 15,\n      impact: o.contact_distribution.overcontact_calls + ' llamadas despues del sweet spot de intentos — esfuerzo con retorno marginal decreciente.' });\n    actions.push({ id: mkId(), urgency: 'this_week',\n      action: 'Revisar politica de intentos de contacto — ' + _ocPct + '% de llamadas exceden ' + _ocMax + ' intentos',\n      reason: 'Sobre-contacto improductivo por encima del sweet spot',\n      evidence: o.contact_distribution.overcontact_calls + ' llamadas > ' + _ocMax + ' intentos (' + _ocPct + '%)',\n      impact_est: 'Liberar capacidad de agentes y reducir quema de leads', owner: 'Supervisor de turno', horizon: '1 semana' });\n  } else if (_ocPct > 5) {\n    alerts.push({ id: mkId(), severity: 'info', cat: 'operations', rpn_score: rpn(2,3,5),\n      title: 'Sobre-contacto moderado: ' + _ocPct + '% de llamadas superan ' + _ocMax + ' intentos',\n      metric: 'overcontact_pct', actual: _ocPct, threshold: 5,\n      impact: 'Nivel aceptable pero monitoreable.' });\n  }\n}\n\n// Rule 17: Call rank average (proxy for contact efficiency)\nif (o.call_metrics && o.call_metrics.call_rank && o.call_metrics.call_rank.avg > (TH.overcontact_max || 7)) {\n  var _rCR = rpn(5, 7, 6);\n  alerts.push({ id: mkId(), severity: rpnSeverity(_rCR), cat: 'operations', rpn_score: _rCR,\n    title: 'Promedio de intentos de contacto alto: ' + o.call_metrics.call_rank.avg + ' (umbral: ' + (TH.overcontact_max || 7) + ')',\n    metric: 'call_rank_avg', actual: o.call_metrics.call_rank.avg, threshold: TH.overcontact_max || 7,\n    impact: 'Los agentes estan marcando en promedio mas de ' + (TH.overcontact_max || 7) + ' veces por lead.' });\n  actions.push({ id: mkId(), urgency: 'this_week',\n    action: 'Evaluar si leads con > ' + (TH.overcontact_max || 7) + ' intentos deben cerrarse como no-contactables',\n    reason: 'Promedio de intentos: ' + o.call_metrics.call_rank.avg,\n    evidence: 'Rango: ' + o.call_metrics.call_rank.min + '-' + o.call_metrics.call_rank.max,\n    impact_est: 'Optimizar el esfuerzo de marcacion y redirigir a leads frescos', owner: 'Supervisor de turno', horizon: '1 semana' });\n}\n\n// ==================================================================\n// RANKING BY RPN SCORE\n// ==================================================================\nalerts.sort(function(a, b) { return (b.rpn_score || 0) - (a.rpn_score || 0); });\nactions.sort(function(a, b) {\n  var u = { immediate: 0, this_week: 1, this_month: 2 };\n  return (u[a.urgency] || 9) - (u[b.urgency] || 9);\n});\n\n// ==================================================================\n// SYSTEM HEALTH SCORE (SHS) — replaces critCount-based semaphore\n// ==================================================================\nvar shs = 100;\n\n// Funnel pillar (40% weight)\nif (f.global_conversion_pct !== null && f.global_conversion_pct !== undefined) {\n  if (f.global_conversion_pct < TH.conversion_critical) shs -= 25;\n  else if (f.global_conversion_pct < TH.conversion_warning) shs -= 15;\n}\nif (f.total_revenue_at_risk && f.total_revenue_at_risk > TH.rar_critical) shs -= 10;\nif (f.markov_analysis && f.markov_analysis.entry_step_cv > TH.step_cv_critical) shs -= 5;\n\n// Operations pillar (30% weight)\nif (o.lead_cv_pct > TH.cv_critical) shs -= 15;\nelse if (o.lead_cv_pct > TH.cv_warning) shs -= 8;\nif (ll.available && ll.saturated) shs -= 15;\nelse if (ll.available && ll.capacity_utilization_pct > 85) shs -= 5;\n\n// Investment pillar (20% weight)\nif (hhi !== null && hhi > TH.hhi_critical) shs -= 10;\nif (cpl.available && cpl.cpl_wow_change_pct > TH.cpl_wow_warning) shs -= 8;\n\n// Prediction pillar (10% weight)\nif (pv2.diagnostics && pv2.diagnostics.best_mase > TH.mase_critical) shs -= 8;\nif (pv2.changepoint && pv2.changepoint.detected) shs -= 5;\nif (pv2.diagnostics && pv2.diagnostics.coverage_80 !== undefined && pv2.diagnostics.coverage_80 < (TH.coverage_floor || 70)) shs -= 4;\n\n// Data quality pillar (penalty for weak evidence)\nif (o.available && o.total_days < 60) shs -= 3;\nif (p.available && p.r2 < 0.01) shs -= 2;\nif (o.contact_distribution && o.contact_distribution.overcontact_pct > 15) shs -= 3;\nif (inv.mmm && inv.mmm.available && inv.mmm.non_causal_campaigns && inv.mmm.non_causal_campaigns.length > 0) shs -= 3;\nif (o.available && o.wow_change_pct !== undefined && o.wow_change_pct < (TH.wow_drop || -15)) shs -= 3;\n\nshs = Math.max(0, Math.min(100, shs));\n\n// v6: critical alerts force SHS below green threshold\nvar critCount = alerts.filter(function(a) { return a.severity === 'critical'; }).length;\nvar warnCount = alerts.filter(function(a) { return a.severity === 'warning'; }).length;\nif (critCount >= 1 && shs >= TH.shs_green) shs = Math.min(shs, TH.shs_green - 1);\nif (critCount >= 2) shs = Math.min(shs, TH.shs_yellow - 1);\n\nvar status = {};\nif (shs >= TH.shs_green) {\n  status = { color: 'verde', label: 'Sistema estable', shs: shs };\n} else if (shs >= TH.shs_yellow) {\n  status = { color: 'amarillo', label: 'Sistema bajo presion', shs: shs };\n} else {\n  status = { color: 'rojo', label: 'Sistema en riesgo', shs: shs };\n}\nstatus.reasons = alerts.filter(function(a) { return a.severity !== 'info'; }).slice(0, 3).map(function(a) { return a.title; });\nif (status.reasons.length === 0) status.reasons = ['Sin alertas activas'];\n\n\n// v6: Speed-to-lead (using avg interval as proxy)\nif (o.call_metrics && o.call_metrics.minutes_since_prev) {\n  var avgInterval = o.call_metrics.minutes_since_prev.avg;\n  if (avgInterval > 60) {\n    var _rStl = rpn(7, 6, 7);\n    alerts.push({ id: mkId(), severity: rpnSeverity(_rStl), cat: 'operations', rpn_score: _rStl,\n      title: 'Intervalo promedio entre intentos alto: ' + avgInterval + ' min',\n      metric: 'avg_interval_min', actual: avgInterval, threshold: 60,\n      impact: 'Leads esperan demasiado entre contactos, degradando probabilidad de conversion.' });\n    actions.push({ id: mkId(), urgency: rpnUrgency(_rStl),\n      action: 'Reducir intervalo entre intentos de contacto (actual: ' + avgInterval + ' min promedio)',\n      reason: 'Intervalo alto degrada speed-to-lead', evidence: 'Promedio: ' + avgInterval + ' min',\n      impact_est: 'Contactar en <30 min aumenta conversion hasta 32%', owner: 'Supervisor de turno', horizon: '1 semana' });\n  }\n}\n\n// ==================================================================\n// NARRATIVE INPUT (feeds the 4 AI narrators)\n// ==================================================================\nvar ni = '=== DATOS ESTRUCTURADOS DEL REPORTE ===';\nni += '\\n\\nFECHA: ' + facts.generated_at;\nni += '\\nESTADO DEL SISTEMA: ' + status.color.toUpperCase() + ' - ' + status.label + ' (Health Score: ' + shs + '/100)';\nni += '\\nRazones: ' + status.reasons.join('; ');\n\nni += '\\n\\n--- VOLUMEN Y TENDENCIA ---';\nif (pv2.mode !== 'unavailable') {\n  ni += '\\nModo de prediccion: ' + (pv2.label || 'no disponible');\n  ni += '\\nMetodo seleccionado: ' + (pv2.model_name || 'N/A');\n  ni += '\\nConfianza: ' + (pv2.confidence || 'desconocida');\n  ni += '\\nValor recomendado para planificacion: ~' + (pv2.recommended_value || 'N/A') + ' leads/dia';\n  if (pv2.observed_forecast) {\n    ni += '\\nBanda de variacion (80%): ' + pv2.observed_forecast.band_low + ' - ' + pv2.observed_forecast.band_high + ' leads/dia';\n    ni += '\\nEstimacion proximos 7 dias: ~' + pv2.observed_forecast.next_7d_total + ' leads';\n  }\n  if (pv2.forecast_horizons && pv2.forecast_horizons.next_14d) {\n    ni += '\\nEstimacion proximos 14 dias: ~' + pv2.forecast_horizons.next_14d.forecast + ' leads';\n  }\n  if (pv2.volatility) ni += '\\nVolatilidad del volumen: ' + pv2.volatility.label + ' (CV: ' + pv2.volatility.cv_pct + '%)';\n  if (pv2.empirical_coverage_pct !== undefined) ni += '\\nCobertura empirica del intervalo 80%: ' + pv2.empirical_coverage_pct + '%';\n  if (p.available) {\n    ni += '\\nTendencia de volumen: ' + p.direction;\n    if (p.acceleration) ni += ' (' + p.acceleration + ')';\n    if (p.p5 !== undefined) ni += '\\nEscenarios EMA (referencia): pesimista ' + p.p5 + ' | base ' + p.p50 + ' | optimista ' + p.p95;\n  }\n  if (pv2.seasonal_indices) ni += '\\nIndices estacionales: ' + pv2.seasonal_indices.map(function(s) { return s.day + '=' + s.index; }).join(', ');\n  if (pv2.changepoint && pv2.changepoint.detected) {\n    var _cpDir = pv2.changepoint.direction === 'upward' ? 'incremento' : 'descenso';\n    ni += '\\nALERTA CAMBIO DE REGIMEN: ' + _cpDir + ' (' + (pv2.changepoint.shift_pct >= 0 ? '+' : '') + pv2.changepoint.shift_pct + '%) el ' + pv2.changepoint.change_date + '. Media pre=' + pv2.changepoint.pre_mean + ', post=' + pv2.changepoint.post_mean;\n  }\n}\n\nni += '\\n\\n--- CONVERSION Y EMBUDO ---';\nif (f.available) {\n  if (f.global_conversion_pct !== null) ni += '\\nConversion global del embudo: ' + f.global_conversion_pct + '% (benchmark B2C saludable: >' + TH.conversion_info + '%)';\n  if (f.markov_analysis && f.markov_analysis.available) {\n    ni += '\\nPasos esperados hasta resolucion: ' + f.markov_analysis.entry_expected_steps;\n    if (f.markov_analysis.entry_step_cv !== undefined) ni += ' (CV: ' + f.markov_analysis.entry_step_cv + ', stddev: ' + f.markov_analysis.entry_step_stddev + ' pasos)';\n    if (f.markov_analysis.entry_step_variance !== undefined) ni += '\\nVarianza de absorcion: ' + f.markov_analysis.entry_step_variance + ' — ' + (f.markov_analysis.entry_step_cv > 1.5 ? 'ALTA: ciclo de ventas impredecible' : f.markov_analysis.entry_step_cv > 1.0 ? 'MODERADA: variabilidad significativa' : 'CONTROLADA: proceso estable');\n  }\n  ni += '\\nObjetivo final: llegar a ' + f.conversion_target;\n}\n\nni += '\\n\\n--- FEEDERS: ESTADOS QUE APORTAN LEADS A CONVERSION (DATO POSITIVO) ---';\nni += '\\nIMPORTANTE: Los feeders son estados BUENOS. Son el camino que los leads toman para llegar a conversion. NO son fugas.';\nif (f.available && f.feeders && f.feeders.length > 0) {\n  f.feeders.slice(0, 5).forEach(function(fe) { ni += '\\n  FEEDER: ' + fe.from + ' -> aporta ' + fe.pct + '% de los leads a conversion (' + fe.cnt + ' leads convierten desde aqui)'; });\n} else {\n  ni += '\\n  Sin feeders identificados.';\n}\n\nni += '\\n\\n--- FUGAS: DONDE SE PIERDEN LEADS (DATO NEGATIVO) ---';\nni += '\\nIMPORTANTE: Las fugas son estados MALOS. Son transiciones donde los leads se PIERDEN y NO convierten.';\nif (f.available && f.biggest_leak) {\n  ni += '\\n  FUGA PRINCIPAL: de ' + f.biggest_leak.from + ' a ' + f.biggest_leak.to + ' (' + f.biggest_leak.pct + '%, ' + f.biggest_leak.cnt + ' leads se PIERDEN aqui)';\n  if (f.top_leaks && f.top_leaks.length > 1) {\n    f.top_leaks.slice(1, 4).forEach(function(l) { ni += '\\n  FUGA: ' + l.from + ' -> ' + l.to + ': ' + l.pct + '% (' + l.cnt + ' leads PERDIDOS)'; });\n  }\n} else {\n  ni += '\\n  No se detectaron fugas por encima del umbral configurado (' + TH.leak_warning_pct + '%) en este periodo. El analisis Markov y Revenue at Risk pueden revelar fugas menores no cubiertas por esta regla.';\n}\n\nni += '\\n\\n--- ESTADOS TRAMPA (leads atascados sin avanzar) ---';\nif (f.available && f.trap_states && f.trap_states.length > 0) {\n  f.trap_states.forEach(function(t) { ni += '\\n  TRAMPA: ' + t.state + ': ' + t.leads + ' leads atrapados (' + t.self_pct + '% no avanzan)'; });\n} else {\n  ni += '\\n  Sin estados trampa detectados.';\n}\n\nif (f.available) {\n  if (f.revenue_at_risk && f.revenue_at_risk.length > 0) {\n    ni += '\\n\\n--- REVENUE AT RISK ---';\n    ni += '\\nTotal revenue at risk: $' + (f.total_revenue_at_risk || 0).toLocaleString();\n    f.revenue_at_risk.slice(0, 3).forEach(function(r) {\n      ni += '\\n  - ' + r.from + ' -> ' + r.to + ': ' + r.leads_lost + ' leads, $' + r.revenue_at_risk.toLocaleString() + ' en riesgo';\n    });\n  }\n  if (f.markov_analysis && f.markov_analysis.available) {\n    ni += '\\n\\n--- ANALISIS DE MARKOV ---';\n    ni += '\\nEstados absorbentes: ' + f.markov_analysis.absorbing_states.join(', ');\n    ni += '\\nProbabilidades de absorcion:';\n    f.markov_analysis.absorption_probabilities.forEach(function(ap) {\n      ni += '\\n  ' + ap.state + ': prob_conversion=' + (ap.prob_conversion !== null ? (ap.prob_conversion * 100).toFixed(2) + '%' : 'N/A') + ', pasos=' + ap.expected_steps;\n    });\n  }\n}\n\nni += '\\n\\n--- OPERACIONES ---';\nif (o.available) {\n  ni += '\\nTotal leads periodo: ' + o.total_leads + ' en ' + o.total_days + ' dias (promedio: ' + o.avg_daily + '/dia)';\n  ni += '\\nUltimo dia: ' + o.latest.date + ' con ' + o.latest.leads + ' leads';\n  ni += '\\nRango diario: ' + o.min_daily + ' - ' + o.max_daily;\n  if (o.last_7d_avg) ni += '\\nPromedio 7d: ' + o.last_7d_avg + ' (anterior: ' + o.prev_7d_avg + ', cambio: ' + o.wow_change_pct + '%)';\n  ni += '\\nTendencia reciente: ' + o.recent_trend;\n  if (o.peak_hour !== undefined) ni += '\\nHora pico: ' + o.peak_hour + ':00, hora valle: ' + o.valley_hour + ':00';\n  if (o.call_records) {\n    ni += '\\n\\n--- METRICAS DE LLAMADAS (' + (o.call_data_note || 'Pre-agregado de ' + o.call_records + ' registros') + ') ---';\n    if (o.unique_contacts) ni += '\\nContactos unicos: ' + o.unique_contacts;\n    if (o.call_metrics && o.call_metrics.call_duration) ni += '\\nDuracion de llamada: promedio ' + o.call_metrics.call_duration.avg + ' seg, min ' + o.call_metrics.call_duration.min + ', max ' + o.call_metrics.call_duration.max;\n    if (o.call_metrics && o.call_metrics.minutes_since_prev) ni += '\\nIntervalo entre intentos: promedio ' + o.call_metrics.minutes_since_prev.avg + ' min, min ' + o.call_metrics.minutes_since_prev.min + ', max ' + o.call_metrics.minutes_since_prev.max;\n    if (o.call_metrics && o.call_metrics.call_rank) ni += '\\nNumero de intento promedio: ' + o.call_metrics.call_rank.avg + ' (rango: ' + o.call_metrics.call_rank.min + '-' + o.call_metrics.call_rank.max + ')';\n    if (o.contact_distribution) {\n      ni += '\\nDistribucion de intentos:';\n      ni += '\\n  Primer intento: ' + o.contact_distribution.first_attempts + ' llamadas';\n      ni += '\\n  Intentos 1-3 (sweet spot): ' + o.contact_distribution.attempts_1_to_3 + ' llamadas';\n      ni += '\\n  Intentos 1-5: ' + o.contact_distribution.attempts_1_to_5 + ' llamadas';\n      ni += '\\n  Sobre-contacto (>7 intentos): ' + o.contact_distribution.overcontact_calls + ' llamadas (' + o.contact_distribution.overcontact_pct + '%)';\n    }\n  }\n}\n\nif (ll.available) {\n  ni += '\\n\\n--- CAPACIDAD OPERATIVA (Little\\'s Law) ---';\n  ni += '\\nLeads en sistema (WIP): ' + ll.L_wip + ' | Capacidad maxima: ' + ll.max_capacity;\n  ni += '\\nUtilizacion: ' + ll.capacity_utilization_pct + '%';\n  ni += '\\nEstado: ' + (ll.saturated ? 'SATURADO' : 'Dentro de capacidad');\n}\n\nni += '\\n\\n--- INVERSION ---';\nif (inv.available) {\n  ni += '\\nGasto total: $' + Math.round(inv.total_spend).toLocaleString() + ' | Campanas: ' + inv.campaign_count;\n  if (inv.top_spender) ni += '\\nMayor gasto: ' + inv.top_spender.name + ' ($' + Math.round(inv.top_spender.spend).toLocaleString() + ', ' + inv.top_concentration_pct + '%)';\n  inv.campaigns.forEach(function(c) { ni += '\\n  ' + c.name + ': $' + Math.round(c.spend).toLocaleString() + ' (' + c.pct_of_total + '%)'; });\n  if (cpl.available) {\n    ni += '\\n\\n--- CPL IMPLICITO ---';\n    ni += '\\nCPL global: $' + cpl.global_cpl;\n    if (cpl.cpl_7d_avg) ni += '\\nCPL 7d promedio: $' + cpl.cpl_7d_avg + ' (anterior: $' + cpl.cpl_prev_7d_avg + ', cambio: ' + cpl.cpl_wow_change_pct + '%)';\n  }\n  if (inv.mmm && inv.mmm.available) {\n    ni += '\\n\\n--- ATRIBUCION (MMM) ---';\n    ni += '\\nHHI: ' + inv.mmm.hhi_index + ' (' + inv.mmm.hhi_label + ')';\n    ni += '\\nContribucion gasto a varianza: ' + inv.mmm.spend_variance_contribution_pct + '%';\n    if (inv.mmm.causal_campaigns.length > 0) ni += '\\nCampanas causales (Granger): ' + inv.mmm.causal_campaigns.join(', ');\n    if (inv.mmm.non_causal_campaigns.length > 0) ni += '\\nCampanas SIN evidencia causal: ' + inv.mmm.non_causal_campaigns.join(', ');\n  }\n}\n\nni += '\\n\\n--- ALERTAS (por RPN score) ---';\nalerts.forEach(function(a, i) {\n  ni += '\\n' + (i+1) + '. [' + a.severity.toUpperCase() + ' | RPN:' + (a.rpn_score || 0) + '] ' + a.title + ' | ' + a.impact;\n});\n\nni += '\\n\\n--- ACCIONES RECOMENDADAS ---';\nvar _wc = alerts.filter(function(a) { return a.severity === 'warning'; }).length;\nif (actions.length === 0 && _wc === 0) ni += '\\nNo hay acciones urgentes en este momento. El sistema opera dentro de parametros normales.';\nif (actions.length === 0 && _wc > 0) ni += '\\nNo se generaron acciones criticas, pero existen ' + _wc + ' alertas de atencion. Se recomienda revision preventiva de los puntos senalados en la seccion de alertas.';\nactions.forEach(function(a, i) {\n  ni += '\\n' + (i+1) + '. [' + a.urgency + '] ' + a.action + ' | Razon: ' + a.reason + ' | Evidencia: ' + a.evidence + ' | Impacto: ' + a.impact_est + ' | Responsable: ' + a.owner + ' | Plazo: ' + a.horizon;\n});\n\nni += '\\n\\n--- DATOS TECNICOS ---';\nif (p.available) ni += '\\nR2: ' + p.r2 + ' | Pendiente: ' + p.slope + ' | Intercepto: ' + p.intercept + ' | Spread pct: ' + p.spread_pct + '%';\nif (pv2.backtest) {\n  ni += '\\nBacktest (' + pv2.backtest.window_days + ' dias): Naive MAE=' + pv2.backtest.naive_mae;\n  pv2.backtest.models.forEach(function(m) { ni += '\\n  ' + m.name + ': MAE=' + m.mae + ', MASE=' + m.mase + ', RMSE=' + m.rmse; });\n  ni += '\\nModelo seleccionado: ' + pv2.backtest.selected;\n  if (pv2.backtest.ensemble_weights) ni += '\\nPesos ensemble: ' + pv2.backtest.ensemble_weights.map(function(w) { return w.name + '=' + w.weight; }).join(', ');\n  ni += '\\nCobertura empirica 80%: ' + (pv2.empirical_coverage_pct || 'N/A') + '%';\n}\nni += '\\nHealth Score: ' + shs + '/100';\nni += '\\nFuentes: regresion=' + (facts.data_quality.sources.regresion || 0) + ', ema=' + (facts.data_quality.sources.ema || 0) + ', markov=' + (facts.data_quality.sources.markov || 0) + ', llamadas=' + (facts.data_quality.sources.llamadas || 0) + ', llegadas=' + (facts.data_quality.sources.llegadas || 0) + ', horarios=' + (facts.data_quality.sources.horarios || 0) + ', inversiones=' + (facts.data_quality.sources.inversiones || 0);\n\nvar critCount = alerts.filter(function(a) { return a.severity === 'critical'; }).length;\nvar warnCount = alerts.filter(function(a) { return a.severity === 'warning'; }).length;\n\nreturn [{ json: {\n  facts: facts,\n  alerts: alerts,\n  actions: actions,\n  system_status: status,\n  narrative_input: ni,\n  alert_count: { critical: critCount, warning: warnCount, total: alerts.length },\n  action_count: actions.length,\n  system_health_score: shs\n}}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2500,
+        1200
+      ],
+      "id": "a0000001-0000-0000-0000-000000000031",
+      "name": "RulesEngine"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=<report_data>\n{{ $json.narrative_input }}\n</report_data>",
+        "options": {
+          "systemMessage": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<agent type=\"executive_narrator\" version=\"6.0\">\n  <role>Consultor senior de Revenue Operations presentando resultados al Director General.</role>\n  <mission>Traducir los datos en una narrativa ejecutiva de maximo 1 pagina. Foco: donde se pierden leads, que funciona bien, y que decisiones tomar.</mission>\n  <audience>Director General, VP de Ventas. No son tecnicos. Necesitan: que pasa, donde duele, que hacer.</audience>\n\n  <critical_rules>\n    <rule priority=\"1\">NUNCA hagas operaciones matematicas. No restes, no dividas, no computes porcentajes nuevos. SOLO usa numeros que YA aparecen TEXTUALMENTE en los datos recibidos.</rule>\n    <rule priority=\"2\">NUNCA inventes nombres de campanas, canales, fuentes, ni estados del funnel que no aparezcan en los datos.</rule>\n    <rule priority=\"10\">CAMBIO DE REGIMEN: Si los datos dicen \"incremento\" o shift_pct positivo, NUNCA uses palabras como \"descenso\", \"caida\" o \"disminucion\". Si dicen \"descenso\" o shift_pct negativo, NUNCA uses \"incremento\" o \"crecimiento\". La direccion del cambio y el signo del porcentaje DEBEN coincidir siempre.</rule>\n    <rule priority=\"3\">Las acciones recomendadas vienen de la seccion ACCIONES RECOMENDADAS. Si esa seccion tiene acciones, usalas. Si dice que no hay acciones criticas pero menciona alertas de atencion, traduce esas alertas como puntos de vigilancia para el lector. NUNCA inventes acciones que no esten respaldadas por datos, pero SI puedes recomendar monitoreo si hay alertas activas.</rule>\n    <rule priority=\"4\">Distingue FEEDERS de FUGAS. Un feeder es un estado que APORTA leads a conversion (dato positivo). Una fuga es donde se PIERDEN leads (dato negativo). No los confundas. La seccion \"Donde se pierden\" tiene las fugas. La seccion \"Lo que SI funciona\" tiene los feeders.</rule>\n    <rule priority=\"5\">Si el sistema esta \"bajo presion\" pero no hay acciones recomendadas, di: \"El sistema esta bajo presion por [razon]. Aunque no se requieren acciones inmediatas, se recomienda vigilar de cerca [metrica].\"</rule>\n    <rule priority=\"6\">NO uses jerga tecnica: R2, pendiente, spread, EMA, modelo de tendencia, ajuste, regresion, Markov, percentil, coeficiente de variacion, RPN, FMEA, SHS.</rule>\n    <rule priority=\"9\">Si los datos mencionan un Health Score, traducelo: \"El sistema esta al X% de su capacidad optima\". No digas \"Health Score\".</rule>\n    <rule priority=\"10\">Si los datos mencionan Revenue at Risk, traducelo a dinero perdido en lenguaje simple: \"Estamos dejando de ganar $X por leads que se pierden en [estado]\".</rule>\n    <rule priority=\"11\">Si la conversion global esta por encima de 3%, NO la presentes como problema. Contextualizala: \"Nuestra conversion de X% esta en niveles saludables para la industria.\"</rule>\n    <rule priority=\"7\">Ignora la seccion DATOS TECNICOS.</rule>\n    <rule priority=\"8\">Responde SIEMPRE en espanol.</rule>\n  </critical_rules>\n\n  <number_translation_guide>\n    <rule>13% = \"poco mas de 1 de cada 10\"</rule>\n    <rule>25% = \"1 de cada 4\"</rule>\n    <rule>35% = \"mas de 1 de cada 3\"</rule>\n    <rule>Para cantidades de leads, usa el numero exacto de los datos. Si dice \"19 leads\", escribe \"19 leads\". No redondees ni extrapoles.</rule>\n  </number_translation_guide>\n\n  <example>\n    <ideal_output>**Estado General**\nEl sistema esta en AMARILLO: bajo presion.\n\n**Que Esta Pasando**\nEstamos recibiendo un promedio de 445 leads por dia. La tendencia reciente es estable. La prevision para los proximos dias es de aproximadamente 373 leads diarios, basada en el comportamiento reciente.\n\nLo que funciona bien: el estado PreClosed - Cash Only es el camino mas efectivo hacia el cierre, aportando el 35.19% de las conversiones (19 leads).\n\n**Donde Se Pierde Dinero**\nLa principal fuga esta en la seccion de datos de fugas del funnel. Usa los datos exactos de esa seccion, no inventes numeros.\n\n**Decisiones Recomendadas**\n[Copia las acciones de la seccion ACCIONES RECOMENDADAS. Si no hay acciones criticas pero hay alertas de atencion, mencionalas como puntos de vigilancia. Solo si no hay ninguna alerta, di que no se requieren acciones inmediatas.]\n\n**Conclusion**\nEl principal riesgo es [lo que dicen las alertas]. Se recomienda [accion de la lista o vigilancia].</ideal_output>\n  </example>\n\n  <required_output>\n    <section name=\"Estado General\" description=\"Color del semaforo + 1 frase. Si hay alertas activas (incluso no criticas), no digas solo 'estable' — menciona la presion o riesgo principal\" />\n    <section name=\"Que Esta Pasando\" description=\"2-3 parrafos: volumen, tendencia, que funciona (feeders)\" />\n    <section name=\"Donde Se Pierde Dinero\" description=\"Top 2-3 fugas. USA SOLO datos de la seccion de fugas. No confundas feeders con fugas.\" />\n    <section name=\"Decisiones Recomendadas\" description=\"SOLO las acciones de ACCIONES RECOMENDADAS. Si no hay, dilo claramente.\" />\n    <section name=\"Conclusion\" description=\"3 lineas: riesgo principal (conectar capacidad operativa con forecast si ambos existen) + accion o vigilancia + contexto de incertidumbre si el spread o historia es limitada\" />\n  </required_output>\n\n  <forbidden_behaviors>\n    <rule>NUNCA computes un numero nuevo (como 100% - 13.17% = 86.83%). Eso es fabricacion.</rule>\n    <rule>NUNCA extrapoles (como \"60 leads semanales\" a partir de un dato diario). Solo reporta lo que hay.</rule>\n    <rule>No inventes acciones que no esten respaldadas por los datos. Si hay alertas sin acciones criticas, traduce las alertas como puntos de monitoreo.</rule>\n    <rule>NUNCA confundas un feeder (aporta a conversion) con una fuga (pierde leads).</rule>\n  </forbidden_behaviors>\n</agent>"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        3100,
+        400
+      ],
+      "id": "a0000001-0000-0000-0000-000000000040",
+      "name": "Narrator_Executive"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=<report_data>\n{{ $json.narrative_input }}\n</report_data>",
+        "options": {
+          "systemMessage": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<agent type=\"manager_narrator\" version=\"6.0\">\n  <role>Coordinador operativo dando el reporte matutino al supervisor del call center.</role>\n  <mission>Decirle al supervisor QUE CAMBIO, DONDE ESTAN LOS PROBLEMAS, QUE FUNCIONA BIEN, y QUE HACER HOY.</mission>\n  <audience>Supervisor de call center. Conoce el proceso, no estadistica. Necesita: donde se pierden leads, donde se atascan, que funciona bien, que hora es critica, que hacer con su equipo.</audience>\n\n  <critical_rules>\n    <rule priority=\"0\">REGLA SUPREMA FEEDERS vs FUGAS: Los datos tienen DOS secciones claramente separadas. La seccion 'FEEDERS' lista estados que APORTAN leads a conversion (son BUENOS, son las rutas que FUNCIONAN). La seccion 'FUGAS' lista estados donde se PIERDEN leads (son MALOS, es donde se pierde dinero). JAMAS uses la palabra 'fuga' para describir un dato que viene de la seccion FEEDERS. Si un dato dice 'FEEDER: PreClosed Cash Only aporta 35%', eso es POSITIVO y va en 'Lo que funciona'. Si un dato dice 'FUGA: New Lead a Closed Lost 40%', eso es NEGATIVO y va en 'Problemas'.</rule>\n    <rule priority=\"1\">NUNCA hagas operaciones matematicas. No restes, no dividas, no computes porcentajes nuevos.</rule>\n    <rule priority=\"2\">NUNCA inventes cantidades (agentes, intentos, dias) que no esten en los datos.</rule>\n    <rule priority=\"3\">NUNCA menciones estados del funnel que no aparezcan en los datos.</rule>\n    <rule priority=\"4\">Las acciones del PLAN DEL DIA vienen de la seccion ACCIONES RECOMENDADAS. Si no hay acciones criticas pero hay alertas activas, menciona los puntos de vigilancia del dia.</rule>\n    <rule priority=\"5\">Los KPIs deben usar SOLO numeros que ya existen en los datos.</rule>\n    <rule priority=\"6\">NO uses jerga tecnica: R2, pendiente, spread, EMA, regresion, coeficiente, MASE, HHI.</rule>\n    <rule priority=\"7\">Ignora DATOS TECNICOS.</rule>\n    <rule priority=\"8\">Responde SIEMPRE en espanol.</rule>\n    <rule priority=\"9\">CAMBIO DE REGIMEN: Si los datos dicen direccion \"incremento\" o porcentaje positivo, NO uses \"descenso\" ni \"caida\". Si dicen \"descenso\" o porcentaje negativo, NO uses \"incremento\" ni \"aumento\". La narrativa debe ser consistente con el signo del cambio.</rule>\n    <rule priority=\"9\">Si los datos mencionan Revenue at Risk, traduce a dinero perdido en lenguaje simple.</rule>\n  </critical_rules>\n\n  <feeder_fuga_test>\n    <instruction>Antes de escribir la palabra 'fuga' o 'se pierden', verifica: el dato viene de la seccion FEEDERS o de la seccion FUGAS? Si viene de FEEDERS, es algo BUENO que funciona. NO lo llames fuga.</instruction>\n    <correct>Dato FEEDER: 'PreClosed Cash Only aporta 35.19%' -> Escribir: 'Lo que mejor funciona es el estado PreClosed Cash Only, donde mas de 1 de cada 3 leads avanzan a cierre.'</correct>\n    <correct>Dato FUGA: 'New Lead a Closed Lost 40% (200 leads PERDIDOS)' -> Escribir: 'La mayor fuga esta en New Lead: el 40% se pierden (200 leads).'</correct>\n    <incorrect>Dato FEEDER: 'PreClosed Cash Only aporta 35.19%' -> Escribir: 'Fuga en PreClosed Cash Only: 35.19%' -- ESTO ESTA MAL, es un feeder no una fuga.</incorrect>\n  </feeder_fuga_test>\n\n  <example>\n    <ideal_output>**Que Cambio Hoy**\nAyer entraron 400 leads. El promedio de los ultimos 7 dias es 421 leads/dia (+9.53% vs semana anterior). Hora pico a las 13:00.\n\n**Lo Que Funciona Bien**\n- El estado PreClosed Cash Only es el mas efectivo: el 35.19% de los leads ahi avanzan a cierre (19 leads).\n- PreClosed No Card tambien aporta: 13.17% convierten (37 leads).\n\n**Problemas del Funnel**\n1. Fuga principal: [nombre del estado de la seccion FUGAS] con X% de leads perdidos.\n2. Capacidad operativa al X%.\n\n**Plan del Dia**\nSin acciones urgentes. Mantener operacion normal.\n\n**KPIs a Vigilar**\n| KPI | Valor |\n| --- | --- |\n| Leads ultimo dia | 400 |\n| Promedio 7d | 421 |\n| Cambio semanal | +9.53% |\n| Hora pico | 13:00 |\n\n**Alerta Especial**\nSin alertas criticas.</ideal_output>\n  </example>\n\n  <required_output>\n    <section name=\"Que Cambio Hoy\" description=\"Volumen ultimo dia, promedio 7d, cambio semanal, hora pico\" />\n    <section name=\"Lo Que Funciona Bien\" description=\"Feeders: estados que APORTAN a conversion. Usa SOLO datos de la seccion FEEDERS.\" />\n    <section name=\"Problemas del Funnel\" description=\"Fugas y atascos. Usa SOLO datos de las secciones FUGAS y ESTADOS TRAMPA.\" />\n    <section name=\"Plan del Dia\" description=\"Acciones de ACCIONES RECOMENDADAS. Si no hay acciones criticas pero hay alertas, listar puntos de vigilancia. Solo decir sin acciones si tampoco hay alertas.\" />\n    <section name=\"KPIs a Vigilar\" description=\"Tabla con 5 metricas operativas.\" />\n    <section name=\"Alerta Especial\" description=\"Solo si hay alertas criticas.\" />\n  </required_output>\n\n  <forbidden_behaviors>\n    <rule>PROHIBIDO: Llamar 'fuga' a un dato que viene de la seccion FEEDERS.</rule>\n    <rule>PROHIBIDO: Restar porcentajes (100%-X%=Y%).</rule>\n    <rule>PROHIBIDO: Inventar cantidades no presentes en los datos.</rule>\n    <rule>PROHIBIDO: Mencionar estados del funnel que no esten en los datos.</rule>\n    <rule>PROHIBIDO: Inventar acciones que no esten en ACCIONES RECOMENDADAS.</rule>\n    <rule>PROHIBIDO: Repetir el mismo punto reformulado.</rule>\n  </forbidden_behaviors>\n</agent>"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        3100,
+        900
+      ],
+      "id": "a0000001-0000-0000-0000-000000000041",
+      "name": "Narrator_Manager"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=<report_data>\n{{ $json.narrative_input }}\n</report_data>",
+        "options": {
+          "systemMessage": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<agent type=\"analyst_narrator\" version=\"6.0\">\n  <role>Data scientist senior documentando hallazgos para el equipo de BI y analytics.</role>\n  <mission>Documentar hallazgos con rigor: fuentes, supuestos, limitaciones, calidad. Otro analista debe poder auditar y replicar las conclusiones.</mission>\n  <audience>Analistas de datos, equipo de BI. Dominan SQL y estadistica. Necesitan TRAZABILIDAD.</audience>\n\n  <critical_rules>\n    <rule priority=\"1\">La tabla de fuentes debe listar LAS 7 FUENTES individualmente: regresion, ema, markov, llamadas, llegadas, horarios, inversiones. Usa los conteos EXACTOS de la seccion DATOS TECNICOS. IMPORTANTE: Si la fuente de llamadas muestra 1 fila SQL pero menciona un conteo de registros alto (ej. 192K), aclara que es 1 fila pre-agregada que representa N registros originales. No confundas filas devueltas con volumen real de datos.</rule>\n    <rule priority=\"2\">R2 menor a 0.01 con MASE >= 1.0 = MODELO NO FUNCIONAL. Pero si MASE menor a 0.75, el forecast AGREGA VALOR a pesar del R2 bajo — en ese caso, etiqueta el R2 como \"no informativo para modelos con estacionalidad capturada via backtest\" y destaca el MASE como metrica primaria de utilidad. NUNCA digas simultaneamente \"NO FUNCIONAL\" y \"rendimiento predictivo superior\" en el mismo reporte.</rule>\n    <rule priority=\"3\">Los analisis sugeridos deben ser ESPECIFICOS: \"Revisar la tabla inversiones_campanas cruzando spend con volumen de leads por fecha para calcular CPL por campana\" es bueno. \"Hacer un analisis de clustering\" es malo.</rule>\n    <rule priority=\"4\">Muestra R2, pendiente, intercepto y spread con precision completa. Esta audiencia necesita los decimales.</rule>\n    <rule priority=\"5\">Si hay datos de inversion, incluye un analisis del gasto: total, distribucion por campana, concentracion, CPL implicito.</rule>\n    <rule priority=\"8\">Si los datos incluyen Revenue at Risk, Little's Law WIP, varianza de pasos Markov, o System Health Score, documenta cada uno con su valor numerico exacto y la formula o logica que lo produce.</rule>\n    <rule priority=\"9\">MASE menor a 0.75 es RENDIMIENTO SUPERIOR. Documentalo como tal, no como \"aceptable\".</rule>\n    <rule priority=\"6\">NUNCA inventes datos. Si una fuente tiene 0 registros, reportala como \"Sin datos\".</rule>\n    <rule priority=\"7\">Responde SIEMPRE en espanol.</rule>\n  </critical_rules>\n\n  <example>\n    <ideal_source_table>| Fuente | Registros | Estado | Limitaciones |\n| --- | --- | --- | --- |\n| Regresion | 65 | NO FUNCIONAL | R2: 0.0007 - equivalente a ruido aleatorio |\n| EMA | 65 | Utilizada | Escenarios con spread alto (84.66%) |\n| Markov | 481 | Utilizada | - |\n| Llamadas | 5000 | Utilizada | Muestra limitada (LIMIT 500 en query) |\n| Llegadas | 43 | Utilizada | 43 dias de historia |\n| Horarios | 24 | Utilizada | - |\n| Inversiones | 6 | Utilizada | Solo gasto agregado, sin CPL |</ideal_source_table>\n  </example>\n\n  <required_output>\n    <section name=\"Resumen de Fuentes y Calidad\" description=\"Tabla con LAS 7 FUENTES individuales\" />\n    <section name=\"Hallazgos Clave\" description=\"Lista numerada con evidencia y datos exactos\" />\n    <section name=\"Supuestos y Limitaciones\" description=\"Que asume el sistema, donde puede fallar\" />\n    <section name=\"Alertas Tecnicas\" description=\"Alertas con severidad y datos de soporte\" />\n    <section name=\"Analisis Sugeridos\" description=\"2-3 investigaciones ESPECIFICAS: que tabla, que variable, que hipotesis, que query\" />\n    <section name=\"Datos Clave en Tabla\" description=\"Tabla con metricas principales con precision completa\" />\n  </required_output>\n\n  <forbidden_behaviors>\n    <rule>NUNCA agrupes fuentes. Las 7 deben aparecer individualmente.</rule>\n    <rule>NUNCA describas R2 menor a 0.01 como \"ajuste debil\". Es MODELO NO FUNCIONAL.</rule>\n    <rule>NUNCA sugieras analisis genericos sin especificar que datos usar.</rule>\n    <rule>NUNCA inventes datos ni conteos de registros. Usa los numeros de DATOS TECNICOS.</rule>\n    <rule>ORTOGRAFIA OBLIGATORIA: Verifica que todos los encabezados esten correctos. Usa 'Resumen' (no 'Res[0ma'), 'varianza' (no 'variania'), 'Utilizada' (no 'Utilinea'), 'asignan' (no 'asionan'), 'Hallazgos' (no 'Hallazos'). Si no estas seguro de una palabra, usa un sinonimo mas simple.</rule>\n    <rule>FORMATO MARKDOWN: Todos los encabezados deben usar ## sin errores. Listas numeradas deben ser continuas (1, 2, 3...). Tablas deben tener | correctos y alineados.</rule>\n  </forbidden_behaviors>\n</agent>"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        3100,
+        1900
+      ],
+      "id": "a0000001-0000-0000-0000-000000000042",
+      "name": "Narrator_Analyst"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=<report_data>\n{{ $json.narrative_input }}\n</report_data>",
+        "options": {
+          "systemMessage": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<agent type=\"operations_narrator\" version=\"6.0\">\n  <role>Team lead dando el briefing matutino de 2 minutos al equipo de ventas.</role>\n  <mission>EXACTAMENTE 5 bullets de accion. Sin introduccion, sin cierre, sin explicaciones. El agente lee esto y empieza a trabajar.</mission>\n  <audience>Agentes de ventas. No son tecnicos. Necesitan instrucciones claras para su turno.</audience>\n\n  <critical_rules>\n    <rule priority=\"1\">Tu respuesta COMPLETA debe ser EXACTAMENTE 5 lineas. Cada linea empieza con \"- \". NADA mas. Sin titulo, sin \"Basado en...\", sin \"Este briefing se basa en...\", sin parrafos explicativos. SOLO 5 BULLETS.</rule>\n    <rule priority=\"2\">NUNCA inventes reglas operativas que no esten en los datos. Si los datos incluyen metricas de intentos de contacto (como sobre-contacto o promedio de intentos), puedes usarlas para guiar al equipo. Si no hay datos de intentos, no inventes numeros.</rule>\n    <rule priority=\"3\">NUNCA inventes nombres de campanas o canales (Google Brand, Meta, etc.) que no aparezcan en los datos.</rule>\n    <rule priority=\"4\">Usa SOLO estados del funnel y horas que aparezcan en los datos.</rule>\n    <rule priority=\"5\">NUNCA repitas el mismo punto con diferentes palabras. Cada bullet debe ser una instruccion DIFERENTE.</rule>\n    <rule priority=\"6\">NUNCA menciones numeros con decimales, porcentajes, KPIs, ni estadisticas. Habla como un coach: \"la hora fuerte es X\", \"prioricen leads de Y\", \"si un lead llega a Z, hagan W\".</rule>\n    <rule priority=\"7\">Ignora DATOS TECNICOS, ALERTAS, INVERSIONES. Tu solo hablas de leads, estados del funnel y horarios.</rule>\n    <rule priority=\"8\">Responde SIEMPRE en espanol.</rule>\n  </critical_rules>\n\n  <format_enforcement>\n    <valid_response>- Bullet 1 aqui.\n- Bullet 2 aqui.\n- Bullet 3 aqui.\n- Bullet 4 aqui.\n- Bullet 5 aqui.</valid_response>\n    <invalid_response>Basado en el reporte...\n\n- Bullet 1.\n- Bullet 2.\n\nEste briefing se basa en...</invalid_response>\n    <why_invalid>Tiene texto antes y despues de los bullets. Tu respuesta debe ser SOLO los 5 bullets, nada mas.</why_invalid>\n  </format_enforcement>\n\n  <example>\n    <ideal_output>- La hora fuerte hoy es a las 13:00. Esten listos para atender rapido en ese horario.\n- Los leads que llegan por Cash Only son los que mejor convierten. Denles prioridad cuando entren.\n- Si un lead llega a PreClosed - No Card, ofrezcan alternativas de pago antes de dejarlo ir.\n- Si un lead no contesta, pasenlo a seguimiento y avancen al siguiente. No se queden esperando.\n- Buen ritmo esta semana. Mantengan el foco y vamos por un buen dia.</ideal_output>\n  </example>\n\n  <forbidden_behaviors>\n    <rule>PROHIBIDO: Escribir CUALQUIER texto antes del primer bullet o despues del ultimo.</rule>\n    <rule>PROHIBIDO: Inventar reglas con numeros (\"3 intentos\", \"5 dias\", \"2 agentes\").</rule>\n    <rule>PROHIBIDO: Inventar nombres de campanas o canales.</rule>\n    <rule>PROHIBIDO: Mencionar porcentajes, KPIs, presupuesto o inversion.</rule>\n    <rule>PROHIBIDO: Repetir la misma instruccion reformulada.</rule>\n    <rule>PROHIBIDO: Usar lenguaje meta (\"Basado en el reporte\", \"Segun los datos\", \"Este briefing\").</rule>\n  </forbidden_behaviors>\n</agent>"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        3100,
+        1400
+      ],
+      "id": "a0000001-0000-0000-0000-000000000043",
+      "name": "Narrator_Operations"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {
+          "temperature": 0.15
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        2980,
+        550
+      ],
+      "id": "a0000001-0000-0000-0000-000000000050",
+      "name": "Groq_Executive",
+      "credentials": {
+        "groqApi": {
+          "id": "0kIrjA83aUXpwN6x",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {
+          "temperature": 0.15
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        2980,
+        1050
+      ],
+      "id": "a0000001-0000-0000-0000-000000000051",
+      "name": "Groq_Manager",
+      "credentials": {
+        "groqApi": {
+          "id": "0kIrjA83aUXpwN6x",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {
+          "temperature": 0.15
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        2980,
+        2050
+      ],
+      "id": "a0000001-0000-0000-0000-000000000052",
+      "name": "Groq_Analyst",
+      "credentials": {
+        "groqApi": {
+          "id": "0kIrjA83aUXpwN6x",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        2980,
+        1550
+      ],
+      "id": "a0000001-0000-0000-0000-000000000053",
+      "name": "Groq_Operations",
+      "credentials": {
+        "groqApi": {
+          "id": "0kIrjA83aUXpwN6x",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3500,
+        650
+      ],
+      "id": "a0000001-0000-0000-0000-000000000060",
+      "name": "Merge_N12"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3500,
+        1650
+      ],
+      "id": "a0000001-0000-0000-0000-000000000061",
+      "name": "Merge_N34"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3800,
+        1150
+      ],
+      "id": "a0000001-0000-0000-0000-000000000062",
+      "name": "Merge_Narratives"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === NARRATIVE QA GATE v6 ===\n// Validates structural quality + semantic correctness per audience.\n// Detects feeder/fuga confusion, typos, format violations.\n\nconst allNarratives = items.map(i => i.json);\nconst issues = [];\nconst qaChecks = [];\n\nfunction getText(obj) {\n  return obj.output || obj.response || obj.text || JSON.stringify(obj);\n}\n\nconst narratives = allNarratives.map((n, i) => {\n  const text = getText(n);\n  const itemIssues = [];\n  if (!text || text.length < 100) itemIssues.push('Narrative ' + (i+1) + ': too short (' + (text ? text.length : 0) + ' chars)');\n  if (text && text.length > 8000) itemIssues.push('Narrative ' + (i+1) + ': unusually long (' + text.length + ' chars)');\n  return { index: i, text: text || '', length: text ? text.length : 0, issues: itemIssues };\n});\n\nnarratives.forEach(n => issues.push(...n.issues));\n\n// --- Semantic QA: Manager feeder/fuga confusion detection ---\nconst mgrText = (narratives[1] && narratives[1].text) || '';\nconst mgrLower = mgrText.toLowerCase();\n\n// Get feeder state names from RulesEngine data\nvar feederNames = [];\ntry {\n  var rulesData = $('RulesEngine').first().json;\n  var funnel = (rulesData.facts && rulesData.facts.funnel) || {};\n  if (funnel.feeders) feederNames = funnel.feeders.slice(0, 5).map(function(fe) { return fe.from.toLowerCase(); });\n} catch(e) {}\n\n// Check if manager text calls any feeder a 'fuga'\nvar feederFugaConfusion = false;\nfeederNames.forEach(function(fname) {\n  var fnameClean = fname.replace(/[^a-z0-9]/g, ' ').trim();\n  if (fnameClean.length < 3) return;\n  var regex = new RegExp('fuga[^.]{0,40}' + fnameClean.replace(/ /g, '.{0,5}'), 'i');\n  if (regex.test(mgrText)) {\n    feederFugaConfusion = true;\n    issues.push('SEMANTIC_FAIL: Manager llama fuga al feeder ' + fname);\n  }\n});\n\nqaChecks.push({ check: 'manager_feeder_fuga', passed: !feederFugaConfusion, detail: feederFugaConfusion ? 'Feeder clasificado como fuga' : 'OK' });\n\n// --- Semantic QA: Analyst typo detection ---\nconst analystText = (narratives[3] && narratives[3].text) || '';\nconst typoPatterns = ['Res[0', 'variania', 'Utilinea', 'asionan', 'Hallazos'];\nvar analystTypos = [];\ntypoPatterns.forEach(function(tp) {\n  if (analystText.includes(tp)) analystTypos.push(tp);\n});\nif (analystTypos.length > 0) issues.push('TYPO_WARN: Analyst tiene typos: ' + analystTypos.join(', '));\nqaChecks.push({ check: 'analyst_typos', passed: analystTypos.length === 0, detail: analystTypos.length > 0 ? analystTypos.join(', ') : 'OK' });\n\n// --- Semantic QA: Operations format (exactly 5 bullets) ---\nconst opsText = (narratives[2] && narratives[2].text) || '';\nconst bulletCount = (opsText.match(/^- /gm) || []).length;\nvar opsFormatOk = bulletCount === 5;\nif (!opsFormatOk && bulletCount > 0) issues.push('FORMAT_WARN: Operations tiene ' + bulletCount + ' bullets (esperado: 5)');\nqaChecks.push({ check: 'operations_format', passed: opsFormatOk, detail: bulletCount + ' bullets' });\n\n// --- v6: Semantic QA — Changepoint direction consistency ---\nvar rulesDataQA = {};\ntry { rulesDataQA = $('RulesEngine').first().json; } catch(e) {}\nvar cpData = (rulesDataQA.facts && rulesDataQA.facts.predictionV2 && rulesDataQA.facts.predictionV2.changepoint) || {};\nif (cpData.detected) {\n  var execText = (narratives[0] && narratives[0].text) || '';\n  var mgrTextQA = (narratives[1] && narratives[1].text) || '';\n  var execLower = execText.toLowerCase();\n  var mgrLowerQA = mgrTextQA.toLowerCase();\n  if (cpData.direction === 'upward' && (execLower.includes('descenso') || execLower.includes('caida') || execLower.includes('disminucion'))) {\n    issues.push('SEMANTIC_WARN: Executive dice descenso/caida pero changepoint es upward (+' + cpData.shift_pct + '%)');\n    qaChecks.push({ check: 'exec_changepoint_consistency', passed: false, detail: 'Direction mismatch: upward vs descenso' });\n  }\n  if (cpData.direction === 'downward' && (execLower.includes('incremento') || execLower.includes('crecimiento') || execLower.includes('aumento'))) {\n    issues.push('SEMANTIC_WARN: Executive dice incremento pero changepoint es downward (' + cpData.shift_pct + '%)');\n    qaChecks.push({ check: 'exec_changepoint_consistency', passed: false, detail: 'Direction mismatch: downward vs incremento' });\n  }\n}\n\n// --- v6: Semantic QA — R2/MASE consistency in analyst ---\nvar pv2QA = (rulesDataQA.facts && rulesDataQA.facts.predictionV2) || {};\nif (pv2QA.quality_label === 'superior' && analystText.toLowerCase().includes('no funcional')) {\n  var maseVal = (pv2QA.diagnostics && pv2QA.diagnostics.best_mase) || 'N/A';\n  issues.push('SEMANTIC_WARN: Analyst marca modelo como NO FUNCIONAL pero MASE=' + maseVal + ' indica rendimiento superior. Usar lenguaje matizado.');\n  qaChecks.push({ check: 'analyst_r2_mase_consistency', passed: false, detail: 'MASE superior pero R2 etiquetado como NO FUNCIONAL' });\n}\n\n// --- v6: Semantic QA — Minimum KPIs per audience ---\nvar execHtml = (narratives[0] && narratives[0].text) || '';\nif (execHtml.length > 200) {\n  var execHasDecision = execHtml.toLowerCase().includes('recomend') || execHtml.toLowerCase().includes('accion') || execHtml.toLowerCase().includes('decision');\n  if (!execHasDecision) {\n    issues.push('FORMAT_WARN: Executive narrative sin recomendaciones o acciones detectables');\n    qaChecks.push({ check: 'exec_has_actions', passed: false, detail: 'Sin keywords de accion' });\n  }\n}\n\n// --- v6: Semantic QA — Analyst code block integrity ---\nif (analystText.includes('sql') && analystText.includes('SELECT')) {\n  var fenceMarker = String.fromCharCode(96,96,96);\n  var brokenFences = analystText.split(fenceMarker).length - 1;\n  if (brokenFences % 2 !== 0) {\n    issues.push('FORMAT_WARN: Analyst tiene bloques de codigo con fences desbalanceados (' + brokenFences + ' backtick-triples)');\n    qaChecks.push({ check: 'analyst_code_integrity', passed: false, detail: brokenFences + ' fences (impar)' });\n  }\n}\n\nvar hasCriticalFail = issues.some(function(i) { return i.startsWith('SEMANTIC_FAIL'); });\n\nconst validation = {\n  narratives_received: narratives.length,\n  expected: 4,\n  all_present: narratives.length >= 4,\n  issues: issues,\n  qa_checks: qaChecks,\n  has_critical_fail: hasCriticalFail,\n  is_valid: !hasCriticalFail && issues.length === 0 && narratives.length >= 4,\n  has_observations: issues.filter(function(i) { return i.includes('TYPO_WARN') || i.includes('FORMAT_WARN') || i.includes('unusually'); }).length > 0\n};\n\nreturn [{\n  json: {\n    validation: validation,\n    executive_report: narratives[0] ? narratives[0].text : '',\n    manager_report: narratives[1] ? narratives[1].text : '',\n    analyst_report: narratives[3] ? narratives[3].text : '',\n    operations_briefing: narratives[2] ? narratives[2].text : '',\n    all_narratives: narratives\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4100,
+        1150
+      ],
+      "id": "a0000001-0000-0000-0000-000000000070",
+      "name": "NarrativeQA"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === FINAL REPORT BUNDLE v7 ===\nvar data = $input.first().json;\nvar rulesData = $('RulesEngine').first().json;\nvar facts = rulesData.facts || {};\nvar alerts = rulesData.alerts || [];\nvar actions = rulesData.actions || [];\nvar systemStatus = rulesData.system_status || { color: 'verde', label: 'Sin datos', shs: 100 };\nvar shs = rulesData.system_health_score || 100;\n\nvar kpis = [];\nvar o = facts.operations || {};\nvar p = facts.projections || {};\nvar inv = facts.investment || {};\nvar pv2 = facts.predictionV2 || {};\nvar f = facts.funnel || {};\nvar ll = facts.littles_law || {};\nvar cpl = facts.cpl_analysis || {};\n\n// Health Score KPI (always first)\nkpis.push({\n  value: shs + '/100',\n  label: 'Health Score',\n  sub: systemStatus.label,\n  color: shs >= 80 ? 'green' : shs >= 65 ? '' : 'red'\n});\n\nif (o.available) {\n  kpis.push({ value: (o.total_leads || 0).toLocaleString(), label: 'Leads totales', sub: o.total_days + ' dias' });\n  kpis.push({ value: Math.round(o.avg_daily).toString(), label: 'Promedio diario', sub: 'leads/dia' });\n  if (o.wow_change_pct !== undefined) {\n    var sign = o.wow_change_pct >= 0 ? '+' : '';\n    kpis.push({ value: sign + o.wow_change_pct + '%', label: 'Cambio semanal', sub: 'vs semana anterior', color: o.wow_change_pct >= 0 ? 'green' : 'red' });\n  }\n  if (o.peak_hour !== undefined) kpis.push({ value: o.peak_hour + ':00', label: 'Hora pico', sub: 'mayor volumen' });\n}\n\n// Conversion KPI\nif (f.global_conversion_pct !== undefined && f.global_conversion_pct !== null) {\n  kpis.push({\n    value: f.global_conversion_pct + '%',\n    label: 'Conversion global',\n    sub: 'entrada a cierre',\n    color: f.global_conversion_pct >= 3.0 ? 'green' : f.global_conversion_pct >= 2.0 ? '' : 'red'\n  });\n}\n\nif (pv2.recommended_value) {\n  kpis.push({ value: '~' + pv2.recommended_value, label: 'Prevision diaria', sub: (pv2.model_name || '') + ' | ' + (pv2.confidence || '') });\n  if (pv2.diagnostics && pv2.diagnostics.best_mase !== null && pv2.diagnostics.best_mase !== undefined) {\n    kpis.push({ value: String(pv2.diagnostics.best_mase), label: 'MASE', sub: pv2.diagnostics.best_mase < 1 ? 'supera baseline' : 'no supera baseline', color: pv2.diagnostics.best_mase < 1 ? 'green' : 'red' });\n  }\n}\n\n// Revenue at Risk KPI\nif (f.total_revenue_at_risk && f.total_revenue_at_risk > 0) {\n  kpis.push({\n    value: '$' + f.total_revenue_at_risk.toLocaleString(),\n    label: 'Revenue at Risk',\n    sub: 'en fugas del embudo',\n    color: f.total_revenue_at_risk > 5000 ? 'red' : ''\n  });\n}\n\n// Little's Law WIP\nif (ll.available) {\n  kpis.push({\n    value: ll.capacity_utilization_pct + '%',\n    label: 'Utilizacion capacidad',\n    sub: ll.L_wip + '/' + ll.max_capacity + ' WIP',\n    color: ll.saturated ? 'red' : ll.capacity_utilization_pct > 85 ? '' : 'green'\n  });\n}\n\n// CPL\nif (cpl.available && cpl.global_cpl) {\n  kpis.push({\n    value: '$' + cpl.global_cpl,\n    label: 'CPL implicito',\n    sub: cpl.cpl_wow_change_pct !== undefined ? (cpl.cpl_wow_change_pct >= 0 ? '+' : '') + cpl.cpl_wow_change_pct + '% WoW' : 'global',\n    color: cpl.cpl_wow_change_pct > 20 ? 'red' : 'green'\n  });\n}\n\n// Investment\nif (inv.available && inv.total_spend) {\n  kpis.push({ value: '$' + Math.round(inv.total_spend).toLocaleString(), label: 'Gasto total', sub: inv.campaign_count + ' campanas' });\n  if (inv.mmm && inv.mmm.hhi_index) {\n    kpis.push({ value: String(inv.mmm.hhi_index), label: 'HHI', sub: inv.mmm.hhi_label, color: inv.mmm.hhi_index > 0.25 ? 'red' : inv.mmm.hhi_index > 0.15 ? '' : 'green' });\n  }\n}\n\n// Changepoint\nif (pv2.changepoint && pv2.changepoint.detected) {\n  kpis.push({ value: (pv2.changepoint.shift_pct >= 0 ? '+' : '') + pv2.changepoint.shift_pct + '%', label: 'Cambio regimen', sub: pv2.changepoint.change_date, color: Math.abs(pv2.changepoint.shift_pct) > 20 ? 'red' : 'green' });\n}\n\n// --- Audience-specific KPI filters ---\nvar strategicLabels = ['Health Score','Leads totales','Conversion global','Revenue at Risk','Gasto total','CPL implicito','Cambio semanal'];\nvar operationalLabels = ['Health Score','Promedio diario','Cambio semanal','Hora pico','Conversion global','Utilizacion capacidad'];\nvar technicalLabels = kpis.map(function(k) { return k.label; });\nvar agentLabels = ['Health Score','Promedio diario','Hora pico','Conversion global'];\n\nvar kpisByAudience = {\n  executive: kpis.filter(function(k) { return strategicLabels.indexOf(k.label) >= 0; }),\n  manager: kpis.filter(function(k) { return operationalLabels.indexOf(k.label) >= 0; }),\n  analyst: kpis,\n  operations: kpis.filter(function(k) { return agentLabels.indexOf(k.label) >= 0; })\n};\n\nreturn [{ json: {\n  _type: 'Mkt_BI_IA_v7_Report',\n  _version: '7.0',\n  _generated_at: new Date().toISOString(),\n  _validation: data.validation,\n  reports: {\n    executive: { audience: 'Direccion / C-Level', channel: 'email', content: data.executive_report },\n    manager: { audience: 'Supervisores / Managers', channel: 'slack', content: data.manager_report },\n    analyst: { audience: 'Equipo BI / Data Science', channel: 'dashboard', content: data.analyst_report },\n    operations: { audience: 'Agentes / Team Leads', channel: 'slack', content: data.operations_briefing }\n  },\n  structured: {\n    kpis: kpis,\n    kpis_by_audience: kpisByAudience,\n    alerts: alerts,\n    actions: actions,\n    system_status: systemStatus,\n    system_health_score: shs,\n    prediction_mode: pv2.mode || 'unavailable',\n    prediction_confidence: pv2.confidence || 'N/A',\n    prediction_method: pv2.model_name || 'N/A',\n    prediction_mase: (pv2.diagnostics && pv2.diagnostics.best_mase) || null,\n    prediction_quality: pv2.quality_label || 'sin_evaluacion',\n    prediction_quality_note: pv2.quality_note || '',\n    forecast_horizons: pv2.forecast_horizons || null,\n    backtest_summary: pv2.backtest || null,\n    aci: pv2.aci || null,\n    changepoint: pv2.changepoint || null,\n    markov_analysis: (f.markov_analysis) || null,\n    mmm: (inv.mmm) || null,\n    global_conversion_pct: f.global_conversion_pct || null,\n    revenue_at_risk: f.total_revenue_at_risk || null,\n    littles_law: ll.available ? ll : null,\n    cpl_analysis: cpl.available ? cpl : null\n  },\n  summary: {\n    total_reports: 4,\n    validation_passed: data.validation ? data.validation.is_valid : false,\n    issues: data.validation ? data.validation.issues : []\n  }\n}}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4400,
+        1150
+      ],
+      "id": "a0000001-0000-0000-0000-000000000080",
+      "name": "FinalReportBundle"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PREMIUM DOCUMENT GENERATOR v7.0 ===\n// Produces self-contained interactive HTML documents per audience.\n// Uses structured data (KPIs, alerts, actions) + AI narrative content.\n\nconst data = $input.first().json;\nconst reports = data.reports;\nconst structured = data.structured || {};\nconst validation = data._validation || {};\nconst generatedAt = data._generated_at || new Date().toISOString();\nconst kpis = structured.kpis || [];\nconst alerts = structured.alerts || [];\nconst actions = structured.actions || [];\nconst sysStatus = structured.system_status || { color: 'verde', label: 'Estable' };\nconst predMode = structured.prediction_mode || 'unavailable';\n\nfunction mdToHtml(md) {\n  if (!md) return '<p class=\"empty-state\">Sin contenido disponible.</p>';\n  let html = md;\n  html = html.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>');\n  html = html.replace(/```([\\s\\S]*?)```/g, '<pre style=\"background:#f8fafc;padding:12px;border-radius:6px;font-size:12px;overflow-x:auto;border:1px solid #e2e8f0\"><code>$1</code></pre>');\n  const lines = html.split('\\n');\n  let inTable = false, headerDone = false, inList = false, _lt = 'ol';\n  const out = [];\n  for (const rawLine of lines) {\n    const t = rawLine.trim();\n    if (t.startsWith('|') && t.endsWith('|')) {\n      if (inList) { out.push('</' + _lt + '>'); inList = false; }\n      if (!inTable) { out.push('<div class=\"tbl-wrap\"><table>'); inTable = true; headerDone = false; }\n      if (t.replace(/[\\|\\-\\s\\:]/g, '') === '') continue;\n      const cells = t.split('|').filter(c => c.trim());\n      const tag = !headerDone ? 'th' : 'td';\n      out.push('<tr>' + cells.map(c => '<' + tag + '>' + c.trim() + '</' + tag + '>').join('') + '</tr>');\n      if (!headerDone) headerDone = true;\n    } else {\n      if (inTable) { out.push('</table></div>'); inTable = false; }\n      if (/^\\d+\\.\\s/.test(t)) {\n        if (!inList) { _lt = 'ol'; out.push('<ol>'); inList = true; }\n        out.push('<li>' + t.replace(/^\\d+\\.\\s/, '') + '</li>');\n      } else if (/^[-*]\\s/.test(t)) {\n        if (!inList) { _lt = 'ul'; out.push('<ul>'); inList = true; }\n        out.push('<li>' + t.replace(/^[-*]\\s/, '') + '</li>');\n      } else {\n        if (inList) { out.push('</' + _lt + '>'); inList = false; }\n        if (!t) out.push('<br/>');\n        else if (t === '---' || t === '***') out.push('<hr style=\"border:none;border-top:1px solid #e2e8f0;margin:16px 0\"/>');\n        else if (t.startsWith('### ')) out.push('<p style=\"font-size:14px;font-weight:700;margin:16px 0 8px;color:var(--p)\">' + t.slice(4) + '</p>');\n        else if (t.startsWith('## ')) out.push('<p style=\"font-size:16px;font-weight:800;margin:20px 0 10px;color:var(--p)\">' + t.slice(3) + '</p>');\n        else out.push('<p>' + t + '</p>');\n      }\n    }\n  }\n  if (inTable) out.push('</table></div>');\n  if (inList) out.push('</' + _lt + '>');\n  return out.join('\\n');\n}\n\nfunction sevColor(sev) {\n  return sev === 'critical' ? '#e53e3e' : sev === 'warning' ? '#dd6b20' : '#3182ce';\n}\nfunction sevBg(sev) {\n  return sev === 'critical' ? '#fff5f5' : sev === 'warning' ? '#fffaf0' : '#ebf8ff';\n}\nfunction sevLabel(sev) {\n  return sev === 'critical' ? 'CRITICO' : sev === 'warning' ? 'ALERTA' : 'INFO';\n}\nfunction urgColor(u) {\n  return u === 'immediate' ? '#e53e3e' : u === 'this_week' ? '#dd6b20' : '#38a169';\n}\nfunction urgLabel(u) {\n  return u === 'immediate' ? 'INMEDIATO' : u === 'this_week' ? 'ESTA SEMANA' : 'ESTE MES';\n}\n\nfunction statusClass() {\n  return sysStatus.color === 'rojo' ? 'status-red' : sysStatus.color === 'amarillo' ? 'status-yellow' : 'status-green';\n}\nfunction statusLabel() {\n  return sysStatus.color === 'rojo' ? 'EN RIESGO' : sysStatus.color === 'amarillo' ? 'BAJO PRESION' : 'ESTABLE';\n}\n\nconst kpisByAudience = structured.kpis_by_audience || {};\n\nfunction buildKpiCards(audienceKey) {\n  var audienceKpis = (kpisByAudience[audienceKey] && kpisByAudience[audienceKey].length > 0) ? kpisByAudience[audienceKey] : kpis;\n  if (audienceKpis.length === 0) return '';\n  return '<div class=\"kpi-row\">' + audienceKpis.map(k => {\n    const valColor = k.color === 'red' ? ' style=\"color:#e53e3e\"' : k.color === 'green' ? ' style=\"color:#38a169\"' : '';\n    return '<div class=\"kpi\"><div class=\"kpi-value\"' + valColor + '>' + (k.value || '-') + '</div><div class=\"kpi-label\">' + (k.label || '') + '</div>' + (k.sub ? '<div class=\"kpi-sub\">' + k.sub + '</div>' : '') + '</div>';\n  }).join('') + '</div>';\n}\n\nfunction buildAlertCards() {\n  const meaningful = alerts.filter(a => a.severity !== 'info');\n  const infos = alerts.filter(a => a.severity === 'info');\n  let html = '';\n  if (meaningful.length === 0 && infos.length === 0) return '<div class=\"empty-card\"><p>No hay alertas activas. El sistema opera dentro de parametros normales.</p></div>';\n  meaningful.forEach(a => {\n    html += '<div class=\"alert-card\" style=\"border-left:4px solid ' + sevColor(a.severity) + ';background:' + sevBg(a.severity) + '\"><div class=\"alert-badge\" style=\"background:' + sevColor(a.severity) + '\">' + sevLabel(a.severity) + '</div><div class=\"alert-title\">' + a.title + '</div><div class=\"alert-detail\">' + (a.impact || '') + '</div></div>';\n  });\n  if (infos.length > 0) {\n    html += '<div class=\"info-section\"><div class=\"info-header\" onclick=\"this.parentElement.classList.toggle(\\'open\\')\">Informacion adicional (' + infos.length + ') <span class=\"chevron\">+</span></div><div class=\"info-body\">';\n    infos.forEach(a => { html += '<div class=\"info-item\"><strong>' + a.title + '</strong><br/><span class=\"info-impact\">' + (a.impact || '') + '</span></div>'; });\n    html += '</div></div>';\n  }\n  return html;\n}\n\nfunction buildActionCards() {\n  if (actions.length === 0) return '<div class=\"empty-card\"><p>No hay acciones urgentes pendientes.</p></div>';\n  return actions.map((a, i) => {\n    return '<div class=\"action-card\" style=\"border-left:4px solid ' + urgColor(a.urgency) + '\"><div class=\"action-head\"><span class=\"action-num\">' + (i + 1) + '</span><span class=\"action-badge\" style=\"background:' + urgColor(a.urgency) + '\">' + urgLabel(a.urgency) + '</span></div><div class=\"action-text\">' + a.action + '</div><div class=\"action-meta\"><span>Razon: ' + (a.reason || '') + '</span></div><div class=\"action-meta\"><span>Responsable: ' + (a.owner || '-') + '</span><span>Plazo: ' + (a.horizon || '-') + '</span></div></div>';\n  }).join('');\n}\n\nfunction predBadge() {\n  const method = structured.prediction_method || '';\n  const mase = structured.prediction_mase;\n  const maseStr = mase !== null && mase !== undefined ? ' (MASE: ' + mase + ')' : '';\n  if (predMode === 'model') return '<span class=\"pred-badge pred-ok\">Forecast favorable vs baseline' + maseStr + '</span>';\n  if (predMode === 'weak_model') return '<span class=\"pred-badge pred-weak\">Forecast orientativo' + maseStr + '</span>';\n  if (predMode === 'observed_fallback') return '<span class=\"pred-badge pred-fallback\">Forecast limitado' + maseStr + '</span>';\n  return '<span class=\"pred-badge pred-na\">Sin forecast</span>';\n}\n\nfunction buildDoc(report, theme) {\n  const d = new Date(generatedAt);\n  const dateStr = d.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });\n  const timeStr = d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });\n  const content = mdToHtml(report.content);\n  const critCount = alerts.filter(a => a.severity === 'critical').length;\n  const warnCount = alerts.filter(a => a.severity === 'warning').length;\n\n  return '<!DOCTYPE html>\\n<html lang=\"es\">\\n<head>\\n<meta charset=\"UTF-8\">\\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\\n<title>' + report.audience + ' | Mkt BI IA v7.0</title>\\n<style>\\n' +\n':root{--p:' + theme.color + ';--a:' + theme.accent + ';--l:' + theme.light + ';--bg:#f4f6f9;--c:#fff;--t:#1a202c;--m:#718096;--b:#e2e8f0;--r:14px;--s:0 2px 12px rgba(0,0,0,.06);--sh:0 8px 30px rgba(0,0,0,.12)}' +\n'*{margin:0;padding:0;box-sizing:border-box}' +\n'body{font-family:\"Segoe UI\",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--t);line-height:1.7}' +\n'.app{max-width:920px;margin:0 auto;padding:16px}' +\n'.hero{background:linear-gradient(135deg,var(--p),var(--a));border-radius:var(--r);color:#fff;padding:40px 44px 32px;position:relative;overflow:hidden}' +\n'.hero::after{content:\"\";position:absolute;top:-50%;right:-15%;width:380px;height:380px;background:rgba(255,255,255,.06);border-radius:50%}' +\n'.hero-top{display:flex;justify-content:space-between;align-items:flex-start}' +\n'.hero-icon{font-size:38px;margin-bottom:10px}' +\n'.hero h1{font-size:24px;font-weight:800;letter-spacing:-.4px;margin-bottom:2px}' +\n'.hero .sub{font-size:13px;opacity:.8;margin-bottom:14px}' +\n'.badges{display:flex;gap:7px;flex-wrap:wrap}' +\n'.badge{background:rgba(255,255,255,.15);backdrop-filter:blur(6px);padding:4px 14px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase}' +\n'.pred-badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}' +\n'.pred-ok{background:#c6f6d5;color:#22543d}.pred-weak{background:#fefcbf;color:#744210}.pred-fallback{background:#fed7d7;color:#742a2a}.pred-na{background:#e2e8f0;color:#4a5568}' +\n'.sbar{margin:-4px 12px 16px;padding:12px 22px;border-radius:0 0 var(--r) var(--r);font-size:12px;font-weight:700;letter-spacing:.5px;display:flex;align-items:center;gap:8px}' +\n'.sdot{width:9px;height:9px;border-radius:50%;display:inline-block;animation:pulse 2s infinite}' +\n'@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}' +\n'.status-green{background:#f0fff4;color:#22543d;border:1px solid #c6f6d5}.status-green .sdot{background:#38a169}' +\n'.status-yellow{background:#fffff0;color:#744210;border:1px solid #fefcbf}.status-yellow .sdot{background:#ecc94b}' +\n'.status-red{background:#fff5f5;color:#742a2a;border:1px solid #fed7d7}.status-red .sdot{background:#e53e3e}' +\n'.tabs{display:flex;gap:3px;margin-bottom:16px;background:var(--c);border-radius:var(--r);padding:5px;box-shadow:var(--s)}' +\n'.tab{flex:1;padding:11px 14px;text-align:center;font-size:12px;font-weight:600;border-radius:10px;cursor:pointer;transition:all .2s;color:var(--m);border:none;background:transparent;position:relative}' +\n'.tab:hover{background:var(--l);color:var(--p)}' +\n'.tab.active{background:var(--p);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15)}' +\n'.tab .tcount{position:absolute;top:4px;right:8px;background:var(--p);color:#fff;font-size:9px;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center}' +\n'.tab.active .tcount{background:rgba(255,255,255,.3)}' +\n'.tc{display:none;animation:fadeIn .3s ease}.tc.active{display:block}' +\n'@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}' +\n'.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px}' +\n'.kpi{background:var(--c);border-radius:var(--r);padding:18px 16px;box-shadow:var(--s);text-align:center;transition:transform .15s}.kpi:hover{transform:translateY(-2px)}' +\n'.kpi-value{font-size:26px;font-weight:800;color:var(--p);margin-bottom:2px}' +\n'.kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--m);font-weight:600}' +\n'.kpi-sub{font-size:10px;color:var(--m);margin-top:3px}' +\n'.content-block{background:var(--c);border-radius:var(--r);padding:28px 32px;box-shadow:var(--s);margin-bottom:14px}' +\n'.content-block p{margin-bottom:12px;font-size:14.5px;color:#2d3748}.content-block strong{color:var(--p)}' +\n'.content-block ol,.content-block ul{margin:10px 0 14px 22px}.content-block li{margin-bottom:8px;font-size:14.5px}' +\n'.tbl-wrap{overflow-x:auto;margin:14px 0}' +\n'.content-block table{width:100%;border-collapse:separate;border-spacing:0;border-radius:8px;overflow:hidden;border:1px solid var(--b);font-size:13px}' +\n'.content-block th{background:var(--p);color:#fff;padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}' +\n'.content-block td{padding:10px 14px;border-bottom:1px solid #edf2f7}.content-block tr:last-child td{border-bottom:none}.content-block tr:nth-child(even) td{background:#f8fafc}' +\n'.alert-card{border-radius:var(--r);padding:16px 20px;margin-bottom:10px;transition:transform .15s}.alert-card:hover{transform:translateX(3px)}' +\n'.alert-badge{display:inline-block;padding:3px 10px;border-radius:8px;font-size:9px;font-weight:700;color:#fff;letter-spacing:.4px;text-transform:uppercase;margin-bottom:6px}' +\n'.alert-title{font-weight:700;font-size:14px;color:var(--t);margin-bottom:4px}.alert-detail{font-size:12px;color:var(--m)}' +\n'.action-card{background:var(--c);border-radius:var(--r);padding:16px 20px;margin-bottom:10px;box-shadow:var(--s);transition:transform .15s}.action-card:hover{transform:translateX(3px)}' +\n'.action-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}' +\n'.action-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--p);color:#fff;font-size:12px;font-weight:700}' +\n'.action-badge{display:inline-block;padding:3px 10px;border-radius:8px;font-size:9px;font-weight:700;color:#fff;letter-spacing:.3px;text-transform:uppercase}' +\n'.action-text{font-weight:600;font-size:14px;color:var(--t);margin-bottom:6px}.action-meta{font-size:11px;color:var(--m);margin-top:3px}.action-meta span{margin-right:14px}' +\n'.empty-card{background:var(--c);border-radius:var(--r);padding:24px;text-align:center;color:var(--m);box-shadow:var(--s)}' +\n'.info-section{border:1px solid var(--b);border-radius:var(--r);margin-top:12px;overflow:hidden}' +\n'.info-header{padding:12px 18px;font-size:12px;font-weight:600;color:var(--m);cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:#f8fafc}' +\n'.info-header:hover{background:#edf2f7}.chevron{font-size:16px;transition:transform .2s}' +\n'.info-section.open .chevron{transform:rotate(45deg)}.info-body{max-height:0;overflow:hidden;transition:max-height .3s}.info-section.open .info-body{max-height:2000px}' +\n'.info-item{padding:10px 18px;border-top:1px solid var(--b);font-size:13px}.info-impact{color:var(--m);font-size:12px}' +\n'.footer{text-align:center;padding:20px;font-size:10px;color:var(--m);margin-top:10px}' +\n'@media print{body{background:#fff}.app{max-width:100%;padding:0}.tabs{display:none}.tc{display:block!important}.hero::after{display:none}.kpi:hover,.alert-card:hover,.action-card:hover{transform:none}}' +\n'@media(max-width:640px){.hero{padding:28px 20px 24px}.content-block{padding:20px 18px}.kpi-row{grid-template-columns:repeat(2,1fr)}}' +\n'\\n</style>\\n</head>\\n<body>\\n<div class=\"app\">\\n' +\n'<div class=\"hero\"><div class=\"hero-top\"><div><div class=\"hero-icon\">' + theme.icon + '</div><h1>' + report.audience + '</h1><div class=\"sub\">' + dateStr + ' &middot; ' + timeStr + '</div></div><div>' + predBadge() + '</div></div>' +\n'<div class=\"badges\"><span class=\"badge\">' + report.channel + '</span><span class=\"badge\">v7.0</span><span class=\"badge\">' + (validation.is_valid ? (validation.has_observations ? 'Pipeline OK (con notas)' : 'Pipeline OK') : 'Con observaciones') + '</span>' +\n(critCount > 0 ? '<span class=\"badge\" style=\"background:rgba(229,62,62,.4)\">' + critCount + ' criticas</span>' : '') +\n(warnCount > 0 ? '<span class=\"badge\" style=\"background:rgba(236,201,75,.3)\">' + warnCount + ' alertas</span>' : '') +\n'</div></div>\\n' +\n'<div class=\"sbar ' + statusClass() + '\"><span class=\"sdot\"></span>ESTADO: ' + statusLabel() + (sysStatus.reasons && sysStatus.reasons.length > 0 ? ' &mdash; ' + sysStatus.reasons[0] : '') + '</div>\\n' +\n'<div class=\"tabs\">' +\n'<button class=\"tab active\" onclick=\"showTab(\\'narrativa\\',this)\">Narrativa</button>' +\n'<button class=\"tab\" onclick=\"showTab(\\'alertas\\',this)\">Alertas' + (critCount + warnCount > 0 ? '<span class=tcount>' + (critCount + warnCount) + '</span>' : '') + '</button>' +\n'<button class=\"tab\" onclick=\"showTab(\\'acciones\\',this)\">Acciones' + (actions.length > 0 ? '<span class=tcount>' + actions.length + '</span>' : '') + '</button>' +\n'</div>\\n' +\n'<div id=\"narrativa\" class=\"tc active\">' + buildKpiCards(theme.key) + '<div class=\"content-block\">' + content + '</div></div>\\n' +\n'<div id=\"alertas\" class=\"tc\">' + buildAlertCards() + '</div>\\n' +\n'<div id=\"acciones\" class=\"tc\">' + buildActionCards() + '</div>\\n' +\n'<div class=\"footer\">Mkt_BI_IA v7.0 &middot; Generado automaticamente &middot; ' + generatedAt + '</div>\\n' +\n'</div>\\n<script>\\n' +\n'function showTab(id,btn){document.querySelectorAll(\".tc\").forEach(e=>e.classList.remove(\"active\"));document.querySelectorAll(\".tab\").forEach(e=>e.classList.remove(\"active\"));document.getElementById(id).classList.add(\"active\");btn.classList.add(\"active\")}\\n' +\n'</script>\\n</body>\\n</html>';\n}\n\nconst themes = [\n  { key: 'executive', color: '#1a365d', accent: '#2b6cb0', light: '#ebf4ff', icon: '\\ud83d\\udcca' },\n  { key: 'manager',   color: '#22543d', accent: '#2f855a', light: '#f0fff4', icon: '\\ud83d\\udccb' },\n  { key: 'analyst',   color: '#44337a', accent: '#6b46c1', light: '#faf5ff', icon: '\\ud83d\\udd2c' },\n  { key: 'operations',color: '#9c4221', accent: '#c05621', light: '#fffaf0', icon: '\\ud83c\\udfaf' }\n];\n\nreturn themes.map(t => ({\n  json: {\n    audience: t.key,\n    filename: 'reporte_' + t.key + '.html',\n    html: buildDoc(reports[t.key], t)\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4700,
+        1150
+      ],
+      "id": "a0000001-0000-0000-0000-000000000090",
+      "name": "DocumentGenerator"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === AUDIT STORAGE v7 ===\n// Persists execution metadata, QA results, and report summaries.\n// In production, replace this with a MySQL INSERT or Supabase upsert.\n\nvar bundle = $('FinalReportBundle').first().json;\nvar qaData = $('NarrativeQA').first().json;\n\nvar audit = {\n  execution_id: 'exec_' + Date.now(),\n  generated_at: bundle._generated_at || new Date().toISOString(),\n  version: bundle._version || '7.0',\n  system_health_score: bundle.structured ? bundle.structured.system_health_score : null,\n  system_status: bundle.structured ? bundle.structured.system_status : null,\n  prediction_mode: bundle.structured ? bundle.structured.prediction_mode : null,\n  prediction_mase: bundle.structured ? bundle.structured.prediction_mase : null,\n  alert_count_critical: bundle.structured ? bundle.structured.alerts.filter(function(a) { return a.severity === 'critical'; }).length : 0,\n  alert_count_warning: bundle.structured ? bundle.structured.alerts.filter(function(a) { return a.severity === 'warning'; }).length : 0,\n  action_count: bundle.structured ? bundle.structured.actions.length : 0,\n  validation_passed: qaData.validation ? qaData.validation.is_valid : false,\n  qa_issues: qaData.validation ? qaData.validation.issues : [],\n  qa_checks: qaData.validation ? qaData.validation.qa_checks : [],\n  has_critical_qa_fail: qaData.validation ? qaData.validation.has_critical_fail : false,\n  narratives_received: qaData.validation ? qaData.validation.narratives_received : 0,\n  report_lengths: {\n    executive: (qaData.executive_report || '').length,\n    manager: (qaData.manager_report || '').length,\n    analyst: (qaData.analyst_report || '').length,\n    operations: (qaData.operations_briefing || '').length\n  },\n  models_used: {\n    executive: 'openai/gpt-oss-120b',\n    manager: 'qwen/qwen3-32b',\n    analyst: 'moonshotai/kimi-k2-instruct-0905',\n    operations: 'llama-3.3-70b-versatile'\n  },\n  global_conversion_pct: bundle.structured ? bundle.structured.global_conversion_pct : null,\n  prediction_quality: bundle.structured ? bundle.structured.prediction_quality : null,\n  littles_law_wip: bundle.structured && bundle.structured.littles_law ? bundle.structured.littles_law.L_wip : null,\n  cpl_wow_change: bundle.structured && bundle.structured.cpl_analysis ? bundle.structured.cpl_analysis.cpl_wow_change_pct : null,\n  revenue_at_risk: bundle.structured ? bundle.structured.revenue_at_risk : null\n};\n\nreturn [{ json: audit }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5000,
+        1400
+      ],
+      "id": "a0000001-0000-0000-0000-000000000095",
+      "name": "AuditStorage"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === DASHBOARD PAYLOAD BUILDER v7 ===\n// Produces a single JSON optimized for the Netlify dashboard frontend.\n\nconst bundle = $('FinalReportBundle').first().json;\nconst docs = $('DocumentGenerator').all();\nconst rulesData = $('RulesEngine').first().json;\nconst facts = rulesData.facts || {};\n\nconst pv2 = facts.predictionV2 || {};\nconst f = facts.funnel || {};\nconst o = facts.operations || {};\nconst inv = facts.investment || {};\nconst ll = facts.littles_law || {};\nconst cpl = facts.cpl_analysis || {};\n\nconst payload = {\n  meta: {\n    generated_at: bundle._generated_at || new Date().toISOString(),\n    version: '7.0',\n    execution_id: 'exec_' + Date.now()\n  },\n  system: {\n    health_score: bundle.structured ? bundle.structured.system_health_score : 0,\n    status: bundle.structured ? bundle.structured.system_status : { color: 'verde', label: 'Sin datos' },\n    alerts: rulesData.alerts || [],\n    actions: rulesData.actions || []\n  },\n  kpis: bundle.structured ? bundle.structured.kpis : [],\n  forecast: {\n    recommended_value: pv2.recommended_value || null,\n    method: pv2.model_name || null,\n    mase: pv2.diagnostics ? pv2.diagnostics.best_mase : null,\n    confidence: pv2.confidence || null,\n    quality_label: pv2.quality_label || null,\n    r2: facts.projections ? facts.projections.r2 : null,\n    slope: facts.projections ? facts.projections.slope : null,\n    intervals: pv2.intervals || {},\n    horizons: pv2.forecast_horizons || {},\n    backtest_models: pv2.backtest ? pv2.backtest.models : [],\n    seasonal_indices: pv2.seasonal_indices || [],\n    changepoint: pv2.changepoint || { detected: false },\n    time_series: facts.raw_time_series || []\n  },\n  funnel: {\n    conversion_pct: f.global_conversion_pct || null,\n    conversion_target: f.conversion_target || 'Consult Booked',\n    transitions: facts.raw_transitions || [],\n    feeders: f.feeders || [],\n    leaks: f.top_leaks || [],\n    trap_states: f.trap_states || [],\n    absorption_probabilities: f.markov_analysis && f.markov_analysis.available ? f.markov_analysis.absorption_probabilities : [],\n    revenue_at_risk: f.revenue_at_risk || []\n  },\n  operations: {\n    total_leads: o.total_leads || 0,\n    total_days: o.total_days || 0,\n    avg_daily: o.avg_daily || 0,\n    latest: o.latest || null,\n    min_daily: o.min_daily || 0,\n    max_daily: o.max_daily || 0,\n    wow_change_pct: o.wow_change_pct || 0,\n    last_7d_avg: o.last_7d_avg || 0,\n    prev_7d_avg: o.prev_7d_avg || 0,\n    peak_hour: o.peak_hour || null,\n    valley_hour: o.valley_hour || null,\n    daily_volumes: (facts.raw_time_series || []).map(function(d) { return { date: d.date, leads: d.value }; }),\n    hourly_distribution: (facts.raw_hourly || []).map(function(h, i) {\n      var hKeys = Object.keys(h);\n      var hF = hKeys.find(function(k) { return k.toLowerCase().includes('hora') || k.toLowerCase().includes('hour'); }) || hKeys[0];\n      var vF = hKeys.find(function(k) { return k !== hF && typeof h[k] === 'number'; }) || hKeys[1];\n      return { hour: h[hF], probability: parseFloat(h[vF]) || 0, label: String(h[hF]).padStart(2,'0') + ':00' };\n    }),\n    call_metrics: o.call_metrics ? {\n      total_records: o.call_records || 0,\n      unique_contacts: o.unique_contacts || 0,\n      call_duration: o.call_metrics.call_duration || {},\n      minutes_since_prev: o.call_metrics.minutes_since_prev || {},\n      call_rank: o.call_metrics.call_rank || {}\n    } : null,\n    contact_distribution: o.contact_distribution || null,\n    littles_law: ll.available ? ll : { available: false }\n  },\n  investment: {\n    campaigns: inv.campaigns || [],\n    total_spend: inv.total_spend || 0,\n    campaign_count: inv.campaign_count || 0,\n    hhi: inv.mmm ? { index: inv.mmm.hhi_index, label: inv.mmm.hhi_label } : null,\n    cpl: cpl.available ? cpl : { available: false },\n    mmm: inv.mmm || { available: false },\n    granger: inv.mmm && inv.mmm.granger_results ? inv.mmm.granger_results : {}\n  }\n};\n\n// Collect HTML reports\nconst reports = {};\ndocs.forEach(function(d) {\n  var dj = d.json;\n  if (dj.audience && dj.html) reports[dj.audience] = dj.html;\n});\n\nreturn [{ json: { payload: payload, reports: reports } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5000,
+        1150
+      ],
+      "id": "a0000001-0000-0000-0000-000000000100",
+      "name": "DashboardPayloadBuilder"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PREPARE GITHUB TREE v7 ===\n// Builds the tree entries array for the GitHub Git Trees API.\n// Creates a single atomic commit with all 5 files.\n\nconst data = $input.first().json;\nconst payload = data.payload;\nconst reports = data.reports || {};\n\nconst OWNER = 'Gerion9';\nconst REPO = 'Marketing_LOOMS';\nconst BRANCH = 'main';\n\nconst files = [\n  { path: 'public/data/dashboard_payload.json', content: JSON.stringify(payload, null, 2) }\n];\n\nObject.entries(reports).forEach(function(entry) {\n  files.push({ path: 'public/reports/reporte_' + entry[0] + '.html', content: entry[1] });\n});\n\nconst tree = files.map(function(f) {\n  return { path: f.path, mode: '100644', type: 'blob', content: f.content };\n});\n\nconst commitMsg = 'chore: update dashboard data - ' + new Date().toISOString().split('T')[0];\n\nreturn [{ json: { owner: OWNER, repo: REPO, branch: BRANCH, tree: tree, message: commitMsg } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5300,
+        1150
+      ],
+      "id": "a0000001-0000-0000-0000-000000000101",
+      "name": "PrepareGitHubTree"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{ $json.owner }}/{{ $json.repo }}/git/ref/heads/{{ $json.branch }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Accept", "value": "application/vnd.github.v3+json" },
+            { "name": "X-GitHub-Api-Version", "value": "2022-11-28" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5600,
+        1150
+      ],
+      "id": "a0000001-0000-0000-0000-000000000102",
+      "name": "GH_GetRef",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GITHUB_PAT_CREDENTIAL_ID",
+          "name": "GitHub PAT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $('PrepareGitHubTree').item.json.owner }}/{{ $('PrepareGitHubTree').item.json.repo }}/git/trees",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Accept", "value": "application/vnd.github.v3+json" },
+            { "name": "X-GitHub-Api-Version", "value": "2022-11-28" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ base_tree: $json.object.sha, tree: $('PrepareGitHubTree').item.json.tree }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5900,
+        1150
+      ],
+      "id": "a0000001-0000-0000-0000-000000000103",
+      "name": "GH_CreateTree",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GITHUB_PAT_CREDENTIAL_ID",
+          "name": "GitHub PAT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $('PrepareGitHubTree').item.json.owner }}/{{ $('PrepareGitHubTree').item.json.repo }}/git/commits",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Accept", "value": "application/vnd.github.v3+json" },
+            { "name": "X-GitHub-Api-Version", "value": "2022-11-28" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ message: $('PrepareGitHubTree').item.json.message, tree: $json.sha, parents: [$('GH_GetRef').item.json.object.sha] }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6200,
+        1150
+      ],
+      "id": "a0000001-0000-0000-0000-000000000104",
+      "name": "GH_CreateCommit",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GITHUB_PAT_CREDENTIAL_ID",
+          "name": "GitHub PAT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.github.com/repos/{{ $('PrepareGitHubTree').item.json.owner }}/{{ $('PrepareGitHubTree').item.json.repo }}/git/refs/heads/{{ $('PrepareGitHubTree').item.json.branch }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Accept", "value": "application/vnd.github.v3+json" },
+            { "name": "X-GitHub-Api-Version", "value": "2022-11-28" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ sha: $json.sha, force: false }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6500,
+        1150
+      ],
+      "id": "a0000001-0000-0000-0000-000000000105",
+      "name": "GH_UpdateRef",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GITHUB_PAT_CREDENTIAL_ID",
+          "name": "GitHub PAT"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule_Trigger": {
+      "main": [
+        [
+          {
+            "node": "RuntimeConfig",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RuntimeConfig": {
+      "main": [
+        [
+          {
+            "node": "Src_Regresion",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Src_Ema",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Src_Markov",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Src_Llamadas",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Src_Llegadas",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Src_Horarios",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Src_Inversiones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Src_Regresion": {
+      "main": [
+        [
+          {
+            "node": "Merge_Reg_Ema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Src_Ema": {
+      "main": [
+        [
+          {
+            "node": "Merge_Reg_Ema",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Src_Markov": {
+      "main": [
+        [
+          {
+            "node": "Merge_Markov_Calls",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Src_Llamadas": {
+      "main": [
+        [
+          {
+            "node": "Merge_Markov_Calls",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Src_Llegadas": {
+      "main": [
+        [
+          {
+            "node": "Merge_Arrivals_Hours",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Src_Horarios": {
+      "main": [
+        [
+          {
+            "node": "Merge_Arrivals_Hours",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge_Reg_Ema": {
+      "main": [
+        [
+          {
+            "node": "Merge_Left",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge_Markov_Calls": {
+      "main": [
+        [
+          {
+            "node": "Merge_Left",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge_Arrivals_Hours": {
+      "main": [
+        [
+          {
+            "node": "Merge_Right",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Src_Inversiones": {
+      "main": [
+        [
+          {
+            "node": "Merge_Right",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge_Left": {
+      "main": [
+        [
+          {
+            "node": "Merge_All",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge_Right": {
+      "main": [
+        [
+          {
+            "node": "Merge_All",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge_All": {
+      "main": [
+        [
+          {
+            "node": "SourceValidator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SourceValidator": {
+      "main": [
+        [
+          {
+            "node": "FactsBuilder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FactsBuilder": {
+      "main": [
+        [
+          {
+            "node": "RulesEngine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RulesEngine": {
+      "main": [
+        [
+          {
+            "node": "Narrator_Executive",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Narrator_Manager",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Narrator_Operations",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Narrator_Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq_Executive": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Narrator_Executive",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq_Manager": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Narrator_Manager",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq_Analyst": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Narrator_Analyst",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq_Operations": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Narrator_Operations",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Narrator_Executive": {
+      "main": [
+        [
+          {
+            "node": "Merge_N12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Narrator_Manager": {
+      "main": [
+        [
+          {
+            "node": "Merge_N12",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Narrator_Analyst": {
+      "main": [
+        [
+          {
+            "node": "Merge_N34",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Narrator_Operations": {
+      "main": [
+        [
+          {
+            "node": "Merge_N34",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge_N12": {
+      "main": [
+        [
+          {
+            "node": "Merge_Narratives",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge_N34": {
+      "main": [
+        [
+          {
+            "node": "Merge_Narratives",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge_Narratives": {
+      "main": [
+        [
+          {
+            "node": "NarrativeQA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NarrativeQA": {
+      "main": [
+        [
+          {
+            "node": "FinalReportBundle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FinalReportBundle": {
+      "main": [
+        [
+          {
+            "node": "DocumentGenerator",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AuditStorage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DocumentGenerator": {
+      "main": [
+        [
+          {
+            "node": "DashboardPayloadBuilder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DashboardPayloadBuilder": {
+      "main": [
+        [
+          {
+            "node": "PrepareGitHubTree",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PrepareGitHubTree": {
+      "main": [
+        [
+          {
+            "node": "GH_GetRef",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GH_GetRef": {
+      "main": [
+        [
+          {
+            "node": "GH_CreateTree",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GH_CreateTree": {
+      "main": [
+        [
+          {
+            "node": "GH_CreateCommit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GH_CreateCommit": {
+      "main": [
+        [
+          {
+            "node": "GH_UpdateRef",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
