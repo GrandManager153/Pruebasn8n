@@ -327,6 +327,42 @@
                     </div>
                 </section>
 
+                <!-- 3b. TAB: PRONÓSTICO RANDOM FOREST -->
+                <section class="tab-content" id="tab-forecast-rf">
+                    <div id="rf-forecast-meta-banner" class="v-mb-4"></div>
+                    <div id="rf-unavailable-state" class="v-mb-4" style="display: none;"></div>
+                    <div id="rf-forecast-content">
+                        <div class="section-header">
+                            <div class="section-title"><span class="bar"></span> Pronóstico Random Forest (1d / 7d)</div>
+                        </div>
+                        <div class="v-grid-2" id="rf-forecast-horizons-grid"></div>
+
+                        <div class="v-grid-2-1 v-mt-4">
+                            <div class="card card-animate" style="animation-delay: 0.08s;">
+                                <div class="chart-title"><span class="dot" style="background: #10b981"></span> Histórico de Leads y Pronóstico RF</div>
+                                <div class="chart-wrapper"><canvas id="rf-chart-timeseries"></canvas></div>
+                            </div>
+                            <div class="card card-animate" style="animation-delay: 0.10s;">
+                                <div class="chart-title"><span class="dot" style="background: var(--gold)"></span> Clasificación de Modelos (Backtest RF)</div>
+                                <div class="custom-table-container v-mt-3">
+                                    <table class="custom-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Modelo de Proyección</th>
+                                                <th style="text-align: right;">MASE</th>
+                                                <th style="text-align: right;">MAE</th>
+                                                <th style="text-align: right;">RMSE</th>
+                                                <th>Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="rf-forecast-models-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- 4. TAB: INVERSIÓN Y CAMPAÑAS -->
                 <section class="tab-content" id="tab-investment">
                     <div class="section-header">
