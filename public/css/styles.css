@@ -8,11 +8,11 @@
     --bg-sidebar: #05080f;
     --bg-card: linear-gradient(135deg, rgba(13, 20, 35, 0.8), rgba(7, 10, 17, 0.9));
     --border: rgba(255, 255, 255, 0.05);
-    --border-hover: rgba(163, 230, 53, 0.35);
-    /* Chartreuse light glow border */
-    --chartreuse: #a3e635;
-    /* Neón Lime green */
-    --chartreuse-glow: rgba(163, 230, 53, 0.15);
+    --border-hover: rgba(224, 153, 42, 0.35);
+    /* Brand Gold light glow border */
+    --chartreuse: #e0992a;
+    /* Manuel Solis Brand Gold */
+    --chartreuse-glow: rgba(224, 153, 42, 0.15);
     --blue: #38bdf8;
     /* Azul eléctrico trading */
     --blue-glow: rgba(56, 189, 248, 0.15);
@@ -61,11 +61,11 @@ body.light-mode {
     /* White glass */
     --border: rgba(15, 23, 42, 0.08);
     /* Dark slate subtle border */
-    --border-hover: rgba(132, 204, 22, 0.45);
-    /* Lime green border light mode */
-    --chartreuse: #84cc16;
-    /* Lime green adjusted for white contrast */
-    --chartreuse-glow: rgba(132, 204, 22, 0.10);
+    --border-hover: rgba(178, 116, 21, 0.45);
+    /* Brand Gold border light mode */
+    --chartreuse: #b27415;
+    /* Brand Gold adjusted for white contrast */
+    --chartreuse-glow: rgba(178, 116, 21, 0.10);
     --blue: #0284c7;
     /* Sky blue trading */
     --blue-glow: rgba(2, 132, 199, 0.10);

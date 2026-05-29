@@ -7,7 +7,7 @@
     --bg-main: #080c14;
     --bg-card: linear-gradient(135deg, rgba(13, 20, 35, 0.88), rgba(7, 10, 17, 0.94));
     --border: rgba(255, 255, 255, 0.06);
-    --chartreuse: #a3e635;
+    --chartreuse: #e0992a;
     --blue: #38bdf8;
     --crimson: #f43f5e;
     --gold: #cca43b;
@@ -45,7 +45,7 @@ body.light-mode {
     --bg-main: #f8fafc;
     --bg-card: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(241, 245, 249, 0.96));
     --border: rgba(15, 23, 42, 0.08);
-    --chartreuse: #84cc16;
+    --chartreuse: #b27415;
     --blue: #0284c7;
     --crimson: #e11d48;
     --text-main: #0f172a;
