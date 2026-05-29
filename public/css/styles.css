@@ -32,6 +32,8 @@
     --amber: #fbbf24;
     --font: 'Inter', sans-serif;
     --mono: 'JetBrains Mono', monospace;
+    --metric-value: #ffffff; /* Unified premium white in dark mode */
+    --metric-value-glow: rgba(255, 255, 255, 0.45);
 
     /* === Bento / Floating layout language (RETRADE-style) === */
     --radius-lg: 24px;
@@ -78,6 +80,8 @@ body.light-mode {
     /* Muted grey */
     --gold: #cca43b;
     --gold-glow: rgba(204, 164, 59, 0.10);
+    --metric-value: #0f172a; /* Unified cool charcoal black in light mode */
+    --metric-value-glow: rgba(15, 23, 42, 0.20);
 }
 
 /* Smooth color transitions for theme toggles */
@@ -1198,7 +1202,7 @@ body.light-mode .wave-4 svg path {
     font-size: 30px;
     font-weight: 800;
     font-family: var(--mono);
-    color: var(--text-main);
+    color: var(--metric-value) !important;
     line-height: 1.1;
 }
 
@@ -1214,7 +1218,7 @@ body.light-mode .wave-4 svg path {
 }
 
 .stat-card-gold .card-stat-value {
-    color: var(--amber);
+    color: var(--metric-value) !important;
 }
 
 .stat-card-crimson {
@@ -1223,7 +1227,7 @@ body.light-mode .wave-4 svg path {
 }
 
 .stat-card-crimson .card-stat-value {
-    color: var(--crimson);
+    color: var(--metric-value) !important;
 }
 
 .stat-card-green {
@@ -1232,7 +1236,7 @@ body.light-mode .wave-4 svg path {
 }
 
 .stat-card-green .card-stat-value {
-    color: var(--chartreuse);
+    color: var(--metric-value) !important;
 }
 
 .stat-card-blue {
@@ -1241,7 +1245,7 @@ body.light-mode .wave-4 svg path {
 }
 
 .stat-card-blue .card-stat-value {
-    color: var(--blue);
+    color: var(--metric-value) !important;
 }
 
 /* === KPI Salud del Sistema — tanque líquido animado (0–100) === */
@@ -1843,19 +1847,19 @@ body.light-mode .chart-title {
 }
 
 .stat-card-gold .card-stat-value:hover {
-    text-shadow: 0 0 14px rgba(251, 191, 36, 0.65);
+    text-shadow: 0 0 14px var(--metric-value-glow) !important;
 }
 
 .stat-card-crimson .card-stat-value:hover {
-    text-shadow: 0 0 14px rgba(244, 63, 94, 0.65);
+    text-shadow: 0 0 14px var(--metric-value-glow) !important;
 }
 
 .stat-card-green .card-stat-value:hover {
-    text-shadow: 0 0 14px rgba(163, 230, 53, 0.65);
+    text-shadow: 0 0 14px var(--metric-value-glow) !important;
 }
 
 .stat-card-blue .card-stat-value:hover {
-    text-shadow: 0 0 14px rgba(56, 189, 248, 0.65);
+    text-shadow: 0 0 14px var(--metric-value-glow) !important;
 }
 
 /* Table cells light up to pure white with text shadow on row hover */

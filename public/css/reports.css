@@ -18,6 +18,8 @@
     --text-dim: #64748b;
     --font: 'Inter', sans-serif;
     --mono: 'JetBrains Mono', monospace;
+    --metric-value: #ffffff; /* Unified premium white in dark mode */
+    --metric-value-glow: rgba(255, 255, 255, 0.45);
     --radius-lg: 24px;
     --radius-md: 16px;
     --radius-sm: 12px;
@@ -52,6 +54,8 @@ body.light-mode {
     --soft-shadow: 0 12px 32px rgba(15, 23, 42, 0.07), inset 0 1px 1px rgba(255, 255, 255, 0.85);
     --l: rgba(132, 204, 22, 0.08);
     --c: rgba(255, 255, 255, 0.92);
+    --metric-value: #0f172a; /* Unified cool charcoal black in light mode */
+    --metric-value-glow: rgba(15, 23, 42, 0.20);
 }
 
 /* === Fondo ambiental (igual que el panel) === */
@@ -373,7 +377,12 @@ body.light-mode .tabs {
     font-family: var(--mono) !important;
     font-size: 26px !important;
     font-weight: 800 !important;
-    color: var(--blue) !important;
+    color: var(--metric-value) !important;
+    transition: text-shadow 0.25s ease !important;
+}
+
+.kpi:hover .kpi-value {
+    text-shadow: 0 0 14px var(--metric-value-glow) !important;
 }
 
 .kpi-label {
