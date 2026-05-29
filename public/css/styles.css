@@ -8,30 +8,42 @@
     --bg-sidebar: #05080f;
     --bg-card: linear-gradient(135deg, rgba(13, 20, 35, 0.8), rgba(7, 10, 17, 0.9));
     --border: rgba(255, 255, 255, 0.05);
-    --border-hover: rgba(163, 230, 53, 0.35); /* Chartreuse light glow border */
-    --chartreuse: #a3e635; /* Neón Lime green */
+    --border-hover: rgba(163, 230, 53, 0.35);
+    /* Chartreuse light glow border */
+    --chartreuse: #a3e635;
+    /* Neón Lime green */
     --chartreuse-glow: rgba(163, 230, 53, 0.15);
-    --blue: #38bdf8; /* Azul eléctrico trading */
+    --blue: #38bdf8;
+    /* Azul eléctrico trading */
     --blue-glow: rgba(56, 189, 248, 0.15);
-    --crimson: #f43f5e; /* Rojo carmesí neón trading */
+    --crimson: #f43f5e;
+    /* Rojo carmesí neón trading */
     --crimson-glow: rgba(244, 63, 94, 0.15);
-    --gold: #cca43b; /* Conservar para compatibilidad */
+    --gold: #cca43b;
+    /* Conservar para compatibilidad */
     --gold-glow: rgba(204, 164, 59, 0.15);
     --text-main: #f8fafc;
     --text-muted: #94a3b8;
     --text-dim: #64748b;
-    --green: #10b981; /* Verde esmeralda suave */
-    --red: #f43f5e; /* Reemplazado por carmesí neón */
+    --green: #10b981;
+    /* Verde esmeralda suave */
+    --red: #f43f5e;
+    /* Reemplazado por carmesí neón */
     --amber: #fbbf24;
     --font: 'Inter', sans-serif;
     --mono: 'JetBrains Mono', monospace;
 
     /* === Bento / Floating layout language (RETRADE-style) === */
-    --radius-lg: 24px;   /* tarjetas y paneles principales */
-    --radius-md: 16px;   /* botones primarios y módulos medianos */
-    --radius-sm: 12px;   /* chips, sub-bloques */
-    --gap-bento: 22px;   /* separación entre módulos flotantes */
-    --shell-pad: 16px;   /* margen exterior del "shell" flotante */
+    --radius-lg: 24px;
+    /* tarjetas y paneles principales */
+    --radius-md: 16px;
+    /* botones primarios y módulos medianos */
+    --radius-sm: 12px;
+    /* chips, sub-bloques */
+    --gap-bento: 22px;
+    /* separación entre módulos flotantes */
+    --shell-pad: 16px;
+    /* margen exterior del "shell" flotante */
     --soft-shadow: 0 14px 40px rgba(0, 0, 0, 0.38), inset 0 1px 1px rgba(255, 255, 255, 0.04);
 }
 
@@ -39,20 +51,31 @@
    ☀️ Premium Cool Metallic Light Theme Variables
    ===================================================================== */
 body.light-mode {
-    --bg-main: #f8fafc; /* Cool metallic white */
-    --bg-sidebar: rgba(241, 245, 249, 0.85); /* Cool slate frosted glass */
-    --bg-card: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(241, 245, 249, 0.95)); /* White glass */
-    --border: rgba(15, 23, 42, 0.08); /* Dark slate subtle border */
-    --border-hover: rgba(132, 204, 22, 0.45); /* Lime green border light mode */
-    --chartreuse: #84cc16; /* Lime green adjusted for white contrast */
+    --bg-main: #f8fafc;
+    /* Cool metallic white */
+    --bg-sidebar: rgba(241, 245, 249, 0.85);
+    /* Cool slate frosted glass */
+    --bg-card: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(241, 245, 249, 0.95));
+    /* White glass */
+    --border: rgba(15, 23, 42, 0.08);
+    /* Dark slate subtle border */
+    --border-hover: rgba(132, 204, 22, 0.45);
+    /* Lime green border light mode */
+    --chartreuse: #84cc16;
+    /* Lime green adjusted for white contrast */
     --chartreuse-glow: rgba(132, 204, 22, 0.10);
-    --blue: #0284c7; /* Sky blue trading */
+    --blue: #0284c7;
+    /* Sky blue trading */
     --blue-glow: rgba(2, 132, 199, 0.10);
-    --crimson: #e11d48; /* Crimson rose */
+    --crimson: #e11d48;
+    /* Crimson rose */
     --crimson-glow: rgba(225, 29, 72, 0.10);
-    --text-main: #0f172a; /* Deep charcoal black */
-    --text-muted: #475569; /* Slate grey */
-    --text-dim: #64748b; /* Muted grey */
+    --text-main: #0f172a;
+    /* Deep charcoal black */
+    --text-muted: #475569;
+    /* Slate grey */
+    --text-dim: #64748b;
+    /* Muted grey */
     --gold: #cca43b;
     --gold-glow: rgba(204, 164, 59, 0.10);
 }
@@ -63,17 +86,18 @@ body {
 }
 
 body.light-mode .ambient-nebula {
-    opacity: 0.08; /* Dim nebulas to avoid light saturation */
+    opacity: 0.08;
+    /* Dim nebulas to avoid light saturation */
 }
 
 /* Light Mode specific radial flashlight halo */
 body.light-mode .global-flashlight {
-    background: radial-gradient(
-        750px circle at var(--global-mouse-x, 50%) var(--global-mouse-y, 50%),
-        rgba(56, 189, 248, 0.05) 0%, /* Soft blue */
-        rgba(255, 255, 255, 0.3) 50%, /* Bright light overlay */
-        transparent 100%
-    );
+    background: radial-gradient(750px circle at var(--global-mouse-x, 50%) var(--global-mouse-y, 50%),
+            rgba(56, 189, 248, 0.05) 0%,
+            /* Soft blue */
+            rgba(255, 255, 255, 0.3) 50%,
+            /* Bright light overlay */
+            transparent 100%);
 }
 
 /* Light mode overrides for high readability */
@@ -85,11 +109,13 @@ body.light-mode .list-group-item:hover,
 body.light-mode .custom-table td,
 body.light-mode .health-reasons,
 body.light-mode .action-text {
-    color: #0f172a !important; /* Force true charcoal color for important headings */
+    color: #0f172a !important;
+    /* Force true charcoal color for important headings */
 }
 
 body.light-mode .list-group-item.active {
-    color: #080c14 !important; /* Active item keeps dark text on lime background */
+    color: #080c14 !important;
+    /* Active item keeps dark text on lime background */
 }
 
 body.light-mode .card {
@@ -152,7 +178,8 @@ body.light-mode .theme-toggle-btn:hover {
     height: 24px;
     border-radius: 50%;
     pointer-events: none;
-    z-index: 99999; /* Draw on top of absolutely everything */
+    z-index: 99999;
+    /* Draw on top of absolutely everything */
     transform: translate(-50%, -50%) scale(0);
     animation: rippleReveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -162,19 +189,22 @@ body.light-mode .theme-toggle-btn:hover {
         transform: translate(-50%, -50%) scale(0);
         opacity: 1;
     }
+
     40% {
         opacity: 1;
     }
+
     100% {
-        transform: translate(-50%, -50%) scale(150); /* Covers entire screen */
+        transform: translate(-50%, -50%) scale(150);
+        /* Covers entire screen */
         opacity: 0;
     }
 }
 
-* { 
-    box-sizing: border-box; 
-    margin: 0; 
-    padding: 0; 
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
 body {
@@ -212,7 +242,8 @@ body {
     pointer-events: none;
     z-index: 1;
     filter: blur(160px);
-    opacity: 0.10; /* Atenuado para un look fintech limpio (estilo RETRADE) */
+    opacity: 0.10;
+    /* Atenuado para un look fintech limpio (estilo RETRADE) */
     mix-blend-mode: screen;
     animation: floatNebula 25s infinite alternate ease-in-out;
 }
@@ -244,13 +275,14 @@ body {
     height: 100vh;
     pointer-events: none;
     z-index: 1;
-    background: radial-gradient(
-        750px circle at var(--global-mouse-x, 50%) var(--global-mouse-y, 50%),
-        rgba(56, 189, 248, 0.04) 0%, /* Cyan eléctrico atenuado */
-        rgba(139, 92, 246, 0.025) 40%, /* Púrpura cósmico atenuado */
-        rgba(163, 230, 53, 0.01) 70%, /* Toque verde limón */
-        transparent 100%
-    );
+    background: radial-gradient(750px circle at var(--global-mouse-x, 50%) var(--global-mouse-y, 50%),
+            rgba(56, 189, 248, 0.04) 0%,
+            /* Cyan eléctrico atenuado */
+            rgba(139, 92, 246, 0.025) 40%,
+            /* Púrpura cósmico atenuado */
+            rgba(163, 230, 53, 0.01) 70%,
+            /* Toque verde limón */
+            transparent 100%);
     mix-blend-mode: screen;
 }
 
@@ -258,9 +290,11 @@ body {
     0% {
         transform: translate(0, 0) scale(1);
     }
+
     50% {
         transform: translate(80px, 50px) scale(1.1);
     }
+
     100% {
         transform: translate(-40px, -80px) scale(0.9);
     }
@@ -299,6 +333,7 @@ body {
 .wave-1 {
     animation: waveFlow 22s linear infinite;
 }
+
 .wave-1 svg path {
     fill: rgba(56, 189, 248, 0.018);
 }
@@ -308,6 +343,7 @@ body {
     animation: waveFlowReverse 18s linear infinite;
     bottom: -20px;
 }
+
 .wave-2 svg path {
     fill: rgba(163, 230, 53, 0.014);
 }
@@ -317,6 +353,7 @@ body {
     animation: waveFlow 28s linear infinite;
     bottom: -40px;
 }
+
 .wave-3 svg path {
     fill: rgba(56, 189, 248, 0.012);
 }
@@ -326,6 +363,7 @@ body {
     animation: waveFlowReverse 24s linear infinite;
     bottom: -10px;
 }
+
 .wave-4 svg path {
     fill: rgba(255, 255, 255, 0.008);
 }
@@ -334,6 +372,7 @@ body {
     0% {
         transform: translateX(0);
     }
+
     100% {
         transform: translateX(-50%);
     }
@@ -343,6 +382,7 @@ body {
     0% {
         transform: translateX(-50%);
     }
+
     100% {
         transform: translateX(0);
     }
@@ -352,12 +392,15 @@ body {
 body.light-mode .wave-1 svg path {
     fill: rgba(2, 132, 199, 0.045);
 }
+
 body.light-mode .wave-2 svg path {
     fill: rgba(132, 204, 22, 0.035);
 }
+
 body.light-mode .wave-3 svg path {
     fill: rgba(2, 132, 199, 0.03);
 }
+
 body.light-mode .wave-4 svg path {
     fill: rgba(15, 23, 42, 0.015);
 }
@@ -414,16 +457,29 @@ body.light-mode .wave-4 svg path {
 }
 
 @media (max-width: 1100px) {
-    .v-grid-2-1, .v-grid-1-1 {
+
+    .v-grid-2-1,
+    .v-grid-1-1 {
         grid-template-columns: 1fr;
     }
 }
 
 /* --- Margins, Spacings & Helpers --- */
-.v-mb-4 { margin-bottom: 24px; }
-.v-mb-3 { margin-bottom: 16px; }
-.v-mt-3 { margin-top: 16px; }
-.v-mt-2 { margin-top: 12px; }
+.v-mb-4 {
+    margin-bottom: 24px;
+}
+
+.v-mb-3 {
+    margin-bottom: 16px;
+}
+
+.v-mt-3 {
+    margin-top: 16px;
+}
+
+.v-mt-2 {
+    margin-top: 12px;
+}
 
 .v-flex-between {
     display: flex;
@@ -444,7 +500,9 @@ body.light-mode .wave-4 svg path {
     gap: 12px;
 }
 
-.v-w-100 { width: 100%; }
+.v-w-100 {
+    width: 100%;
+}
 
 /* --- Native Buttons --- */
 .btn-primary {
@@ -501,9 +559,24 @@ body.light-mode .wave-4 svg path {
     border-style: solid;
     display: inline-block;
 }
-.custom-badge-critical { background: rgba(239, 68, 68, 0.1); color: var(--red); border-color: rgba(239, 68, 68, 0.2); }
-.custom-badge-warning { background: rgba(245, 158, 11, 0.1); color: var(--amber); border-color: rgba(245, 158, 11, 0.2); }
-.custom-badge-success { background: rgba(16, 185, 129, 0.1); color: var(--green); border-color: rgba(16, 185, 129, 0.2); }
+
+.custom-badge-critical {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--red);
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.custom-badge-warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--amber);
+    border-color: rgba(245, 158, 11, 0.2);
+}
+
+.custom-badge-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--green);
+    border-color: rgba(16, 185, 129, 0.2);
+}
 
 /* --- Custom Responsive Tables --- */
 .custom-table-container {
@@ -571,7 +644,7 @@ body.light-mode .wave-4 svg path {
     right: -15%;
     width: 320px;
     height: 320px;
-    background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
     border-radius: 50%;
     pointer-events: none;
 }
@@ -593,7 +666,7 @@ body.light-mode .wave-4 svg path {
     font-weight: 900;
     letter-spacing: -0.5px;
     margin-bottom: 4px;
-    text-shadow: 0 0 10px rgba(255,255,255,0.1);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
 }
 
 .hero .sub {
@@ -646,7 +719,7 @@ body.light-mode .wave-4 svg path {
 }
 
 /* Ensure sidebar children are above pseudo-elements */
-.sidebar > * {
+.sidebar>* {
     position: relative;
     z-index: 2;
 }
@@ -730,7 +803,8 @@ body.light-mode .wave-4 svg path {
     background: rgba(255, 255, 255, 0.04);
     color: white;
     border-color: rgba(255, 255, 255, 0.06);
-    padding-left: 18px; /* micro-slide action */
+    padding-left: 18px;
+    /* micro-slide action */
 }
 
 /* Active state — intense neon bloom glow */
@@ -744,14 +818,16 @@ body.light-mode .wave-4 svg path {
 }
 
 .list-group-item.active:hover {
-    padding-left: 14px; /* lock active item padding */
+    padding-left: 14px;
+    /* lock active item padding */
     box-shadow: 0 0 32px rgba(163, 230, 53, 0.45), 0 6px 20px rgba(163, 230, 53, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 }
 
 .sidebar-footer {
     border-top: 1px solid rgba(255, 255, 255, 0.03);
     padding-top: 16px;
-    margin-top: auto; /* Dynamically absorb all vertical space to maintain perfect separation gap */
+    margin-top: auto;
+    /* Dynamically absorb all vertical space to maintain perfect separation gap */
 }
 
 .sidebar-footer p {
@@ -767,7 +843,8 @@ body.light-mode .wave-4 svg path {
     background: transparent !important;
     display: flex;
     flex-direction: column;
-    min-width: 0; /* prevent layout overflow */
+    min-width: 0;
+    /* prevent layout overflow */
 }
 
 .topbar {
@@ -794,7 +871,7 @@ body.light-mode .wave-4 svg path {
     letter-spacing: -0.5px;
     color: white;
     margin: 0;
-    text-shadow: 0 0 10px rgba(255,255,255,0.05);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
 }
 
 .status-pill {
@@ -819,8 +896,15 @@ body.light-mode .wave-4 svg path {
 }
 
 @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.7); }
-    70% { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+
+    70% {
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+    }
 }
 
 /* === Status Bar === */
@@ -847,16 +931,46 @@ body.light-mode .wave-4 svg path {
 }
 
 @keyframes pulse-status {
-    0%, 100% { box-shadow: 0 0 0 0 currentColor; }
-    70% { box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 currentColor;
+    }
+
+    70% {
+        box-shadow: 0 0 0 6px rgba(255, 255, 255, 0);
+    }
 }
 
-.status-green { background: rgba(16, 185, 129, 0.08); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.2); }
-.status-green .sdot { background: var(--green); }
-.status-yellow { background: rgba(251, 191, 36, 0.08); color: var(--amber); border: 1px solid rgba(251, 191, 36, 0.2); }
-.status-yellow .sdot { background: var(--amber); }
-.status-red { background: rgba(244, 63, 94, 0.08); color: var(--crimson); border: 1px solid rgba(244, 63, 94, 0.2); }
-.status-red .sdot { background: var(--crimson); }
+.status-green {
+    background: rgba(16, 185, 129, 0.08);
+    color: var(--green);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.status-green .sdot {
+    background: var(--green);
+}
+
+.status-yellow {
+    background: rgba(251, 191, 36, 0.08);
+    color: var(--amber);
+    border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.status-yellow .sdot {
+    background: var(--amber);
+}
+
+.status-red {
+    background: rgba(244, 63, 94, 0.08);
+    color: var(--crimson);
+    border: 1px solid rgba(244, 63, 94, 0.2);
+}
+
+.status-red .sdot {
+    background: var(--crimson);
+}
 
 /* === Scrollable Content Area === */
 .content-scrollable {
@@ -876,8 +990,15 @@ body.light-mode .wave-4 svg path {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @media (max-width: 992px) {
@@ -888,18 +1009,23 @@ body.light-mode .wave-4 svg path {
         border-bottom: 1px solid rgba(163, 230, 53, 0.12);
         padding: 20px;
     }
+
     .sidebar-brand {
         margin-bottom: 18px;
     }
+
     .sidebar-menu-wrapper .list-group {
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
         gap: 6px;
     }
+
     .menu-header {
-        display: none; /* hide headers in row wrap mobile view */
+        display: none;
+        /* hide headers in row wrap mobile view */
     }
+
     .list-group-item {
         width: auto;
         flex: 1;
@@ -907,12 +1033,15 @@ body.light-mode .wave-4 svg path {
         text-align: center;
         justify-content: center;
     }
+
     .topbar {
         padding: 16px 20px;
     }
+
     .sbar {
         margin: 0 20px 24px 20px;
     }
+
     .content-scrollable {
         padding: 12px 20px 40px 20px;
     }
@@ -939,8 +1068,13 @@ body.light-mode .wave-4 svg path {
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 .premium-empty-icon {
@@ -999,6 +1133,7 @@ body.light-mode .wave-4 svg path {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -1013,12 +1148,10 @@ body.light-mode .wave-4 svg path {
     left: 0;
     width: 100%;
     height: 100%;
-    background: radial-gradient(
-        450px circle at var(--mouse-x, 0px) var(--mouse-y, 0px),
-        rgba(163, 230, 53, 0.07) 0%,
-        rgba(56, 189, 248, 0.03) 50%,
-        transparent 80%
-    );
+    background: radial-gradient(450px circle at var(--mouse-x, 0px) var(--mouse-y, 0px),
+            rgba(163, 230, 53, 0.07) 0%,
+            rgba(56, 189, 248, 0.03) 50%,
+            transparent 80%);
     opacity: 0;
     transition: opacity 0.4s ease;
     pointer-events: none;
@@ -1047,7 +1180,7 @@ body.light-mode .wave-4 svg path {
 }
 
 /* Floating elements on top of hover overlays */
-.card > * {
+.card>* {
     position: relative;
     z-index: 3;
 }
@@ -1079,25 +1212,37 @@ body.light-mode .wave-4 svg path {
     background: linear-gradient(135deg, rgba(20, 30, 48, 0.85), rgba(80, 65, 20, 0.25)) !important;
     border-color: rgba(234, 179, 8, 0.25) !important;
 }
-.stat-card-gold .card-stat-value { color: var(--amber); }
+
+.stat-card-gold .card-stat-value {
+    color: var(--amber);
+}
 
 .stat-card-crimson {
     background: linear-gradient(135deg, rgba(20, 30, 48, 0.85), rgba(90, 20, 30, 0.25)) !important;
     border-color: rgba(244, 63, 94, 0.25) !important;
 }
-.stat-card-crimson .card-stat-value { color: var(--crimson); }
+
+.stat-card-crimson .card-stat-value {
+    color: var(--crimson);
+}
 
 .stat-card-green {
     background: linear-gradient(135deg, rgba(20, 30, 48, 0.85), rgba(16, 80, 50, 0.25)) !important;
     border-color: rgba(163, 230, 53, 0.25) !important;
 }
-.stat-card-green .card-stat-value { color: var(--chartreuse); }
+
+.stat-card-green .card-stat-value {
+    color: var(--chartreuse);
+}
 
 .stat-card-blue {
     background: linear-gradient(135deg, rgba(20, 30, 48, 0.85), rgba(30, 60, 110, 0.25)) !important;
     border-color: rgba(56, 189, 248, 0.25) !important;
 }
-.stat-card-blue .card-stat-value { color: var(--blue); }
+
+.stat-card-blue .card-stat-value {
+    color: var(--blue);
+}
 
 /* === KPI Salud del Sistema — tanque líquido animado (0–100) === */
 .liquid-tank {
@@ -1219,22 +1364,46 @@ body.light-mode .liquid-tank .card-stat-sub {
 }
 
 @keyframes liquidSloshA {
-    0%, 100% { transform: translateX(0) rotate(0deg); }
-    25% { transform: translateX(-8%) rotate(-2deg); }
-    50% { transform: translateX(-15%) rotate(0deg); }
-    75% { transform: translateX(-6%) rotate(2deg); }
+
+    0%,
+    100% {
+        transform: translateX(0) rotate(0deg);
+    }
+
+    25% {
+        transform: translateX(-8%) rotate(-2deg);
+    }
+
+    50% {
+        transform: translateX(-15%) rotate(0deg);
+    }
+
+    75% {
+        transform: translateX(-6%) rotate(2deg);
+    }
 }
 
 @keyframes liquidSloshB {
-    0%, 100% { transform: translateX(-10%) rotate(1deg); }
-    33% { transform: translateX(-4%) rotate(-1.5deg); }
-    66% { transform: translateX(-18%) rotate(1.5deg); }
+
+    0%,
+    100% {
+        transform: translateX(-10%) rotate(1deg);
+    }
+
+    33% {
+        transform: translateX(-4%) rotate(-1.5deg);
+    }
+
+    66% {
+        transform: translateX(-18%) rotate(1.5deg);
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .liquid-tank__fill {
         transition-duration: 0.01ms;
     }
+
     .liquid-tank__surface--1,
     .liquid-tank__surface--2 {
         animation: none;
@@ -1469,12 +1638,10 @@ body.light-mode .chart-title {
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.25),
-        transparent
-    );
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.25),
+            transparent);
     animation: shine-bar 2.4s infinite linear;
 }
 
@@ -1482,6 +1649,7 @@ body.light-mode .chart-title {
     0% {
         left: -100%;
     }
+
     100% {
         left: 100%;
     }
@@ -1497,8 +1665,13 @@ body.light-mode .chart-title {
     display: inline-block;
 }
 
-.urgency-badge.today { color: var(--red); }
-.urgency-badge.this_week { color: var(--amber); }
+.urgency-badge.today {
+    color: var(--red);
+}
+
+.urgency-badge.this_week {
+    color: var(--amber);
+}
 
 .owner-pill {
     display: inline-flex;
@@ -1549,10 +1722,21 @@ body.light-mode .chart-title {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.report-card .icon-box.exec { background: linear-gradient(135deg, #1e3a8a, #3b82f6); }
-.report-card .icon-box.mgr { background: linear-gradient(135deg, #065f46, #10b981); }
-.report-card .icon-box.analyst { background: linear-gradient(135deg, #581c87, #8b5cf6); }
-.report-card .icon-box.ops { background: linear-gradient(135deg, #7c2d12, #ea580c); }
+.report-card .icon-box.exec {
+    background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+}
+
+.report-card .icon-box.mgr {
+    background: linear-gradient(135deg, #065f46, #10b981);
+}
+
+.report-card .icon-box.analyst {
+    background: linear-gradient(135deg, #581c87, #8b5cf6);
+}
+
+.report-card .icon-box.ops {
+    background: linear-gradient(135deg, #7c2d12, #ea580c);
+}
 
 .report-card .arrow {
     margin-left: auto;
@@ -1621,22 +1805,36 @@ body.light-mode .chart-title {
 /* === Dynamic Text Hover Glow Highlights === */
 
 /* Titles and labels glow chartreuse when hovered */
-.card-stat-label, .chart-title, .section-title, .brand-text h1, .brand-text p, .topbar-left h2, .action-text {
+.card-stat-label,
+.chart-title,
+.section-title,
+.brand-text h1,
+.brand-text p,
+.topbar-left h2,
+.action-text {
     transition: color 0.3s ease, text-shadow 0.3s ease;
 }
 
-.card-stat-label:hover, .chart-title:hover, .section-title:hover, .brand-text h1:hover, .brand-text p:hover, .topbar-left h2:hover, .action-text:hover {
+.card-stat-label:hover,
+.chart-title:hover,
+.section-title:hover,
+.brand-text h1:hover,
+.brand-text p:hover,
+.topbar-left h2:hover,
+.action-text:hover {
     color: var(--chartreuse) !important;
     text-shadow: 0 0 8px rgba(163, 230, 53, 0.5);
 }
 
 /* Statistics numbers scale up and glow with their respective themed colors */
-.card-stat-value, .health-score-text .num {
+.card-stat-value,
+.health-score-text .num {
     transition: text-shadow 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s ease;
     display: inline-block;
 }
 
-.card-stat-value:hover, .health-score-text .num:hover {
+.card-stat-value:hover,
+.health-score-text .num:hover {
     transform: scale(1.04);
 }
 
@@ -1644,10 +1842,21 @@ body.light-mode .chart-title {
     text-shadow: 0 0 14px currentColor;
 }
 
-.stat-card-gold .card-stat-value:hover { text-shadow: 0 0 14px rgba(251, 191, 36, 0.65); }
-.stat-card-crimson .card-stat-value:hover { text-shadow: 0 0 14px rgba(244, 63, 94, 0.65); }
-.stat-card-green .card-stat-value:hover { text-shadow: 0 0 14px rgba(163, 230, 53, 0.65); }
-.stat-card-blue .card-stat-value:hover { text-shadow: 0 0 14px rgba(56, 189, 248, 0.65); }
+.stat-card-gold .card-stat-value:hover {
+    text-shadow: 0 0 14px rgba(251, 191, 36, 0.65);
+}
+
+.stat-card-crimson .card-stat-value:hover {
+    text-shadow: 0 0 14px rgba(244, 63, 94, 0.65);
+}
+
+.stat-card-green .card-stat-value:hover {
+    text-shadow: 0 0 14px rgba(163, 230, 53, 0.65);
+}
+
+.stat-card-blue .card-stat-value:hover {
+    text-shadow: 0 0 14px rgba(56, 189, 248, 0.65);
+}
 
 /* Table cells light up to pure white with text shadow on row hover */
 .custom-table td {
@@ -1718,10 +1927,21 @@ body.light-mode .stat-card-blue {
     box-shadow: 0 8px 24px rgba(2, 132, 199, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
 }
 
-body.light-mode .stat-card-gold:hover { border-color: rgba(217, 119, 6, 0.35) !important; }
-body.light-mode .stat-card-crimson:hover { border-color: rgba(225, 29, 72, 0.35) !important; }
-body.light-mode .stat-card-green:hover { border-color: rgba(132, 204, 22, 0.45) !important; }
-body.light-mode .stat-card-blue:hover { border-color: rgba(2, 132, 199, 0.35) !important; }
+body.light-mode .stat-card-gold:hover {
+    border-color: rgba(217, 119, 6, 0.35) !important;
+}
+
+body.light-mode .stat-card-crimson:hover {
+    border-color: rgba(225, 29, 72, 0.35) !important;
+}
+
+body.light-mode .stat-card-green:hover {
+    border-color: rgba(132, 204, 22, 0.45) !important;
+}
+
+body.light-mode .stat-card-blue:hover {
+    border-color: rgba(2, 132, 199, 0.35) !important;
+}
 
 /* 3. Custom Table Text Visibility on Hover (Avoid text turning white on light rows) */
 body.light-mode .custom-table tr:hover td {
@@ -1747,12 +1967,12 @@ body.light-mode .custom-table td[style*="color:#fff"] {
 }
 
 /* 5. Custom Tab Banners & Inlined Gradients Overrides */
-body.light-mode #tab-funnel > .card:first-child {
+body.light-mode #tab-funnel>.card:first-child {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(240, 253, 244, 0.45)) !important;
     border-color: rgba(132, 204, 22, 0.22) !important;
 }
 
-body.light-mode #tab-funnel > .card:first-child h2 {
+body.light-mode #tab-funnel>.card:first-child h2 {
     color: #0f172a !important;
 }
 
@@ -1788,8 +2008,8 @@ body.light-mode #tab-funnel #funnel-leaks-list .progress-bar-val {
     color: var(--red) !important;
 }
 
-body.light-mode #tab-funnel #funnel-feeders-list .card-animate > div:nth-child(2),
-body.light-mode #tab-funnel #funnel-leaks-list .card-animate > div:nth-child(2) {
+body.light-mode #tab-funnel #funnel-feeders-list .card-animate>div:nth-child(2),
+body.light-mode #tab-funnel #funnel-leaks-list .card-animate>div:nth-child(2) {
     background: rgba(15, 23, 42, 0.05) !important;
 }
 
@@ -1875,12 +2095,12 @@ body.light-mode .status-pill {
 }
 
 /* 8. Text Glow in Light Mode (Adapt chartreuse neon glow to corporate blue) */
-body.light-mode .card-stat-label:hover, 
-body.light-mode .chart-title:hover, 
-body.light-mode .section-title:hover, 
-body.light-mode .brand-text h1:hover, 
-body.light-mode .brand-text p:hover, 
-body.light-mode .topbar-left h2:hover, 
+body.light-mode .card-stat-label:hover,
+body.light-mode .chart-title:hover,
+body.light-mode .section-title:hover,
+body.light-mode .brand-text h1:hover,
+body.light-mode .brand-text p:hover,
+body.light-mode .topbar-left h2:hover,
 body.light-mode .action-text:hover {
     color: var(--blue) !important;
     text-shadow: 0 0 8px rgba(2, 132, 199, 0.3) !important;
@@ -1907,4 +2127,3 @@ body.light-mode .chart-tool-btn.active {
     color: #080c14 !important;
     box-shadow: 0 0 10px rgba(132, 204, 22, 0.3) !important;
 }
-

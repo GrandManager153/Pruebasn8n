@@ -103,17 +103,35 @@ body.light-mode {
     min-height: 140px;
 }
 
-.report-waves .wave-a { animation: reportWaveFlow 24s linear infinite; fill: rgba(56, 189, 248, 0.018); }
-.report-waves .wave-b { animation: reportWaveFlowRev 20s linear infinite; fill: rgba(163, 230, 53, 0.014); bottom: -12px; }
+.report-waves .wave-a {
+    animation: reportWaveFlow 24s linear infinite;
+    fill: rgba(56, 189, 248, 0.018);
+}
+
+.report-waves .wave-b {
+    animation: reportWaveFlowRev 20s linear infinite;
+    fill: rgba(163, 230, 53, 0.014);
+    bottom: -12px;
+}
 
 @keyframes reportWaveFlow {
-    from { transform: translateX(0); }
-    to { transform: translateX(-50%); }
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(-50%);
+    }
 }
 
 @keyframes reportWaveFlowRev {
-    from { transform: translateX(-50%); }
-    to { transform: translateX(0); }
+    from {
+        transform: translateX(-50%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
 }
 
 /* === Base === */
@@ -200,10 +218,25 @@ body.light-mode .badge {
     font-weight: 700 !important;
 }
 
-.pred-ok { background: rgba(16, 185, 129, 0.12) !important; color: var(--green) !important; }
-.pred-weak { background: rgba(251, 191, 36, 0.12) !important; color: var(--amber) !important; }
-.pred-fallback { background: rgba(244, 63, 94, 0.12) !important; color: var(--crimson) !important; }
-.pred-na { background: rgba(255, 255, 255, 0.05) !important; color: var(--text-muted) !important; }
+.pred-ok {
+    background: rgba(16, 185, 129, 0.12) !important;
+    color: var(--green) !important;
+}
+
+.pred-weak {
+    background: rgba(251, 191, 36, 0.12) !important;
+    color: var(--amber) !important;
+}
+
+.pred-fallback {
+    background: rgba(244, 63, 94, 0.12) !important;
+    color: var(--crimson) !important;
+}
+
+.pred-na {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: var(--text-muted) !important;
+}
 
 /* === Barra de estado === */
 .sbar {
@@ -234,13 +267,33 @@ body.light-mode .badge {
     border: 1px solid rgba(244, 63, 94, 0.22) !important;
 }
 
-.status-green .sdot { background: var(--green) !important; animation: reportPulse 1.8s infinite; }
-.status-yellow .sdot { background: var(--amber) !important; animation: reportPulse 1.8s infinite; }
-.status-red .sdot { background: var(--crimson) !important; animation: reportPulse 1.8s infinite; }
+.status-green .sdot {
+    background: var(--green) !important;
+    animation: reportPulse 1.8s infinite;
+}
+
+.status-yellow .sdot {
+    background: var(--amber) !important;
+    animation: reportPulse 1.8s infinite;
+}
+
+.status-red .sdot {
+    background: var(--crimson) !important;
+    animation: reportPulse 1.8s infinite;
+}
 
 @keyframes reportPulse {
-    0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
-    70% { box-shadow: 0 0 0 6px transparent; opacity: 0.85; }
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 currentColor;
+        opacity: 1;
+    }
+
+    70% {
+        box-shadow: 0 0 0 6px transparent;
+        opacity: 0.85;
+    }
 }
 
 /* === Tabs (como menú del panel) === */
@@ -538,13 +591,27 @@ body.light-mode .info-header {
 }
 
 @keyframes reportTabIn {
-    from { opacity: 0; transform: translateY(14px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes reportTabOut {
-    from { opacity: 1; transform: translateY(0); }
-    to { opacity: 0; transform: translateY(-8px); }
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
 }
 
 /* === Entrada escalonada de tarjetas (como el panel) === */
@@ -557,8 +624,15 @@ body.light-mode .info-header {
 }
 
 @keyframes reportCardDropIn {
-    from { opacity: 0; transform: translateY(18px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* === Spotlight hover en tarjetas === */
@@ -570,12 +644,10 @@ body.light-mode .info-header {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(
-        420px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-        rgba(163, 230, 53, 0.07) 0%,
-        rgba(56, 189, 248, 0.03) 50%,
-        transparent 80%
-    );
+    background: radial-gradient(420px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+            rgba(163, 230, 53, 0.07) 0%,
+            rgba(56, 189, 248, 0.03) 50%,
+            transparent 80%);
     opacity: 0;
     transition: opacity 0.35s ease;
     pointer-events: none;
@@ -590,11 +662,11 @@ body.light-mode .info-header {
     opacity: 1;
 }
 
-.kpi > *,
-.content-block > *,
-.alert-card > *,
-.action-card > *,
-.report-chart-card > * {
+.kpi>*,
+.content-block>*,
+.alert-card>*,
+.action-card>*,
+.report-chart-card>* {
     position: relative;
     z-index: 2;
 }
@@ -645,17 +717,39 @@ body.light-mode .report-liquid-kpi {
     opacity: 0.95;
 }
 
-.report-liquid-surface--1 { animation: reportLiquidSloshA 7s ease-in-out infinite; }
-.report-liquid-surface--2 { top: -20px; opacity: 0.55; animation: reportLiquidSloshB 9s ease-in-out infinite; animation-delay: -2s; }
+.report-liquid-surface--1 {
+    animation: reportLiquidSloshA 7s ease-in-out infinite;
+}
+
+.report-liquid-surface--2 {
+    top: -20px;
+    opacity: 0.55;
+    animation: reportLiquidSloshB 9s ease-in-out infinite;
+    animation-delay: -2s;
+}
 
 @keyframes reportLiquidSloshA {
-    0%, 100% { transform: translateX(0); }
-    50% { transform: translateX(-12%); }
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    50% {
+        transform: translateX(-12%);
+    }
 }
 
 @keyframes reportLiquidSloshB {
-    0%, 100% { transform: translateX(-8%); }
-    50% { transform: translateX(-18%); }
+
+    0%,
+    100% {
+        transform: translateX(-8%);
+    }
+
+    50% {
+        transform: translateX(-18%);
+    }
 }
 
 /* === Gráficas del informe === */
@@ -704,8 +798,13 @@ body.light-mode .report-liquid-kpi {
     background: var(--blue);
 }
 
-.report-chart-title .dot-lime { background: var(--chartreuse); }
-.report-chart-title .dot-crimson { background: var(--crimson); }
+.report-chart-title .dot-lime {
+    background: var(--chartreuse);
+}
+
+.report-chart-title .dot-crimson {
+    background: var(--crimson);
+}
 
 .report-chart-wrap {
     position: relative;
@@ -767,17 +866,41 @@ body.light-mode .report-back-btn {
 }
 
 @media (max-width: 640px) {
-    .hero { padding: 24px 20px !important; }
-    .content-block { padding: 20px 18px !important; }
-    .kpi-row { grid-template-columns: repeat(2, 1fr) !important; }
-    .tabs { flex-wrap: wrap; }
+    .hero {
+        padding: 24px 20px !important;
+    }
+
+    .content-block {
+        padding: 20px 18px !important;
+    }
+
+    .kpi-row {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .tabs {
+        flex-wrap: wrap;
+    }
 }
 
 @media print {
+
     .report-ambient,
     .report-waves,
-    .report-back-bar { display: none !important; }
-    body { background: #fff !important; color: #000 !important; }
-    .tabs { display: none !important; }
-    .tc { display: block !important; }
+    .report-back-bar {
+        display: none !important;
+    }
+
+    body {
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    .tabs {
+        display: none !important;
+    }
+
+    .tc {
+        display: block !important;
+    }
 }
