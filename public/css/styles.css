@@ -1340,6 +1340,100 @@ body.light-mode .chart-title {
     display: inline-block;
 }
 
+.model-compare-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 10px 0 4px;
+}
+
+.model-compare-row label {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.model-compare-select {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12.5px;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.model-compare-select:hover {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.model-compare-select:focus {
+    border-color: var(--chartreuse);
+}
+
+.model-compare-select option {
+    background: #0a0f1c;
+    color: var(--text-main);
+}
+
+.model-compare-meta {
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted);
+}
+
+.card-stat-compare {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+    font-size: 12.5px;
+    min-height: 0;
+}
+
+.card-stat-compare:empty {
+    display: none;
+}
+
+.hz-compare-label {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.hz-compare-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: #f472b6;
+}
+
+.hz-compare-delta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    font-weight: 700;
+}
+
+.hz-compare-delta.up {
+    color: var(--green, #22c55e);
+}
+
+.hz-compare-delta.down {
+    color: var(--red, #ef4444);
+}
+
+.hz-compare-none {
+    color: var(--text-dim);
+    font-style: italic;
+    font-size: 12px;
+}
+
+body.light-mode .model-compare-select option {
+    background: #ffffff;
+    color: #0f172a;
+}
+
 .chart-wrapper {
     position: relative;
     height: 240px;
