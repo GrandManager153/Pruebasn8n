@@ -247,6 +247,8 @@
                                 <select id="model-compare-select" class="model-compare-select" onchange="onModelCompareChange()">
                                     <option value="">Ninguno (solo modelo actual)</option>
                                 </select>
+                                <button type="button" class="model-compare-btn" onclick="showAllModelOverlays()" title="Sobreponer todas las curvas de modelos">Mostrar todas</button>
+                                <button type="button" class="model-compare-btn ghost" onclick="clearModelOverlays()" title="Volver a la gráfica original">Limpiar</button>
                                 <span id="model-compare-meta" class="model-compare-meta"></span>
                             </div>
                             <div class="chart-wrapper">

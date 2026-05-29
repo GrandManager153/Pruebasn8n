@@ -9,6 +9,7 @@ let currentTab = 'dashboard';
 let currentAlertFilter = 'all';
 let timeSeriesType = 'line';
 let selectedCompareModel = '';
+let showAllModels = false;
 
 // =====================================================================
 //  TEXT CLEANING & SANITIZATION (No Emojis, No Technical Parentheses)
@@ -138,7 +139,7 @@ function switchTab(tabId) {
                     canvasId: 'chart-timeseries',
                     chartKey: 'timeseries',
                     lineLabel: 'Pronóstico Recomendado',
-                    overlay: getForecastOverlay()
+                    overlays: getActiveOverlays()
                 });
                 if (dashboardData.forecast.seasonal_indices) {
                     renderSeasonalChart(dashboardData.forecast.seasonal_indices);
@@ -517,7 +518,7 @@ function renderBOS(data) {
         canvasId: 'chart-timeseries',
         chartKey: 'timeseries',
         lineLabel: 'Pronóstico Recomendado',
-        overlay: getForecastOverlay()
+        overlays: getActiveOverlays()
     });
     renderSeasonalChart(data.forecast ? data.forecast.seasonal_indices : []);
     renderCampaignChart(data.investment.campaigns);
@@ -754,6 +755,26 @@ function renderForecastDetails(forecast, options = {}) {
 //  COMPARADOR DE MODELOS (lista desplegable + overlay)
 // =====================================================================
 
+// Color consistente por modelo (mapa fijo para los conocidos + hash determinístico).
+const MODEL_COLORS = {
+    theta_lite: '#38bdf8',
+    holt_winters: '#f472b6',
+    trend_season: '#f59e0b',
+    seasonal_naive: '#a78bfa',
+    fourier_regression: '#34d399',
+    mean_7d: '#fb7185',
+    ewma: '#facc15',
+    random_forest: '#10b981',
+};
+
+function getModelColor(name) {
+    if (!name) return '#f472b6';
+    if (MODEL_COLORS[name]) return MODEL_COLORS[name];
+    let h = 0;
+    for (const c of String(name)) h = (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0;
+    return `hsl(${h % 360}, 70%, 62%)`;
+}
+
 // Construye la lista de modelos comparables: los del backtest estadistico
 // mas el Random Forest (desde forecast_rf), cada uno con su serie diaria si existe.
 function buildComparableModels(data) {
@@ -778,17 +799,64 @@ function buildComparableModels(data) {
     return list;
 }
 
-// Devuelve el dataset de overlay para el modelo seleccionado (o null).
-function getForecastOverlay() {
-    if (!selectedCompareModel || !dashboardData) return null;
-    const m = buildComparableModels(dashboardData).find(x => x.name === selectedCompareModel);
-    if (!m || !Array.isArray(m.series) || !m.series.length) return null;
+// Construye el dataset de overlay para un modelo dado.
+function overlayForModel(m) {
     const maseTxt = (typeof m.mase === 'number') ? ` (MASE ${m.mase.toFixed(3)})` : '';
     return {
         label: cleanTechnicalTerms(m.name.replace(/_/g, ' ').toUpperCase()) + maseTxt,
         series: m.series,
-        color: '#f472b6'
+        color: getModelColor(m.name)
     };
+}
+
+// Devuelve los overlays activos: todos los modelos, uno solo, o ninguno.
+function getActiveOverlays() {
+    if (!dashboardData) return [];
+    const baseName = (dashboardData.forecast && dashboardData.forecast.method) ? dashboardData.forecast.method : null;
+    const models = buildComparableModels(dashboardData)
+        .filter(m => m.name !== baseName && Array.isArray(m.series) && m.series.length);
+
+    if (showAllModels) return models.map(overlayForModel);
+    if (selectedCompareModel) {
+        const m = models.find(x => x.name === selectedCompareModel);
+        if (m) return [overlayForModel(m)];
+    }
+    return [];
+}
+
+// Vuelve a dibujar la gráfica base del tab forecast con los overlays activos.
+function renderForecastBaseChart() {
+    if (!dashboardData || !dashboardData.forecast) return;
+    renderTimeSeriesChart(dashboardData.forecast, {
+        canvasId: 'chart-timeseries',
+        chartKey: 'timeseries',
+        lineLabel: 'Pronóstico Recomendado',
+        overlays: getActiveOverlays()
+    });
+}
+
+// Botón "Mostrar todas": sobrepone todas las curvas de modelos a la vez.
+function showAllModelOverlays() {
+    showAllModels = true;
+    selectedCompareModel = '';
+    const sel = document.getElementById('model-compare-select');
+    if (sel) { sel.value = ''; sel.style.borderColor = ''; sel.style.color = ''; }
+    const meta = document.getElementById('model-compare-meta');
+    if (meta) { meta.textContent = 'Mostrando todos los modelos'; meta.style.color = ''; }
+    renderForecastBaseChart();
+    updateHorizonComparison();
+}
+
+// Botón "Limpiar": regresa a la gráfica original (solo modelo base).
+function clearModelOverlays() {
+    showAllModels = false;
+    selectedCompareModel = '';
+    const sel = document.getElementById('model-compare-select');
+    if (sel) { sel.value = ''; sel.style.borderColor = ''; sel.style.color = ''; }
+    const meta = document.getElementById('model-compare-meta');
+    if (meta) { meta.textContent = ''; meta.style.color = ''; }
+    renderForecastBaseChart();
+    updateHorizonComparison();
 }
 
 // Llena el desplegable con los modelos comparables, excluyendo el modelo base/actual.
@@ -802,12 +870,15 @@ function populateModelCompareDropdown(data) {
     models.forEach(m => {
         const hasSeries = Array.isArray(m.series) && m.series.length;
         const label = cleanTechnicalTerms(m.name.replace(/_/g, ' ').toUpperCase());
-        html += `<option value="${m.name}"${hasSeries ? '' : ' disabled'}>${label}${hasSeries ? '' : ' (sin serie)'}</option>`;
+        const color = getModelColor(m.name);
+        html += `<option value="${m.name}" style="color:${color}"${hasSeries ? '' : ' disabled'}>${label}${hasSeries ? '' : ' (sin serie)'}</option>`;
     });
     sel.innerHTML = html;
     selectedCompareModel = '';
+    sel.style.borderColor = '';
+    sel.style.color = '';
     const meta = document.getElementById('model-compare-meta');
-    if (meta) meta.textContent = '';
+    if (meta) { meta.textContent = ''; meta.style.color = ''; }
 }
 
 // Devuelve los horizontes (next_1d/7d/14d) del modelo indicado, si existen.
@@ -832,16 +903,18 @@ function updateHorizonComparison() {
     ];
     slots.forEach(o => { const el = document.getElementById(o.slot); if (el) el.innerHTML = ''; });
 
+    // En modo "todos los modelos" no se llenan las tarjetas (sería ilegible).
     const name = selectedCompareModel;
-    if (!name || !dashboardData) return;
+    if (showAllModels || !name || !dashboardData) return;
 
     const label = cleanTechnicalTerms(name.replace(/_/g, ' ').toUpperCase());
+    const color = getModelColor(name);
     const baseH = (dashboardData.forecast && dashboardData.forecast.horizons) ? dashboardData.forecast.horizons : {};
     const modelH = getModelHorizons(name);
 
     if (!modelH) {
         const first = document.getElementById('forecast-1d-compare');
-        if (first) first.innerHTML = `<span class="hz-compare-none">${label}: sin datos de pronóstico</span>`;
+        if (first) first.innerHTML = `<span class="hz-compare-none" style="color:${color}">${label}: sin datos de pronóstico</span>`;
         return;
     }
 
@@ -857,7 +930,7 @@ function updateHorizonComparison() {
             const up = pct >= 0;
             deltaTxt = ` <span class="hz-compare-delta ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${Math.abs(pct).toFixed(1)}%</span>`;
         }
-        el.innerHTML = `<span class="hz-compare-label">${label}:</span> <span class="hz-compare-val">${Number(mv).toLocaleString('es-MX')}</span>${deltaTxt}`;
+        el.innerHTML = `<span class="hz-compare-label" style="color:${color}">${label}:</span> <span class="hz-compare-val" style="color:${color}">${Number(mv).toLocaleString('es-MX')}</span>${deltaTxt}`;
     });
 }
 
@@ -866,22 +939,20 @@ function onModelCompareChange() {
     const sel = document.getElementById('model-compare-select');
     if (!sel) return;
     selectedCompareModel = sel.value || '';
+    showAllModels = false;
+
+    const color = selectedCompareModel ? getModelColor(selectedCompareModel) : '';
+    sel.style.borderColor = color;
+    sel.style.color = color;
 
     const meta = document.getElementById('model-compare-meta');
     if (meta) {
         const m = buildComparableModels(dashboardData).find(x => x.name === selectedCompareModel);
         meta.textContent = (m && typeof m.mase === 'number') ? `MASE comparado: ${m.mase.toFixed(3)}` : '';
+        meta.style.color = color;
     }
 
-    if (dashboardData && dashboardData.forecast) {
-        renderTimeSeriesChart(dashboardData.forecast, {
-            canvasId: 'chart-timeseries',
-            chartKey: 'timeseries',
-            lineLabel: 'Pronóstico Recomendado',
-            overlay: getForecastOverlay()
-        });
-    }
-
+    renderForecastBaseChart();
     updateHorizonComparison();
 }
 
@@ -1069,14 +1140,17 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
         }
     ];
 
-    // Overlay: curva del modelo seleccionado para comparar (un modelo a la vez)
-    const overlay = options.overlay;
-    if (overlay && Array.isArray(overlay.series) && overlay.series.length) {
+    // Overlays: una o varias curvas de modelos para comparar
+    const overlays = Array.isArray(options.overlays)
+        ? options.overlays
+        : (options.overlay ? [options.overlay] : []);
+    overlays.forEach(ov => {
+        if (!ov || !Array.isArray(ov.series) || !ov.series.length) return;
         datasets.push({
             type: 'line',
-            label: overlay.label || 'Modelo comparado',
-            data: overlay.series,
-            borderColor: overlay.color || (isLight ? '#db2777' : '#f472b6'),
+            label: ov.label || 'Modelo comparado',
+            data: ov.series,
+            borderColor: ov.color || (isLight ? '#db2777' : '#f472b6'),
             backgroundColor: 'transparent',
             borderWidth: 2.5,
             tension: 0.35,
@@ -1084,7 +1158,7 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
             pointHoverRadius: 6,
             fill: false
         });
-    }
+    });
 
     charts[chartKey] = new Chart(ctx, {
         type: chartType,
@@ -1154,7 +1228,7 @@ function setTimeSeriesType(type, ev) {
             canvasId: 'chart-timeseries',
             chartKey: 'timeseries',
             lineLabel: 'Pronóstico Recomendado',
-            overlay: getForecastOverlay()
+            overlays: getActiveOverlays()
         });
     }
 }
@@ -1574,7 +1648,7 @@ window.toggleTheme = function(event) {
                 canvasId: 'chart-timeseries',
                 chartKey: 'timeseries',
                 lineLabel: 'Pronóstico Recomendado',
-                overlay: getForecastOverlay()
+                overlays: getActiveOverlays()
             });
             if (dashboardData.forecast && dashboardData.forecast.seasonal_indices) {
                 renderSeasonalChart(dashboardData.forecast.seasonal_indices);
