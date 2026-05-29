@@ -415,6 +415,9 @@ function renderBOS(data) {
     // 7. Render Forecast Page
     renderForecastDetails(data.forecast);
 
+    // 7b. Render Random Forest (Advanced ML Model) Page
+    renderForecastRF(data.forecast_rf);
+
     // 8. Render Interactive Alerts Centre Tab
     renderAlertsCentre(data.system.alerts);
 
@@ -617,6 +620,123 @@ function renderForecastDetails(forecast) {
             `;
         }).join('');
     }
+}
+
+// =====================================================================
+//  RENDER RANDOM FOREST (ADVANCED ML MODEL) DETAILS
+// =====================================================================
+
+function renderForecastRF(rf) {
+    const section = document.getElementById('forecast-rf-section');
+    if (!section) return;
+
+    // Caso sin datos: el payload no incluye el bloque del modelo avanzado
+    if (!rf || rf.available === false) {
+        section.innerHTML = `
+            <div style="padding: 28px; text-align: center; color: var(--text-dim); background: rgba(255, 255, 255, 0.02); border: 1px dashed var(--border); border-radius: 12px;">
+                <div style="font-size: 15px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px;">Modelo Random Forest no disponible</div>
+                <div style="font-size: 13px; line-height: 1.6; max-width: 520px; margin: 0 auto;">Este conjunto de datos no incluye los resultados del modelo avanzado. Ejecuta el flujo que genera la predicción de Random Forest para visualizar sus métricas aquí.</div>
+            </div>
+        `;
+        return;
+    }
+
+    const rfMase = typeof rf.mase === 'number' ? rf.mase : null;
+    const horizons = rf.horizons || {};
+
+    // Comparativa contra el modelo recomendado estadístico (si existe)
+    let compareHtml = '';
+    const baseForecast = dashboardData && dashboardData.forecast ? dashboardData.forecast : null;
+    if (baseForecast && typeof baseForecast.mase === 'number' && rfMase !== null) {
+        const rfBetter = rfMase < baseForecast.mase;
+        const rfModelName = cleanTechnicalTerms((rf.model_name || 'random_forest').replace(/_/g, ' ').toUpperCase());
+        const baseModelName = cleanTechnicalTerms((baseForecast.method || 'modelo base').replace(/_/g, ' ').toUpperCase());
+        const winnerColor = rfBetter ? 'var(--green)' : 'var(--amber)';
+        compareHtml = `
+            <div class="card card-animate" style="animation-delay: 0.02s; border-left: 4px solid ${winnerColor}; margin-bottom: 18px;">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; justify-content: space-between;">
+                    <div>
+                        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">Comparación de precisión (menor MASE es mejor)</div>
+                        <div style="font-size: 15px; font-weight: 700; color: white;">
+                            ${rfModelName}: <span style="font-family: var(--mono); color: ${rfBetter ? 'var(--green)' : 'var(--text-muted)'};">${rfMase.toFixed(3)}</span>
+                            <span style="color: var(--text-dim); margin: 0 8px;">vs</span>
+                            ${baseModelName}: <span style="font-family: var(--mono); color: var(--text-muted);">${baseForecast.mase.toFixed(3)}</span>
+                        </div>
+                    </div>
+                    <span class="custom-badge ${rfBetter ? 'custom-badge-success' : 'custom-badge-warning'}">
+                        ${rfBetter ? 'Random Forest supera al modelo base' : 'El modelo base mantiene la ventaja'}
+                    </span>
+                </div>
+            </div>
+        `;
+    }
+
+    // Tarjetas de horizonte (solo las presentes en el payload)
+    const horizonDefs = [
+        { key: 'next_1d', label: 'Pronóstico Mañana', cls: 'stat-card-blue', id: 'forecast-rf-1d-val' },
+        { key: 'next_7d', label: 'Pronóstico 7 Días', cls: 'stat-card-gold', id: 'forecast-rf-7d-val' },
+        { key: 'next_14d', label: 'Pronóstico 14 Días', cls: 'stat-card-green', id: 'forecast-rf-14d-val' }
+    ].filter(h => horizons[h.key] && typeof horizons[h.key].forecast !== 'undefined');
+
+    const horizonsHtml = horizonDefs.map((h, idx) => {
+        const data = horizons[h.key];
+        const range = (typeof data.band_low !== 'undefined' && typeof data.band_high !== 'undefined')
+            ? `Rango: ${data.band_low} a ${data.band_high} leads`
+            : '&nbsp;';
+        return `
+            <div class="card ${h.cls} card-animate" style="animation-delay: ${0.03 + idx * 0.03}s;">
+                <div class="card-stat-label">${h.label}</div>
+                <div class="card-stat-value" id="${h.id}" data-value="${data.forecast}">0</div>
+                <div class="card-stat-sub">${range}</div>
+            </div>
+        `;
+    }).join('');
+
+    // Tabla de backtest del modelo avanzado
+    const modelsRows = Array.isArray(rf.backtest_models) ? rf.backtest_models.map(m => {
+        const maseColor = m.mase < 0.85 ? 'var(--green)' : m.mase < 1.0 ? 'var(--amber)' : 'var(--red)';
+        const stateLabel = m.mase < 1.0 ? 'Aceptable' : 'Subóptimo';
+        return `
+            <tr>
+                <td style="font-weight: 600; color: white;">${cleanTechnicalTerms(m.name.replace(/_/g, ' ').toUpperCase())}</td>
+                <td style="text-align: right; font-family: var(--mono); color: ${maseColor}; font-weight: bold;">${m.mase.toFixed(3)}</td>
+                <td style="text-align: right; font-family: var(--mono); color: var(--text-muted);">${m.mae ? m.mae.toFixed(2) : 'N/A'}</td>
+                <td style="text-align: right; font-family: var(--mono); color: var(--text-dim);">${m.rmse ? m.rmse.toFixed(2) : 'N/A'}</td>
+                <td><span class="custom-badge" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: ${maseColor}">${stateLabel}</span></td>
+            </tr>
+        `;
+    }).join('') : '';
+
+    const tableHtml = modelsRows ? `
+        <div class="card card-animate" style="animation-delay: 0.12s;">
+            <div class="chart-title"><span class="dot" style="background: #22c55e"></span> Backtest del Modelo Random Forest</div>
+            <div class="custom-table-container v-mt-3">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>Modelo de Proyección</th>
+                            <th style="text-align: right;">Error Medio Absoluto Escalado</th>
+                            <th style="text-align: right;">Desviación Promedio</th>
+                            <th style="text-align: right;">Error Cuadrático Medio</th>
+                            <th>Estado de Ajuste</th>
+                        </tr>
+                    </thead>
+                    <tbody id="forecast-rf-models-body">${modelsRows}</tbody>
+                </table>
+            </div>
+        </div>
+    ` : '';
+
+    section.innerHTML = `
+        ${compareHtml}
+        <div class="v-grid-3" id="forecast-rf-horizons">${horizonsHtml}</div>
+        <div class="v-mt-4">${tableHtml}</div>
+    `;
+
+    // Animaciones de los contadores de horizonte
+    horizonDefs.forEach(h => {
+        parseAndAnimate(document.getElementById(h.id), horizons[h.key].forecast);
+    });
 }
 
 // =====================================================================

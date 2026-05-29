@@ -1,0 +1,542 @@
+{
+  "apiPred": {
+    "model_name": "random_forest",
+    "recommended_value": 80,
+    "mase": 0.2724,
+    "confidence": "alta",
+    "mode": "model",
+    "label": "Forecast RF favorable (MASE: 0.2724)",
+    "backtest": {
+      "window_days": 14,
+      "naive_mae": 10.57,
+      "models": [
+        {
+          "name": "random_forest",
+          "mae": 2.88,
+          "mase": 0.2724,
+          "rmse": 4.03
+        },
+        {
+          "name": "seasonal_naive",
+          "mae": 10.57,
+          "mase": 1,
+          "rmse": 12.69
+        }
+      ],
+      "selected": "random_forest"
+    },
+    "forecast_horizons": {
+      "next_1d": {
+        "forecast": 80,
+        "band_low": 75,
+        "band_high": 86,
+        "method": "random_forest"
+      },
+      "next_7d": {
+        "forecast": 560,
+        "band_low": 522,
+        "band_high": 601,
+        "method": "random_forest+scale"
+      }
+    },
+    "intervals": {
+      "band_50": {
+        "low": 79,
+        "high": 82
+      },
+      "band_80": {
+        "low": 75,
+        "high": 86
+      },
+      "residual_points": 14
+    },
+    "diagnostics": {
+      "total_history_days": 42,
+      "backtest_days": 14,
+      "best_model": "random_forest",
+      "best_mase": 0.2724
+    }
+  },
+  "localEngine": {
+    "mode": "observed_fallback",
+    "model_name": "mean_7d",
+    "recommended_value": 89,
+    "mase": 1,
+    "confidence": "media",
+    "label": "Local stub mean_7d",
+    "forecast_horizons": {
+      "next_1d": {
+        "forecast": 89,
+        "band_low": 0,
+        "band_high": 106
+      },
+      "next_7d": {
+        "forecast": 620,
+        "band_low": 0,
+        "band_high": 744
+      },
+      "next_14d": {
+        "forecast": 1240,
+        "band_low": 0,
+        "band_high": 1488
+      }
+    },
+    "backtest": {
+      "models": [
+        {
+          "name": "mean_7d",
+          "mae": 8.57,
+          "mase": 1,
+          "rmse": 8.57142857142857
+        },
+        {
+          "name": "fourier_regression",
+          "mae": 9.428571428571427,
+          "mase": 1.05,
+          "rmse": 10.285714285714283
+        }
+      ]
+    },
+    "diagnostics": {
+      "best_model": "mean_7d",
+      "best_mase": 1
+    },
+    "seasonal_indices": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      0.8,
+      0.7
+    ],
+    "changepoint": {
+      "detected": false
+    }
+  },
+  "dashboard": {
+    "forecast": {
+      "recommended_value": 89,
+      "method": "mean_7d",
+      "mase": 1,
+      "horizons": {
+        "next_1d": {
+          "forecast": 89,
+          "band_low": 0,
+          "band_high": 106
+        },
+        "next_7d": {
+          "forecast": 620,
+          "band_low": 0,
+          "band_high": 744
+        },
+        "next_14d": {
+          "forecast": 1240,
+          "band_low": 0,
+          "band_high": 1488
+        }
+      },
+      "backtest_models": [
+        {
+          "name": "mean_7d",
+          "mae": 8.57,
+          "mase": 1,
+          "rmse": 8.57142857142857
+        },
+        {
+          "name": "fourier_regression",
+          "mae": 9.428571428571427,
+          "mase": 1.05,
+          "rmse": 10.285714285714283
+        }
+      ],
+      "seasonal_indices": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        0.8,
+        0.7
+      ],
+      "changepoint": {
+        "detected": false
+      },
+      "time_series": [
+        {
+          "date": "2026-04-16",
+          "value": 107
+        },
+        {
+          "date": "2026-04-17",
+          "value": 108
+        },
+        {
+          "date": "2026-04-18",
+          "value": 108
+        },
+        {
+          "date": "2026-04-19",
+          "value": 107
+        },
+        {
+          "date": "2026-04-20",
+          "value": 105
+        },
+        {
+          "date": "2026-04-21",
+          "value": 104
+        },
+        {
+          "date": "2026-04-22",
+          "value": 101
+        },
+        {
+          "date": "2026-04-23",
+          "value": 98
+        },
+        {
+          "date": "2026-04-24",
+          "value": 96
+        },
+        {
+          "date": "2026-04-25",
+          "value": 92
+        },
+        {
+          "date": "2026-04-26",
+          "value": 89
+        },
+        {
+          "date": "2026-04-27",
+          "value": 86
+        },
+        {
+          "date": "2026-04-28",
+          "value": 82
+        },
+        {
+          "date": "2026-04-29",
+          "value": 80
+        },
+        {
+          "date": "2026-04-30",
+          "value": 77
+        },
+        {
+          "date": "2026-05-01",
+          "value": 75
+        },
+        {
+          "date": "2026-05-02",
+          "value": 74
+        },
+        {
+          "date": "2026-05-03",
+          "value": 73
+        },
+        {
+          "date": "2026-05-04",
+          "value": 72
+        },
+        {
+          "date": "2026-05-05",
+          "value": 73
+        },
+        {
+          "date": "2026-05-06",
+          "value": 74
+        },
+        {
+          "date": "2026-05-07",
+          "value": 75
+        },
+        {
+          "date": "2026-05-08",
+          "value": 77
+        },
+        {
+          "date": "2026-05-09",
+          "value": 79
+        },
+        {
+          "date": "2026-05-10",
+          "value": 81
+        },
+        {
+          "date": "2026-05-11",
+          "value": 84
+        },
+        {
+          "date": "2026-05-12",
+          "value": 87
+        },
+        {
+          "date": "2026-05-13",
+          "value": 89
+        },
+        {
+          "date": "2026-05-14",
+          "value": 92
+        },
+        {
+          "date": "2026-05-15",
+          "value": 94
+        },
+        {
+          "date": "2026-05-16",
+          "value": 95
+        },
+        {
+          "date": "2026-05-17",
+          "value": 97
+        },
+        {
+          "date": "2026-05-18",
+          "value": 98
+        },
+        {
+          "date": "2026-05-19",
+          "value": 97
+        },
+        {
+          "date": "2026-05-20",
+          "value": 97
+        },
+        {
+          "date": "2026-05-21",
+          "value": 96
+        },
+        {
+          "date": "2026-05-22",
+          "value": 94
+        },
+        {
+          "date": "2026-05-23",
+          "value": 92
+        },
+        {
+          "date": "2026-05-24",
+          "value": 89
+        },
+        {
+          "date": "2026-05-25",
+          "value": 86
+        },
+        {
+          "date": "2026-05-26",
+          "value": 83
+        },
+        {
+          "date": "2026-05-27",
+          "value": 80
+        }
+      ]
+    },
+    "forecast_rf": {
+      "available": true,
+      "model_name": "random_forest",
+      "recommended_value": 80,
+      "mase": 0.2724,
+      "horizons": {
+        "next_1d": {
+          "forecast": 80,
+          "band_low": 75,
+          "band_high": 86,
+          "method": "random_forest"
+        },
+        "next_7d": {
+          "forecast": 560,
+          "band_low": 522,
+          "band_high": 601,
+          "method": "random_forest+scale"
+        }
+      },
+      "backtest_models": [
+        {
+          "name": "random_forest",
+          "mae": 2.88,
+          "mase": 0.2724,
+          "rmse": 4.03
+        },
+        {
+          "name": "seasonal_naive",
+          "mae": 10.57,
+          "mase": 1,
+          "rmse": 12.69
+        }
+      ],
+      "time_series": [
+        {
+          "date": "2026-04-16",
+          "value": 107
+        },
+        {
+          "date": "2026-04-17",
+          "value": 108
+        },
+        {
+          "date": "2026-04-18",
+          "value": 108
+        },
+        {
+          "date": "2026-04-19",
+          "value": 107
+        },
+        {
+          "date": "2026-04-20",
+          "value": 105
+        },
+        {
+          "date": "2026-04-21",
+          "value": 104
+        },
+        {
+          "date": "2026-04-22",
+          "value": 101
+        },
+        {
+          "date": "2026-04-23",
+          "value": 98
+        },
+        {
+          "date": "2026-04-24",
+          "value": 96
+        },
+        {
+          "date": "2026-04-25",
+          "value": 92
+        },
+        {
+          "date": "2026-04-26",
+          "value": 89
+        },
+        {
+          "date": "2026-04-27",
+          "value": 86
+        },
+        {
+          "date": "2026-04-28",
+          "value": 82
+        },
+        {
+          "date": "2026-04-29",
+          "value": 80
+        },
+        {
+          "date": "2026-04-30",
+          "value": 77
+        },
+        {
+          "date": "2026-05-01",
+          "value": 75
+        },
+        {
+          "date": "2026-05-02",
+          "value": 74
+        },
+        {
+          "date": "2026-05-03",
+          "value": 73
+        },
+        {
+          "date": "2026-05-04",
+          "value": 72
+        },
+        {
+          "date": "2026-05-05",
+          "value": 73
+        },
+        {
+          "date": "2026-05-06",
+          "value": 74
+        },
+        {
+          "date": "2026-05-07",
+          "value": 75
+        },
+        {
+          "date": "2026-05-08",
+          "value": 77
+        },
+        {
+          "date": "2026-05-09",
+          "value": 79
+        },
+        {
+          "date": "2026-05-10",
+          "value": 81
+        },
+        {
+          "date": "2026-05-11",
+          "value": 84
+        },
+        {
+          "date": "2026-05-12",
+          "value": 87
+        },
+        {
+          "date": "2026-05-13",
+          "value": 89
+        },
+        {
+          "date": "2026-05-14",
+          "value": 92
+        },
+        {
+          "date": "2026-05-15",
+          "value": 94
+        },
+        {
+          "date": "2026-05-16",
+          "value": 95
+        },
+        {
+          "date": "2026-05-17",
+          "value": 97
+        },
+        {
+          "date": "2026-05-18",
+          "value": 98
+        },
+        {
+          "date": "2026-05-19",
+          "value": 97
+        },
+        {
+          "date": "2026-05-20",
+          "value": 97
+        },
+        {
+          "date": "2026-05-21",
+          "value": 96
+        },
+        {
+          "date": "2026-05-22",
+          "value": 94
+        },
+        {
+          "date": "2026-05-23",
+          "value": 92
+        },
+        {
+          "date": "2026-05-24",
+          "value": 89
+        },
+        {
+          "date": "2026-05-25",
+          "value": 86
+        },
+        {
+          "date": "2026-05-26",
+          "value": 83
+        },
+        {
+          "date": "2026-05-27",
+          "value": 80
+        }
+      ]
+    }
+  },
+  "generated_at": "2026-05-28T17:06:47.796Z"
+}

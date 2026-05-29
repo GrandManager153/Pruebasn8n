@@ -1,6 +1,14 @@
 # Dependencias
 node_modules/
 
+# Entornos virtuales y cache de Python
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
 # Variables de entorno y secretos
 .env
 .env.*
