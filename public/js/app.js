@@ -7,6 +7,7 @@ let dashboardData = null;
 let charts = {};
 let currentTab = 'dashboard';
 let currentAlertFilter = 'all';
+let timeSeriesType = 'line';
 
 // =====================================================================
 //  TEXT CLEANING & SANITIZATION (No Emojis, No Technical Parentheses)
@@ -50,7 +51,7 @@ function cleanTechnicalTerms(str) {
 function restartHealthRing() {
     const ring = document.getElementById('health-fg-ring');
     const numVal = document.getElementById('health-num-val');
-    if (!dashboardData) return;
+    if (!dashboardData || !dashboardData.system) return;
     
     const scoreVal = dashboardData.system.health_score;
     const circumference = 2 * Math.PI * 58;
@@ -60,12 +61,26 @@ function restartHealthRing() {
         ring.style.transition = 'none';
         ring.style.strokeDashoffset = circumference;
         void ring.offsetWidth; // Force reflow
-        ring.style.transition = 'stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1)';
-        ring.style.strokeDashoffset = dashOffset;
+        
+        requestAnimationFrame(() => {
+            ring.style.transition = 'stroke-dashoffset 0.85s cubic-bezier(0.16, 1, 0.3, 1)';
+            ring.style.strokeDashoffset = dashOffset;
+        });
     }
     
     if (numVal) {
-        parseAndAnimate(numVal, scoreVal, 700);
+        numVal.textContent = '0';
+        parseAndAnimate(numVal, scoreVal, 750);
+    }
+
+    const tank = document.querySelector('.liquid-tank');
+    if (tank) {
+        const target = Number(tank.dataset.fillTarget) || scoreVal;
+        tank.style.setProperty('--fill-level', 0);
+        void tank.offsetWidth;
+        requestAnimationFrame(() => {
+            tank.style.setProperty('--fill-level', target);
+        });
     }
 }
 
@@ -73,7 +88,7 @@ function switchTab(tabId) {
     document.querySelectorAll('.list-group-item').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
 
-    const activeMenuItem = document.querySelector(`[data-tab="${tabId}"]`);
+    const activeMenuItem = document.querySelector(`.list-group-item[data-tab="${tabId}"]`);
     if (activeMenuItem) activeMenuItem.classList.add('active');
 
     const activeTabContent = document.getElementById(`tab-${tabId}`);
@@ -103,13 +118,49 @@ function switchTab(tabId) {
         // Specialized resets for specific tabs
         if (tabId === 'dashboard') {
             setTimeout(restartHealthRing, 60);
+            setTimeout(() => {
+                const wave = document.querySelector('.card-wave-bg');
+                if (wave) {
+                    wave.style.transition = 'none';
+                    wave.style.height = '0%';
+                    void wave.offsetWidth; // Force reflow
+                    
+                    requestAnimationFrame(() => {
+                        wave.style.transition = 'height 1.5s cubic-bezier(0.16, 1, 0.3, 1)';
+                        wave.style.height = wave.getAttribute('data-target-height');
+                    });
+                }
+            }, 100);
         } else if (tabId === 'forecast') {
-            if (charts.timeseries) { charts.timeseries.reset(); charts.timeseries.update(); }
-            if (charts.seasonal) { charts.seasonal.reset(); charts.seasonal.update(); }
+            if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.forecast) {
+                renderTimeSeriesChart(dashboardData.forecast);
+                if (dashboardData.forecast.seasonal_indices) {
+                    renderSeasonalChart(dashboardData.forecast.seasonal_indices);
+                }
+            } else {
+                if (charts.timeseries) { charts.timeseries.reset(); charts.timeseries.update(); }
+                if (charts.seasonal) { charts.seasonal.reset(); charts.seasonal.update(); }
+            }
+        } else if (tabId === 'forecast-rf') {
+            if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.forecast_rf) {
+                renderTimeSeriesChart(dashboardData.forecast_rf, {
+                    canvasId: 'rf-chart-timeseries',
+                    chartKey: 'rfTimeseries',
+                    lineLabel: 'Pronóstico Random Forest',
+                    lineColor: 'rgba(16, 185, 129, 0.75)',
+                });
+            } else if (charts.rfTimeseries) {
+                charts.rfTimeseries.reset();
+                charts.rfTimeseries.update();
+            }
         } else if (tabId === 'investment') {
-            if (charts.campaigns) { charts.campaigns.reset(); charts.campaigns.update(); }
+            if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.investment && dashboardData.investment.campaigns) {
+                renderCampaignChart(dashboardData.investment.campaigns);
+            }
         } else if (tabId === 'operations') {
-            if (charts.hourly) { charts.hourly.reset(); charts.hourly.update(); }
+            if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.operations && dashboardData.operations.hourly_distribution) {
+                renderHourlyChart(dashboardData.operations.hourly_distribution);
+            }
         }
     }
 
@@ -118,12 +169,16 @@ function switchTab(tabId) {
         'dashboard': 'Resumen General',
         'funnel': 'Embudo y Conversiones',
         'forecast': 'Pronósticos y Regímenes',
+        'forecast-rf': 'Pronóstico Random Forest',
         'investment': 'Inversión y Campañas',
         'operations': 'Operaciones Diarias',
         'alerts': 'Alertas de Operación',
         'reports': 'Informes Corporativos'
     };
-    document.getElementById('topbar-section-title').textContent = titles[tabId] || 'BOS Panel';
+    const sectionTitleEl = document.getElementById('topbar-section-title');
+    if (sectionTitleEl) {
+        sectionTitleEl.textContent = titles[tabId] || 'BOS Panel';
+    }
 
     currentTab = tabId;
 
@@ -288,6 +343,15 @@ async function loadBOS() {
 // =====================================================================
 
 function renderBOS(data) {
+    // Update main horizontal status bar dynamically
+    const mainSbar = document.getElementById('main-sbar');
+    const mainSbarText = document.getElementById('main-sbar-text');
+    if (mainSbar && mainSbarText) {
+        const severityClass = data.system.status.color === 'rojo' ? 'status-red' : data.system.status.color === 'amarillo' ? 'status-yellow' : 'status-green';
+        mainSbar.className = `sbar main-sbar ${severityClass}`;
+        mainSbarText.innerHTML = `ESTADO: ${cleanTechnicalTerms(data.system.status.label).toUpperCase()} &mdash; ${cleanTechnicalTerms(data.system.status.reasons[0] || 'Operación en curso.')}`;
+    }
+
     // 1. Render System Health Hero
     const healthColor = data.system.health_score >= 80 ? 'var(--green)' : data.system.health_score >= 60 ? 'var(--amber)' : 'var(--red)';
     const circumference = 2 * Math.PI * 58;
@@ -353,18 +417,49 @@ function renderBOS(data) {
         return { ...k, label, sub };
     });
 
-    kpisGrid.innerHTML = cleanedKpis.map((kpi, idx) => `
-        <div class="card stat-card-${kpi.color || 'blue'} card-animate" style="animation-delay: ${idx * 0.025}s;">
-            <div class="card-stat-label">${kpi.label}</div>
-            <div class="card-stat-value" id="kpi-val-${idx}" data-value="${kpi.value}">0</div>
-            <div class="card-stat-sub">${kpi.sub || '&nbsp;'}</div>
-        </div>
-    `).join('');
+    const healthScore = Math.min(100, Math.max(0, Number(data.system.health_score) || 0));
+    const liquidTone = healthScore >= 80 ? 'good' : healthScore >= 60 ? 'warn' : 'critical';
 
-    // Trigger dynamic count animations for general KPIs
+    kpisGrid.innerHTML = cleanedKpis.map((kpi, idx) => {
+        const isHealth = idx === 0;
+        if (isHealth) {
+            return `
+                <div class="card liquid-tank liquid-tone-${liquidTone} card-animate"
+                    style="--fill-level: 0; animation-delay: ${idx * 0.025}s;"
+                    data-fill-target="${healthScore}">
+                    <div class="liquid-tank__fill" aria-hidden="true">
+                        <div class="liquid-tank__surface liquid-tank__surface--1"></div>
+                        <div class="liquid-tank__surface liquid-tank__surface--2"></div>
+                    </div>
+                    <div class="liquid-tank__content">
+                        <div class="card-stat-label">${kpi.label}</div>
+                        <div class="card-stat-value" id="kpi-val-${idx}" data-value="${kpi.value}">0</div>
+                        <div class="card-stat-sub">${kpi.sub || '&nbsp;'}</div>
+                    </div>
+                </div>
+            `;
+        }
+        return `
+            <div class="card stat-card-${kpi.color || 'blue'} card-animate" style="animation-delay: ${idx * 0.025}s;">
+                <div class="card-stat-label">${kpi.label}</div>
+                <div class="card-stat-value" id="kpi-val-${idx}" data-value="${kpi.value}">0</div>
+                <div class="card-stat-sub">${kpi.sub || '&nbsp;'}</div>
+            </div>
+        `;
+    }).join('');
+
+    // Trigger dynamic count animations and liquid fill rising for KPIs
     cleanedKpis.forEach((kpi, idx) => {
         const element = document.getElementById(`kpi-val-${idx}`);
         parseAndAnimate(element, kpi.value);
+    });
+
+    requestAnimationFrame(() => {
+        const tank = document.querySelector('.liquid-tank');
+        if (tank) {
+            const target = Number(tank.dataset.fillTarget) || 0;
+            tank.style.setProperty('--fill-level', target);
+        }
     });
 
     // 3. Render Action Cards in Dashboard Tab
@@ -412,8 +507,13 @@ function renderBOS(data) {
     // 6. Render Funnel Page
     renderFunnelDetails(data);
 
-    // 7. Render Forecast Page
-    renderForecastDetails(data.forecast);
+    // 7. Render Forecast Pages (linear + Random Forest)
+    renderForecastDetails(data.forecast || {}, {
+        prefix: '',
+        show14d: true,
+        showChangepoint: true,
+    });
+    renderForecastRfTab(data.forecast_rf);
 
     // 7b. Render Random Forest (Advanced ML Model) Page
     renderForecastRF(data.forecast_rf);
@@ -422,8 +522,12 @@ function renderBOS(data) {
     renderAlertsCentre(data.system.alerts);
 
     // 9. Initialize and render high-impact Charts
-    renderTimeSeriesChart(data.forecast);
-    renderSeasonalChart(data.forecast.seasonal_indices);
+    renderTimeSeriesChart(data.forecast || {}, {
+        canvasId: 'chart-timeseries',
+        chartKey: 'timeseries',
+        lineLabel: 'Pronóstico Recomendado',
+    });
+    renderSeasonalChart(data.forecast ? data.forecast.seasonal_indices : []);
     renderCampaignChart(data.investment.campaigns);
     renderHourlyChart(data.operations.hourly_distribution);
 
@@ -555,9 +659,13 @@ function renderFunnelDetails(data) {
 //  RENDER FORECAST TAB DETAILS
 // =====================================================================
 
-function renderForecastDetails(forecast) {
-    const cpBanner = document.getElementById('forecast-changepoint-banner');
-    if (cpBanner) {
+function renderForecastDetails(forecast, options = {}) {
+    const prefix = options.prefix || '';
+    const show14d = options.show14d !== false;
+    const showChangepoint = options.showChangepoint !== false;
+
+    const cpBanner = document.getElementById(`${prefix}forecast-changepoint-banner`);
+    if (cpBanner && showChangepoint) {
         if (forecast.changepoint && forecast.changepoint.detected) {
             const cp = forecast.changepoint;
             const isUp = cp.direction === 'upward';
@@ -576,36 +684,45 @@ function renderForecastDetails(forecast) {
         }
     }
 
-    const horizonsGrid = document.getElementById('forecast-horizons-grid');
-    if (horizonsGrid) {
+    const horizonsGrid = document.getElementById(`${prefix}forecast-horizons-grid`);
+    if (horizonsGrid && forecast.horizons) {
         const horizons = forecast.horizons;
-        
-        horizonsGrid.innerHTML = `
+        const h1d = horizons.next_1d || {};
+        const h7d = horizons.next_7d || {};
+        const h14d = horizons.next_14d || {};
+
+        let cardsHtml = `
             <div class="card stat-card-blue card-animate" style="animation-delay: 0.03s;">
                 <div class="card-stat-label">Pronóstico Mañana</div>
-                <div class="card-stat-value" id="forecast-1d-val" data-value="${horizons.next_1d.forecast}">0</div>
-                <div class="card-stat-sub">Rango: ${horizons.next_1d.band_low} a ${horizons.next_1d.band_high} leads</div>
+                <div class="card-stat-value" id="${prefix}forecast-1d-val" data-value="${h1d.forecast ?? 0}">0</div>
+                <div class="card-stat-sub">Rango: ${h1d.band_low ?? 0} a ${h1d.band_high ?? 0} leads</div>
             </div>
             <div class="card stat-card-gold card-animate" style="animation-delay: 0.06s;">
                 <div class="card-stat-label">Pronóstico 7 Días</div>
-                <div class="card-stat-value" id="forecast-7d-val" data-value="${horizons.next_7d.forecast}">0</div>
-                <div class="card-stat-sub">Rango: ${horizons.next_7d.band_low} a ${horizons.next_7d.band_high} leads</div>
-            </div>
+                <div class="card-stat-value" id="${prefix}forecast-7d-val" data-value="${h7d.forecast ?? 0}">0</div>
+                <div class="card-stat-sub">Rango: ${h7d.band_low ?? 0} a ${h7d.band_high ?? 0} leads</div>
+            </div>`;
+
+        if (show14d && horizons.next_14d) {
+            cardsHtml += `
             <div class="card stat-card-green card-animate" style="animation-delay: 0.09s;">
                 <div class="card-stat-label">Pronóstico 14 Días</div>
-                <div class="card-stat-value" id="forecast-14d-val" data-value="${horizons.next_14d.forecast}">0</div>
-                <div class="card-stat-sub">Rango: ${horizons.next_14d.band_low} a ${horizons.next_14d.band_high} leads</div>
-            </div>
-        `;
+                <div class="card-stat-value" id="${prefix}forecast-14d-val" data-value="${h14d.forecast ?? 0}">0</div>
+                <div class="card-stat-sub">Rango: ${h14d.band_low ?? 0} a ${h14d.band_high ?? 0} leads</div>
+            </div>`;
+        }
 
-        // Animate forecast horizon metrics dynamically
-        parseAndAnimate(document.getElementById('forecast-1d-val'), horizons.next_1d.forecast);
-        parseAndAnimate(document.getElementById('forecast-7d-val'), horizons.next_7d.forecast);
-        parseAndAnimate(document.getElementById('forecast-14d-val'), horizons.next_14d.forecast);
+        horizonsGrid.innerHTML = cardsHtml;
+
+        parseAndAnimate(document.getElementById(`${prefix}forecast-1d-val`), h1d.forecast ?? 0);
+        parseAndAnimate(document.getElementById(`${prefix}forecast-7d-val`), h7d.forecast ?? 0);
+        if (show14d && horizons.next_14d) {
+            parseAndAnimate(document.getElementById(`${prefix}forecast-14d-val`), h14d.forecast ?? 0);
+        }
     }
 
-    const modelsBody = document.getElementById('forecast-models-body');
-    if (modelsBody) {
+    const modelsBody = document.getElementById(`${prefix}forecast-models-body`);
+    if (modelsBody && Array.isArray(forecast.backtest_models)) {
         modelsBody.innerHTML = forecast.backtest_models.map(m => {
             const maseColor = m.mase < 0.85 ? 'var(--green)' : m.mase < 1.0 ? 'var(--amber)' : 'var(--red)';
             const stateLabel = m.mase < 1.0 ? 'Aceptable' : 'Subóptimo';
@@ -620,6 +737,61 @@ function renderForecastDetails(forecast) {
             `;
         }).join('');
     }
+}
+
+function renderForecastRfTab(forecastRf) {
+    const content = document.getElementById('rf-forecast-content');
+    const unavailable = document.getElementById('rf-unavailable-state');
+    const metaBanner = document.getElementById('rf-forecast-meta-banner');
+
+    if (!content || !unavailable) return;
+
+    if (!forecastRf || forecastRf.available === false) {
+        content.style.display = 'none';
+        unavailable.style.display = 'block';
+        if (metaBanner) metaBanner.innerHTML = '';
+        unavailable.innerHTML = `
+            <div class="card card-animate" style="padding: 32px; text-align: center; border-left: 4px solid var(--amber);">
+                <h3 style="color: white; font-size: 16px; font-weight: 800; margin: 0 0 12px 0;">Modelo Random Forest no disponible</h3>
+                <p style="color: var(--text-muted); font-size: 13.5px; margin: 0; line-height: 1.6;">
+                    ${cleanTechnicalTerms(forecastRf && forecastRf.reason ? forecastRf.reason : 'La API ML no respondió en esta ejecución. Verifique que uvicorn y ngrok estén activos.')}
+                </p>
+            </div>`;
+        return;
+    }
+
+    content.style.display = 'block';
+    unavailable.style.display = 'none';
+
+    if (metaBanner) {
+        const maseColor = forecastRf.mase < 0.85 ? 'var(--green)' : forecastRf.mase < 1.0 ? 'var(--amber)' : 'var(--red)';
+        metaBanner.innerHTML = `
+            <div class="card card-animate" style="background: linear-gradient(135deg, var(--bg-card), #0a2015) !important; border-left: 4px solid var(--green) !important; padding: 20px 24px;">
+                <div class="v-flex-between" style="flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <h2 class="text-white" style="font-size: 15px; font-weight: 800; margin: 0 0 6px 0;">Random Forest — ${cleanTechnicalTerms(forecastRf.label || 'Forecast activo')}</h2>
+                        <p class="text-muted" style="font-size: 13px; margin: 0;">Confianza: ${forecastRf.confidence || 'N/A'} · Modo: ${cleanTechnicalTerms(forecastRf.mode || 'model')}</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">MASE</div>
+                        <div style="font-family: var(--mono); font-size: 22px; font-weight: 800; color: ${maseColor};">${forecastRf.mase != null ? forecastRf.mase.toFixed(4) : 'N/A'}</div>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    renderForecastDetails(forecastRf, {
+        prefix: 'rf-',
+        show14d: false,
+        showChangepoint: false,
+    });
+
+    renderTimeSeriesChart(forecastRf, {
+        canvasId: 'rf-chart-timeseries',
+        chartKey: 'rfTimeseries',
+        lineLabel: 'Pronóstico Random Forest',
+        lineColor: 'rgba(16, 185, 129, 0.75)',
+    });
 }
 
 // =====================================================================
@@ -859,43 +1031,68 @@ function renderAlertsTableList(filteredList) {
 //  CHART.JS PLOTTING INITIALIZERS
 // =====================================================================
 
-function renderTimeSeriesChart(forecast) {
-    if (charts.timeseries) charts.timeseries.destroy();
-    const element = document.getElementById('chart-timeseries');
-    if (!element) return;
+function renderTimeSeriesChart(forecast, typeOrOptions) {
+    let options = {
+        canvasId: 'chart-timeseries',
+        chartKey: 'timeseries',
+        lineLabel: 'Pronóstico Recomendado',
+    };
+    if (typeof typeOrOptions === 'string') {
+        timeSeriesType = typeOrOptions;
+    } else if (typeOrOptions && typeof typeOrOptions === 'object') {
+        options = { ...options, ...typeOrOptions };
+    }
 
+    const canvasId = options.canvasId;
+    const chartKey = options.chartKey;
+    const isRfChart = chartKey === 'rfTimeseries';
+    const chartType = !isRfChart && timeSeriesType === 'bar' ? 'bar' : 'line';
+
+    if (charts[chartKey]) charts[chartKey].destroy();
+    const element = document.getElementById(canvasId);
+    if (!element || !forecast || !Array.isArray(forecast.time_series)) return;
+
+    const isLight = document.body.classList.contains('light-mode');
     const ctx = element.getContext('2d');
     const ts = forecast.time_series;
-    const labels = ts.map(d => { 
-        const dt = new Date(d.date); 
-        return dt.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }); 
+    const labels = ts.map(d => {
+        const dt = new Date(d.date);
+        return dt.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
     });
     const values = ts.map(d => d.value);
+    const isBar = chartType === 'bar';
+    const defaultLineColor = isLight ? 'rgba(132, 204, 22, 0.9)' : 'rgba(163, 230, 53, 0.8)';
+    const lineLabel = options.lineLabel || 'Pronóstico Recomendado';
+    const lineColor = options.lineColor || defaultLineColor;
 
-    charts.timeseries = new Chart(ctx, {
-        type: 'line',
+    charts[chartKey] = new Chart(ctx, {
+        type: chartType,
         data: {
             labels,
             datasets: [
                 {
                     label: 'Leads diarios',
                     data: values,
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                    fill: true,
+                    borderColor: isLight ? '#0284c7' : '#38bdf8',
+                    backgroundColor: isBar
+                        ? (isLight ? 'rgba(2, 132, 199, 0.55)' : 'rgba(56, 189, 248, 0.45)')
+                        : (isLight ? 'rgba(2, 132, 199, 0.05)' : 'rgba(56, 189, 248, 0.06)'),
+                    fill: !isBar,
                     tension: 0.35,
-                    pointRadius: 3,
-                    pointHoverRadius: 8,
-                    pointBackgroundColor: '#3b82f6',
-                    pointBorderColor: '#ffffff',
+                    borderRadius: isBar ? 6 : 0,
+                    pointRadius: isBar ? 0 : 3,
+                    pointHoverRadius: isBar ? 0 : 8,
+                    pointBackgroundColor: isLight ? '#0284c7' : '#38bdf8',
+                    pointBorderColor: isLight ? '#ffffff' : '#080c14',
                     pointBorderWidth: 2,
-                    borderWidth: 2.5
+                    borderWidth: isBar ? 0 : 2.5
                 },
                 {
-                    label: `Pronóstico Recomendado`,
+                    type: 'line',
+                    label: lineLabel,
                     data: new Array(values.length).fill(forecast.recommended_value),
-                    borderColor: 'rgba(204, 164, 59, 0.6)',
-                    borderDash: [8, 4],
+                    borderColor: lineColor,
+                    borderDash: [6, 4],
                     borderWidth: 2,
                     pointRadius: 0,
                     fill: false
@@ -918,11 +1115,20 @@ function renderTimeSeriesChart(forecast) {
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: { display: true, labels: { color: '#94a3b8', font: { size: 11, family: 'Inter' }, boxWidth: 12 } },
+                legend: { 
+                    display: true, 
+                    labels: { 
+                        color: isLight ? '#475569' : '#94a3b8', 
+                        font: { size: 11, family: 'Inter' }, 
+                        boxWidth: 12 
+                    } 
+                },
                 tooltip: {
-                    backgroundColor: '#090f20',
-                    borderColor: 'rgba(204, 164, 59, 0.3)',
+                    backgroundColor: isLight ? '#ffffff' : '#05080f',
+                    borderColor: isLight ? 'rgba(15, 23, 42, 0.08)' : 'rgba(163, 230, 53, 0.3)',
                     borderWidth: 1,
+                    titleColor: isLight ? '#0f172a' : '#ffffff',
+                    bodyColor: isLight ? '#475569' : '#94a3b8',
                     titleFont: { family: 'Inter', weight: 'bold' },
                     bodyFont: { family: 'JetBrains Mono', size: 12 },
                     padding: 12,
@@ -931,11 +1137,27 @@ function renderTimeSeriesChart(forecast) {
                 }
             },
             scales: {
-                x: { grid: { color: 'rgba(255,255,255,0.02)' }, ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 10 } },
-                y: { grid: { color: 'rgba(255,255,255,0.02)' }, ticks: { color: '#64748b', font: { size: 11, family: 'JetBrains Mono' } } }
+                x: { 
+                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' }, 
+                    ticks: { color: isLight ? '#475569' : '#64748b', font: { size: 10 }, maxTicksLimit: 10 } 
+                },
+                y: { 
+                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' }, 
+                    ticks: { color: isLight ? '#475569' : '#64748b', font: { size: 11, family: 'JetBrains Mono' } } 
+                }
             }
         }
     });
+}
+
+function setTimeSeriesType(type, ev) {
+    if (ev) ev.preventDefault();
+    document.querySelectorAll('.chart-toolbar [data-ts-type]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tsType === type);
+    });
+    if (dashboardData && dashboardData.forecast) {
+        renderTimeSeriesChart(dashboardData.forecast, type);
+    }
 }
 
 function renderSeasonalChart(indices) {
@@ -943,6 +1165,7 @@ function renderSeasonalChart(indices) {
     const element = document.getElementById('chart-seasonal');
     if (!element) return;
 
+    const isLight = document.body.classList.contains('light-mode');
     const ctx = element.getContext('2d');
     charts.seasonal = new Chart(ctx, {
         type: 'bar',
@@ -951,8 +1174,20 @@ function renderSeasonalChart(indices) {
             datasets: [{
                 label: 'Índice Estacional',
                 data: indices.map(i => i.index),
-                backgroundColor: indices.map(i => i.index >= 1 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.5)'),
-                borderColor: indices.map(i => i.index >= 1 ? '#10b981' : '#ef4444'),
+                backgroundColor: indices.map(i => {
+                    if (i.index >= 1) {
+                        return isLight ? 'rgba(132, 204, 22, 0.75)' : 'rgba(163, 230, 53, 0.7)';
+                    } else {
+                        return isLight ? 'rgba(225, 29, 72, 0.65)' : 'rgba(244, 63, 94, 0.6)';
+                    }
+                }),
+                borderColor: indices.map(i => {
+                    if (i.index >= 1) {
+                        return isLight ? '#84cc16' : '#a3e635';
+                    } else {
+                        return isLight ? '#e11d48' : '#f43f5e';
+                    }
+                }),
                 borderWidth: 1.5,
                 borderRadius: 6
             }]
@@ -974,17 +1209,24 @@ function renderSeasonalChart(indices) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    backgroundColor: '#090f20',
-                    borderColor: 'rgba(204, 164, 59, 0.3)',
+                    backgroundColor: isLight ? '#ffffff' : '#090f20',
+                    borderColor: isLight ? 'rgba(15, 23, 42, 0.08)' : 'rgba(163, 230, 53, 0.3)',
                     borderWidth: 1,
+                    titleColor: isLight ? '#0f172a' : '#ffffff',
+                    bodyColor: isLight ? '#475569' : '#94a3b8',
                     padding: 10,
                     cornerRadius: 8,
                     bodyFont: { family: 'JetBrains Mono' }
                 }
             },
             scales: {
-                x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 11, weight: '600' } } },
-                y: { grid: { color: 'rgba(255,255,255,0.02)' }, ticks: { color: '#64748b' }, min: 0.6, max: 1.3 }
+                x: { grid: { display: false }, ticks: { color: isLight ? '#475569' : '#94a3b8', font: { size: 11, weight: '600' } } },
+                y: { 
+                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' }, 
+                    ticks: { color: isLight ? '#475569' : '#64748b' }, 
+                    min: 0.6, 
+                    max: 1.3 
+                }
             }
         }
     });
@@ -996,15 +1238,19 @@ function renderCampaignChart(campaigns) {
     const element = document.getElementById('chart-campaigns');
     if (!element) return;
 
+    const isLight = document.body.classList.contains('light-mode');
     const ctx = element.getContext('2d');
-    const colors = ['#a8201a', '#cca43b', '#10b981', '#3b82f6', '#ec4899', '#f59e0b', '#8b5cf6'];
+    const colors = isLight 
+        ? ['#0284c7', '#84cc16', '#7c3aed', '#ea580c', '#db2777', '#cca43b', '#e11d48']
+        : ['#38bdf8', '#a3e635', '#8b5cf6', '#f97316', '#ec4899', '#fbbf24', '#f43f5e'];
+
     charts.campaigns = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: campaigns.map(c => c.name ? cleanTechnicalTerms(c.name).substring(0, 30) : 'N/A'),
             datasets: [{
                 data: campaigns.map(c => c.spend || c.total_spend || 0),
-                backgroundColor: colors.slice(0, campaigns.length).map(c => c + '88'),
+                backgroundColor: colors.slice(0, campaigns.length).map(c => c + '77'),
                 borderColor: colors.slice(0, campaigns.length),
                 borderWidth: 2,
                 hoverOffset: 12
@@ -1026,11 +1272,21 @@ function renderCampaignChart(campaigns) {
             maintainAspectRatio: false, 
             cutout: '65%',
             plugins: {
-                legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 10, padding: 8 } },
+                legend: { 
+                    position: 'right', 
+                    labels: { 
+                        color: isLight ? '#475569' : '#94a3b8', 
+                        font: { size: 11 }, 
+                        boxWidth: 10, 
+                        padding: 8 
+                    } 
+                },
                 tooltip: {
-                    backgroundColor: '#090f20',
-                    borderColor: 'rgba(204, 164, 59, 0.3)',
+                    backgroundColor: isLight ? '#ffffff' : '#090f20',
+                    borderColor: isLight ? 'rgba(15, 23, 42, 0.08)' : 'rgba(163, 230, 53, 0.3)',
                     borderWidth: 1,
+                    titleColor: isLight ? '#0f172a' : '#ffffff',
+                    bodyColor: isLight ? '#475569' : '#94a3b8',
                     padding: 10,
                     cornerRadius: 8,
                     bodyFont: { family: 'JetBrains Mono' },
@@ -1047,18 +1303,23 @@ function renderHourlyChart(hourly) {
     const element = document.getElementById('chart-hourly');
     if (!element) return;
 
+    const isLight = document.body.classList.contains('light-mode');
     const ctx = element.getContext('2d');
     charts.hourly = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: hourly.map(h => `${h.hour || h.hr}:00`),
+            labels: hourly.map(h => h.label || `${h.hour !== undefined ? h.hour : h.hr}:00`),
             datasets: [{
                 label: 'Contactos',
-                data: hourly.map(h => h.count || h.calls || h.total || 0),
+                data: hourly.map(h => h.probability !== undefined ? (h.probability * 100) : (h.count || h.calls || h.total || 0)),
                 backgroundColor: hourly.map((h, i) => {
-                    const val = h.count || h.calls || h.total || 0;
-                    const max = Math.max(...hourly.map(x => x.count || x.calls || x.total || 0));
-                    return val === max ? 'rgba(168, 32, 26, 0.8)' : 'rgba(204, 164, 59, 0.4)';
+                    const val = h.probability !== undefined ? (h.probability * 100) : (h.count || h.calls || h.total || 0);
+                    const max = Math.max(...hourly.map(x => x.probability !== undefined ? (x.probability * 100) : (x.count || x.calls || x.total || 0)));
+                    if (val === max) {
+                        return isLight ? 'rgba(225, 29, 72, 0.85)' : 'rgba(244, 63, 94, 0.85)';
+                    } else {
+                        return isLight ? 'rgba(132, 204, 22, 0.55)' : 'rgba(163, 230, 53, 0.45)';
+                    }
                 }),
                 borderRadius: 4
             }]
@@ -1080,17 +1341,31 @@ function renderHourlyChart(hourly) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    backgroundColor: '#090f20',
-                    borderColor: 'rgba(204, 164, 59, 0.3)',
+                    backgroundColor: isLight ? '#ffffff' : '#090f20',
+                    borderColor: isLight ? 'rgba(15, 23, 42, 0.08)' : 'rgba(163, 230, 53, 0.3)',
                     borderWidth: 1,
+                    titleColor: isLight ? '#0f172a' : '#ffffff',
+                    bodyColor: isLight ? '#475569' : '#94a3b8',
                     padding: 10,
                     cornerRadius: 8,
-                    bodyFont: { family: 'JetBrains Mono' }
+                    bodyFont: { family: 'JetBrains Mono' },
+                    callbacks: {
+                        label: (ctx) => {
+                            const val = ctx.raw;
+                            return ` Proporción: ${val.toFixed(2)}%`;
+                        }
+                    }
                 }
             },
             scales: {
-                x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 9 } } },
-                y: { grid: { color: 'rgba(255,255,255,0.02)' }, ticks: { color: '#64748b' } }
+                x: { grid: { display: false }, ticks: { color: isLight ? '#475569' : '#94a3b8', font: { size: 9 } } },
+                y: { 
+                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' }, 
+                    ticks: { 
+                        color: isLight ? '#475569' : '#64748b',
+                        callback: (value) => `${value}%`
+                    } 
+                }
             }
         }
     });
@@ -1163,7 +1438,7 @@ function loadReportInViewer(url, title, event) {
     // Switch view states
     placeholder.style.display = 'none';
     iframe.style.display = 'block';
-    iframe.src = url;
+    iframe.src = url + (url.includes('?') ? '&' : '?') + '_=' + Date.now();
     
     // Show control buttons
     if (openLink) {
@@ -1214,10 +1489,126 @@ function closeReportViewer() {
 }
 
 // =====================================================================
+//  ☀️ HIGH-FIDELITY THEME CONTROLLER & RIPPLE TRANSITION
+// =====================================================================
+
+function updateThemeIcon(isLight) {
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+    
+    if (isLight) {
+        // Sun SVG Icon
+        btn.innerHTML = `
+            <svg viewBox="0 0 24 24" class="theme-icon-svg" style="width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; transition: transform 0.5s ease; transform: rotate(180deg);">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        `;
+    } else {
+        // Moon SVG Icon
+        btn.innerHTML = `
+            <svg viewBox="0 0 24 24" class="theme-icon-svg" style="width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; transition: transform 0.5s ease;">
+                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+            </svg>
+        `;
+    }
+}
+
+window.toggleTheme = function(event) {
+    let x = window.innerWidth / 2;
+    let y = window.innerHeight / 2;
+    
+    if (event && event.clientX !== undefined && event.clientY !== undefined) {
+        x = event.clientX;
+        y = event.clientY;
+    } else {
+        const btn = document.getElementById('theme-toggle');
+        if (btn) {
+            const rect = btn.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+
+    const isCurrentlyLight = document.body.classList.contains('light-mode');
+    const nextThemeIsLight = !isCurrentlyLight;
+
+    // Create dynamic theme transition wave (Ripple Reveal)
+    const ripple = document.createElement('div');
+    ripple.className = 'theme-ripple';
+    ripple.style.left = `${x}px`;
+    ripple.style.top = `${y}px`;
+    ripple.style.backgroundColor = nextThemeIsLight ? '#f8fafc' : '#080c14';
+
+    document.body.appendChild(ripple);
+
+    // Swap stylesheet theme rules at ripple wave peak expansion (300ms)
+    setTimeout(() => {
+        if (nextThemeIsLight) {
+            document.body.classList.add('light-mode');
+            localStorage.setItem('theme', 'light');
+        } else {
+            document.body.classList.remove('light-mode');
+            localStorage.setItem('theme', 'dark');
+        }
+        
+        updateThemeIcon(nextThemeIsLight);
+
+        const reportIframe = document.getElementById('viewer-iframe');
+        if (reportIframe && reportIframe.contentWindow && reportIframe.src) {
+            reportIframe.contentWindow.postMessage(nextThemeIsLight ? 'theme-light' : 'theme-dark', '*');
+        }
+
+        // Dynamically redraw all loaded active charts with new gridlines, tooltips, and tick colors
+        if (dashboardData) {
+            renderTimeSeriesChart(dashboardData.forecast);
+            if (dashboardData.forecast && dashboardData.forecast.seasonal_indices) {
+                renderSeasonalChart(dashboardData.forecast.seasonal_indices);
+            }
+            if (dashboardData.forecast_rf) {
+                renderTimeSeriesChart(dashboardData.forecast_rf, {
+                    canvasId: 'rf-chart-timeseries',
+                    chartKey: 'rfTimeseries',
+                    lineLabel: 'Pronóstico Random Forest',
+                    lineColor: 'rgba(16, 185, 129, 0.75)',
+                });
+            }
+            if (dashboardData.investment && dashboardData.investment.campaigns) {
+                renderCampaignChart(dashboardData.investment.campaigns);
+            }
+            if (dashboardData.operations && dashboardData.operations.hourly_distribution) {
+                renderHourlyChart(dashboardData.operations.hourly_distribution);
+            }
+        }
+    }, 300);
+
+    // Clean up transition circle after completion
+    setTimeout(() => {
+        ripple.remove();
+    }, 700);
+};
+
+// =====================================================================
 //  APPLICATION INITIALIZATION
 // =====================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Early initialisation of Light Mode to prevent transition flashes
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+        updateThemeIcon(true);
+    } else {
+        updateThemeIcon(false);
+    }
+
     loadBOS();
     initSpotlight();
     console.log('⚡ Solis BOS Dashboard logic active');

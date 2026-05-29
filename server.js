@@ -174,6 +174,55 @@ app.post('/api/clear-logs', (req, res) => {
   res.json({ success: true, message: 'Logs limpiados con éxito.' });
 });
 
+// Inyecta el design system BOS en reportes HTML generados por n8n
+function injectTheme(htmlContent) {
+  if (!htmlContent || typeof htmlContent !== 'string') return htmlContent;
+
+  // Eliminar estilos y script embebidos de n8n
+  let output = htmlContent
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script>\s*function showTab[\s\S]*?<\/script>/gi, '');
+
+  const headAssets = `
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/reports.css?v=3">
+  `;
+
+  const bodyScripts = `
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="/js/reports.js?v=3"></script>`;
+
+  const ambientBg = `
+    <div class="report-ambient" aria-hidden="true">
+      <div class="report-nebula report-nebula-a"></div>
+      <div class="report-nebula report-nebula-b"></div>
+    </div>
+    <div class="report-waves" aria-hidden="true">
+      <svg class="wave-a" viewBox="0 0 1440 320" preserveAspectRatio="none"><path d="M0,160 C180,220 360,100 540,160 C720,220 900,100 1080,160 C1260,220 1440,100 1440,160 L1440,320 L0,320 Z"/></svg>
+      <svg class="wave-b" viewBox="0 0 1440 320" preserveAspectRatio="none"><path d="M0,200 C160,260 320,140 480,200 C640,260 800,140 960,200 C1120,260 1280,140 1440,200 L1440,320 L0,320 Z"/></svg>
+    </div>
+  `;
+
+  if (output.includes('</head>')) {
+    output = output.replace('</head>', `${headAssets}</head>`);
+  }
+
+  if (output.includes('<body>')) {
+    output = output.replace(
+      '<body>',
+      `<body>${ambientBg}<div class="report-back-bar"><a class="report-back-btn" href="/">← Volver al BOS Panel</a></div>`
+    );
+  } else if (output.includes('<body ')) {
+    output = output.replace(/<body([^>]*)>/, `<body$1>${ambientBg}<div class="report-back-bar"><a class="report-back-btn" href="/">← Volver al BOS Panel</a></div>`);
+  }
+
+  if (output.includes('</body>')) {
+    output = output.replace('</body>', `${bodyScripts}</body>`);
+  }
+
+  return output;
+}
+
 // Servir reportes HTML interactivos
 app.get('/reports/:audience', (req, res) => {
   const audience = req.params.audience;
@@ -184,7 +233,8 @@ app.get('/reports/:audience', (req, res) => {
     try {
       const htmlContent = fs.readFileSync(reportPath, 'utf-8');
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      return res.send(htmlContent);
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      return res.send(injectTheme(htmlContent));
     } catch (err) {
       console.log(`⚠️ Error leyendo reporte ${audience} desde disco:`, err.message);
     }
@@ -192,7 +242,8 @@ app.get('/reports/:audience', (req, res) => {
 
   if (activeReports[audience]) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(activeReports[audience]);
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.send(injectTheme(activeReports[audience]));
   } else {
     res.status(404).send(`
       <div style="font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif; text-align: center; padding: 60px; background: #050409; color: #ffffff; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">

@@ -1,0 +1,783 @@
+/* =====================================================================
+   BOS Panel — Estilos unificados para informes HTML (n8n)
+   Mapea la estructura de reportes al design system del dashboard
+   ===================================================================== */
+
+:root {
+    --bg-main: #080c14;
+    --bg-card: linear-gradient(135deg, rgba(13, 20, 35, 0.88), rgba(7, 10, 17, 0.94));
+    --border: rgba(255, 255, 255, 0.06);
+    --chartreuse: #a3e635;
+    --blue: #38bdf8;
+    --crimson: #f43f5e;
+    --gold: #cca43b;
+    --green: #10b981;
+    --amber: #fbbf24;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --font: 'Inter', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+    --radius-lg: 24px;
+    --radius-md: 16px;
+    --radius-sm: 12px;
+    --gap-bento: 22px;
+    --shell-pad: 16px;
+    --soft-shadow: 0 14px 40px rgba(0, 0, 0, 0.38), inset 0 1px 1px rgba(255, 255, 255, 0.04);
+
+    /* Remapeo de variables internas del generador n8n */
+    --p: var(--chartreuse);
+    --a: var(--blue);
+    --l: rgba(163, 230, 53, 0.08);
+    --bg: var(--bg-main);
+    --c: rgba(13, 20, 35, 0.85);
+    --t: var(--text-main);
+    --m: var(--text-muted);
+    --b: var(--border);
+    --r: var(--radius-lg);
+    --s: var(--soft-shadow);
+    --sh: 0 18px 48px rgba(0, 0, 0, 0.45);
+}
+
+body.light-mode {
+    --bg-main: #f8fafc;
+    --bg-card: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(241, 245, 249, 0.96));
+    --border: rgba(15, 23, 42, 0.08);
+    --chartreuse: #84cc16;
+    --blue: #0284c7;
+    --crimson: #e11d48;
+    --text-main: #0f172a;
+    --text-muted: #475569;
+    --text-dim: #64748b;
+    --soft-shadow: 0 12px 32px rgba(15, 23, 42, 0.07), inset 0 1px 1px rgba(255, 255, 255, 0.85);
+    --l: rgba(132, 204, 22, 0.08);
+    --c: rgba(255, 255, 255, 0.92);
+}
+
+/* === Fondo ambiental (igual que el panel) === */
+.report-ambient {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.report-nebula {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(140px);
+    opacity: 0.1;
+    mix-blend-mode: screen;
+}
+
+.report-nebula-a {
+    width: 480px;
+    height: 480px;
+    background: radial-gradient(circle, var(--gold) 0%, transparent 70%);
+    top: 8%;
+    left: -80px;
+}
+
+.report-nebula-b {
+    width: 560px;
+    height: 560px;
+    background: radial-gradient(circle, var(--crimson) 0%, transparent 70%);
+    bottom: 6%;
+    right: -120px;
+}
+
+.report-waves {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.35;
+}
+
+.report-waves svg {
+    position: absolute;
+    bottom: 0;
+    width: 200%;
+    height: 28%;
+    min-height: 140px;
+}
+
+.report-waves .wave-a { animation: reportWaveFlow 24s linear infinite; fill: rgba(56, 189, 248, 0.018); }
+.report-waves .wave-b { animation: reportWaveFlowRev 20s linear infinite; fill: rgba(163, 230, 53, 0.014); bottom: -12px; }
+
+@keyframes reportWaveFlow {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+
+@keyframes reportWaveFlowRev {
+    from { transform: translateX(-50%); }
+    to { transform: translateX(0); }
+}
+
+/* === Base === */
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0 !important;
+    font-family: var(--font) !important;
+    background: var(--bg-main) !important;
+    color: var(--text-main) !important;
+    line-height: 1.65 !important;
+    transition: background-color 0.35s ease, color 0.35s ease;
+}
+
+.app {
+    position: relative;
+    z-index: 2;
+    max-width: 1180px !important;
+    margin: 0 auto !important;
+    padding: var(--shell-pad) !important;
+}
+
+/* === Hero === */
+.hero {
+    background: var(--bg-card) !important;
+    border: 1px solid rgba(163, 230, 53, 0.22) !important;
+    border-radius: var(--radius-lg) !important;
+    color: var(--text-main) !important;
+    padding: 32px 36px 28px !important;
+    box-shadow: var(--soft-shadow) !important;
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    margin-bottom: var(--gap-bento);
+}
+
+.hero::after {
+    background: radial-gradient(circle, rgba(163, 230, 53, 0.08) 0%, transparent 70%) !important;
+}
+
+.hero h1 {
+    font-size: 22px !important;
+    font-weight: 900 !important;
+    letter-spacing: -0.4px !important;
+    color: var(--text-main) !important;
+}
+
+.hero .sub,
+.hero-top {
+    color: var(--text-muted) !important;
+}
+
+.hero-icon {
+    font-size: 28px !important;
+    filter: grayscale(0.2);
+}
+
+.badges {
+    gap: 8px !important;
+    margin-top: 14px;
+}
+
+.badge {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-muted) !important;
+    backdrop-filter: blur(6px);
+    border-radius: 50px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+}
+
+body.light-mode .badge {
+    background: rgba(15, 23, 42, 0.04) !important;
+}
+
+.pred-badge {
+    border-radius: 50px !important;
+    font-weight: 700 !important;
+}
+
+.pred-ok { background: rgba(16, 185, 129, 0.12) !important; color: var(--green) !important; }
+.pred-weak { background: rgba(251, 191, 36, 0.12) !important; color: var(--amber) !important; }
+.pred-fallback { background: rgba(244, 63, 94, 0.12) !important; color: var(--crimson) !important; }
+.pred-na { background: rgba(255, 255, 255, 0.05) !important; color: var(--text-muted) !important; }
+
+/* === Barra de estado === */
+.sbar {
+    margin: 0 0 var(--gap-bento) 0 !important;
+    padding: 12px 20px !important;
+    border-radius: var(--radius-md) !important;
+    font-size: 12.5px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.3px !important;
+    box-shadow: var(--soft-shadow) !important;
+}
+
+.status-green {
+    background: rgba(16, 185, 129, 0.08) !important;
+    color: var(--green) !important;
+    border: 1px solid rgba(16, 185, 129, 0.22) !important;
+}
+
+.status-yellow {
+    background: rgba(251, 191, 36, 0.08) !important;
+    color: var(--amber) !important;
+    border: 1px solid rgba(251, 191, 36, 0.22) !important;
+}
+
+.status-red {
+    background: rgba(244, 63, 94, 0.08) !important;
+    color: var(--crimson) !important;
+    border: 1px solid rgba(244, 63, 94, 0.22) !important;
+}
+
+.status-green .sdot { background: var(--green) !important; animation: reportPulse 1.8s infinite; }
+.status-yellow .sdot { background: var(--amber) !important; animation: reportPulse 1.8s infinite; }
+.status-red .sdot { background: var(--crimson) !important; animation: reportPulse 1.8s infinite; }
+
+@keyframes reportPulse {
+    0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+    70% { box-shadow: 0 0 0 6px transparent; opacity: 0.85; }
+}
+
+/* === Tabs (como menú del panel) === */
+.tabs {
+    display: flex !important;
+    gap: 6px !important;
+    margin-bottom: var(--gap-bento) !important;
+    background: rgba(13, 20, 35, 0.55) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-lg) !important;
+    padding: 6px !important;
+    box-shadow: var(--soft-shadow) !important;
+    backdrop-filter: blur(12px);
+}
+
+body.light-mode .tabs {
+    background: rgba(255, 255, 255, 0.88) !important;
+}
+
+.tab {
+    flex: 1 !important;
+    padding: 12px 16px !important;
+    font-size: 12.5px !important;
+    font-weight: 700 !important;
+    border-radius: var(--radius-sm) !important;
+    color: var(--text-muted) !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.tab:hover {
+    background: rgba(255, 255, 255, 0.04) !important;
+    color: var(--text-main) !important;
+}
+
+.tab.active {
+    background: var(--chartreuse) !important;
+    color: #080c14 !important;
+    box-shadow: 0 0 20px rgba(163, 230, 53, 0.3) !important;
+}
+
+.tab .tcount {
+    background: rgba(8, 12, 20, 0.25) !important;
+    color: #080c14 !important;
+    font-weight: 800 !important;
+}
+
+.tab.active .tcount {
+    background: rgba(8, 12, 20, 0.15) !important;
+}
+
+/* === KPIs === */
+.kpi-row {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
+    gap: var(--gap-bento) !important;
+    margin-bottom: var(--gap-bento) !important;
+}
+
+.kpi {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-lg) !important;
+    padding: 20px 16px !important;
+    box-shadow: var(--soft-shadow) !important;
+    backdrop-filter: blur(12px);
+    transition: transform 0.25s ease, border-color 0.25s ease !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.kpi:hover {
+    transform: translateY(-3px) !important;
+    border-color: rgba(163, 230, 53, 0.25) !important;
+}
+
+.kpi-value {
+    font-family: var(--mono) !important;
+    font-size: 26px !important;
+    font-weight: 800 !important;
+    color: var(--blue) !important;
+}
+
+.kpi-label {
+    color: var(--text-muted) !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.6px !important;
+}
+
+.kpi-sub {
+    color: var(--text-dim) !important;
+}
+
+/* === Bloques de contenido === */
+.content-block {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-lg) !important;
+    padding: 28px 32px !important;
+    box-shadow: var(--soft-shadow) !important;
+    margin-bottom: var(--gap-bento) !important;
+    backdrop-filter: blur(12px);
+}
+
+.content-block p,
+.content-block li {
+    font-size: 14.5px !important;
+    color: var(--text-main) !important;
+    line-height: 1.7 !important;
+}
+
+.content-block strong,
+.content-block p[style*="font-weight:800"],
+.content-block p[style*="font-weight: 800"] {
+    color: var(--chartreuse) !important;
+}
+
+.content-block pre {
+    background: rgba(8, 12, 20, 0.55) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-sm) !important;
+    color: var(--text-main) !important;
+    font-family: var(--mono) !important;
+}
+
+body.light-mode .content-block pre {
+    background: rgba(15, 23, 42, 0.04) !important;
+}
+
+.tbl-wrap {
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.content-block table {
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-sm) !important;
+    overflow: hidden;
+}
+
+.content-block th {
+    background: rgba(13, 20, 35, 0.95) !important;
+    color: var(--text-muted) !important;
+    font-size: 10.5px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.6px !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+body.light-mode .content-block th {
+    background: rgba(241, 245, 249, 0.95) !important;
+    color: var(--text-muted) !important;
+}
+
+.content-block td {
+    color: var(--text-main) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+    font-size: 13px !important;
+}
+
+body.light-mode .content-block td {
+    border-bottom-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+.content-block tr:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.02) !important;
+}
+
+body.light-mode .content-block tr:nth-child(even) td {
+    background: rgba(15, 23, 42, 0.02) !important;
+}
+
+/* === Alertas === */
+.alert-card {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-left: 4px solid var(--crimson) !important;
+    border-radius: var(--radius-md) !important;
+    padding: 18px 22px !important;
+    margin-bottom: 12px !important;
+    box-shadow: var(--soft-shadow) !important;
+}
+
+.alert-badge {
+    border-radius: 50px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.4px !important;
+}
+
+.alert-title {
+    color: var(--text-main) !important;
+    font-weight: 800 !important;
+}
+
+.alert-detail {
+    color: var(--text-muted) !important;
+}
+
+/* === Acciones === */
+.action-card {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-left: 4px solid var(--amber) !important;
+    border-radius: var(--radius-md) !important;
+    padding: 18px 22px !important;
+    margin-bottom: 12px !important;
+    box-shadow: var(--soft-shadow) !important;
+}
+
+.action-num {
+    background: var(--blue) !important;
+    font-weight: 800 !important;
+}
+
+.action-text {
+    color: var(--text-main) !important;
+    font-weight: 700 !important;
+}
+
+.action-meta {
+    color: var(--text-muted) !important;
+}
+
+.action-badge {
+    border-radius: 50px !important;
+    font-weight: 800 !important;
+}
+
+.empty-card {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-lg) !important;
+    color: var(--text-muted) !important;
+    box-shadow: var(--soft-shadow) !important;
+}
+
+/* === Secciones colapsables === */
+.info-section {
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-md) !important;
+    margin-top: var(--gap-bento) !important;
+    overflow: hidden;
+    background: var(--bg-card) !important;
+    box-shadow: var(--soft-shadow) !important;
+}
+
+.info-header {
+    background: rgba(13, 20, 35, 0.55) !important;
+    color: var(--text-muted) !important;
+    font-weight: 700 !important;
+    padding: 14px 20px !important;
+}
+
+body.light-mode .info-header {
+    background: rgba(241, 245, 249, 0.8) !important;
+}
+
+.info-header:hover {
+    background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.info-item {
+    color: var(--text-main) !important;
+    border-top: 1px solid var(--border) !important;
+    padding: 12px 20px !important;
+}
+
+.info-impact {
+    color: var(--text-muted) !important;
+}
+
+.footer {
+    text-align: center;
+    padding: 24px 12px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    letter-spacing: 0.3px;
+}
+
+/* === Tabs y secciones animadas === */
+.tc {
+    display: none;
+}
+
+.tc.active {
+    display: block;
+}
+
+.tc-enter {
+    animation: reportTabIn 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.tc-leave {
+    animation: reportTabOut 0.22s ease forwards;
+}
+
+@keyframes reportTabIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes reportTabOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-8px); }
+}
+
+/* === Entrada escalonada de tarjetas (como el panel) === */
+.card-animate {
+    opacity: 0;
+}
+
+.card-animate-run {
+    animation: reportCardDropIn 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes reportCardDropIn {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* === Spotlight hover en tarjetas === */
+.kpi::before,
+.content-block::before,
+.alert-card::before,
+.action-card::before,
+.report-chart-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+        420px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(163, 230, 53, 0.07) 0%,
+        rgba(56, 189, 248, 0.03) 50%,
+        transparent 80%
+    );
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.kpi:hover::before,
+.content-block:hover::before,
+.alert-card:hover::before,
+.action-card:hover::before,
+.report-chart-card:hover::before {
+    opacity: 1;
+}
+
+.kpi > *,
+.content-block > *,
+.alert-card > *,
+.action-card > *,
+.report-chart-card > * {
+    position: relative;
+    z-index: 2;
+}
+
+/* === Tanque líquido en Health Score (KPI #1) === */
+.report-liquid-kpi {
+    --tank-bg: rgba(13, 20, 35, 0.92);
+    --liquid-top: #d4f96a;
+    --liquid-bottom: #84cc16;
+    --fill-level: 0;
+    min-height: 130px;
+}
+
+.report-liquid-kpi.liquid-tone-warn {
+    --liquid-top: #fde68a;
+    --liquid-bottom: #f59e0b;
+}
+
+.report-liquid-kpi.liquid-tone-critical {
+    --liquid-top: #fda4af;
+    --liquid-bottom: #e11d48;
+}
+
+body.light-mode .report-liquid-kpi {
+    --tank-bg: rgba(255, 255, 255, 0.94);
+}
+
+.report-liquid-fill {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(var(--fill-level) * 1%);
+    background: linear-gradient(180deg, var(--liquid-top), var(--liquid-bottom));
+    z-index: 0;
+    overflow: hidden;
+    transition: height 1.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.report-liquid-surface {
+    position: absolute;
+    top: -16px;
+    left: -120%;
+    width: 320%;
+    height: 32px;
+    border-radius: 42%;
+    background: var(--tank-bg);
+    opacity: 0.95;
+}
+
+.report-liquid-surface--1 { animation: reportLiquidSloshA 7s ease-in-out infinite; }
+.report-liquid-surface--2 { top: -20px; opacity: 0.55; animation: reportLiquidSloshB 9s ease-in-out infinite; animation-delay: -2s; }
+
+@keyframes reportLiquidSloshA {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-12%); }
+}
+
+@keyframes reportLiquidSloshB {
+    0%, 100% { transform: translateX(-8%); }
+    50% { transform: translateX(-18%); }
+}
+
+/* === Gráficas del informe === */
+.report-charts-row {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: var(--gap-bento);
+    margin-bottom: var(--gap-bento);
+}
+
+.report-chart-card {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-lg) !important;
+    padding: 22px 24px !important;
+    box-shadow: var(--soft-shadow) !important;
+    backdrop-filter: blur(12px);
+    position: relative;
+    overflow: hidden;
+}
+
+.report-alerts-chart-card {
+    margin-bottom: var(--gap-bento);
+}
+
+.report-chart-title {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-main);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+}
+
+.report-chart-title .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--blue);
+}
+
+.report-chart-title .dot-lime { background: var(--chartreuse); }
+.report-chart-title .dot-crimson { background: var(--crimson); }
+
+.report-chart-wrap {
+    position: relative;
+    height: 220px;
+}
+
+.report-chart-wrap--donut {
+    height: 200px;
+    max-width: 220px;
+    margin: 0 auto;
+}
+
+.report-chart-wrap--bar {
+    height: 180px;
+}
+
+@media (max-width: 900px) {
+    .report-charts-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* === Animaciones de tabs (legacy fallback) === */
+
+/* === Botón volver al panel (inyectado) === */
+.report-back-bar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    justify-content: flex-end;
+    padding-bottom: 12px;
+}
+
+.report-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 50px;
+    border: 1px solid var(--border);
+    background: rgba(13, 20, 35, 0.75);
+    color: var(--text-muted);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    backdrop-filter: blur(10px);
+    transition: all 0.2s ease;
+}
+
+.report-back-btn:hover {
+    color: var(--chartreuse);
+    border-color: rgba(163, 230, 53, 0.35);
+}
+
+body.light-mode .report-back-btn {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+@media (max-width: 640px) {
+    .hero { padding: 24px 20px !important; }
+    .content-block { padding: 20px 18px !important; }
+    .kpi-row { grid-template-columns: repeat(2, 1fr) !important; }
+    .tabs { flex-wrap: wrap; }
+}
+
+@media print {
+    .report-ambient,
+    .report-waves,
+    .report-back-bar { display: none !important; }
+    body { background: #fff !important; color: #000 !important; }
+    .tabs { display: none !important; }
+    .tc { display: block !important; }
+}
