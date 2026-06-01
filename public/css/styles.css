@@ -809,12 +809,12 @@ body.light-mode .wave-4 svg path {
     /* micro-slide action */
 }
 
-/* Active state — intense neon bloom glow */
+/* Active state — elegant white background with soft glow */
 .list-group-item.active {
-    background: var(--chartreuse) !important;
+    background: #ffffff !important;
     color: #080c14 !important;
     font-weight: 800;
-    box-shadow: 0 0 24px rgba(163, 230, 53, 0.35), 0 4px 16px rgba(163, 230, 53, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 0 24px rgba(255, 255, 255, 0.25), 0 4px 16px rgba(255, 255, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
     border-left: 4px solid var(--blue) !important;
     padding-left: 14px;
 }
@@ -822,7 +822,7 @@ body.light-mode .wave-4 svg path {
 .list-group-item.active:hover {
     padding-left: 14px;
     /* lock active item padding */
-    box-shadow: 0 0 32px rgba(163, 230, 53, 0.45), 0 6px 20px rgba(163, 230, 53, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 0 32px rgba(255, 255, 255, 0.35), 0 6px 20px rgba(255, 255, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 }
 
 .sidebar-footer {
@@ -1246,6 +1246,34 @@ body.light-mode .wave-4 svg path {
 
 .stat-card-blue .card-stat-value {
     color: var(--metric-value) !important;
+}
+
+.stat-card-red {
+    background: linear-gradient(135deg, rgba(20, 30, 48, 0.85), rgba(30, 60, 110, 0.25)) !important;
+    border-color: rgba(244, 63, 94, 0.3) !important;
+}
+
+.stat-card-red .card-stat-value {
+    color: var(--metric-value) !important;
+}
+
+.stat-card-red:hover {
+    border-color: rgba(244, 63, 94, 0.5) !important;
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1), 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(244, 63, 94, 0.2) !important;
+}
+
+.stat-card-white {
+    background: linear-gradient(135deg, rgba(20, 30, 48, 0.85), rgba(30, 60, 110, 0.25)) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.stat-card-white .card-stat-value {
+    color: var(--metric-value) !important;
+}
+
+.stat-card-white:hover {
+    border-color: rgba(255, 255, 255, 0.5) !important;
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.15), 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 255, 255, 0.15) !important;
 }
 
 /* === KPI Salud del Sistema — tanque líquido animado (0–100) === */
@@ -1978,6 +2006,11 @@ body.light-mode .model-compare-select option {
     text-shadow: 0 0 14px var(--metric-value-glow) !important;
 }
 
+.stat-card-red .card-stat-value:hover,
+.stat-card-white .card-stat-value:hover {
+    text-shadow: 0 0 14px var(--metric-value-glow) !important;
+}
+
 /* Table cells light up to pure white with text shadow on row hover */
 .custom-table td {
     transition: color 0.25s ease, text-shadow 0.25s ease;
@@ -2047,12 +2080,32 @@ body.light-mode .stat-card-blue {
     box-shadow: 0 8px 24px rgba(2, 132, 199, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
 }
 
+body.light-mode .stat-card-red {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(224, 242, 254, 0.45)) !important;
+    border-color: rgba(225, 29, 72, 0.18) !important;
+    box-shadow: 0 8px 24px rgba(225, 29, 72, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
+}
+
+body.light-mode .stat-card-white {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(224, 242, 254, 0.45)) !important;
+    border-color: rgba(15, 23, 42, 0.2) !important;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
+}
+
 body.light-mode .stat-card-gold:hover {
     border-color: rgba(217, 119, 6, 0.35) !important;
 }
 
 body.light-mode .stat-card-crimson:hover {
     border-color: rgba(225, 29, 72, 0.35) !important;
+}
+
+body.light-mode .stat-card-red:hover {
+    border-color: rgba(225, 29, 72, 0.35) !important;
+}
+
+body.light-mode .stat-card-white:hover {
+    border-color: rgba(15, 23, 42, 0.45) !important;
 }
 
 body.light-mode .stat-card-green:hover {
@@ -2202,9 +2255,9 @@ body.light-mode .list-group-item:hover {
 }
 
 body.light-mode .list-group-item.active {
-    background: var(--chartreuse) !important;
+    background: #ffffff !important;
     color: #080c14 !important;
-    box-shadow: 0 0 20px rgba(132, 204, 22, 0.3), 0 4px 14px rgba(132, 204, 22, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+    box-shadow: 0 0 20px rgba(15, 23, 42, 0.1), 0 4px 14px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
     border-left: 4px solid var(--blue) !important;
 }
 

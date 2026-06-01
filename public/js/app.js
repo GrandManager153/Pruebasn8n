@@ -165,6 +165,30 @@ const KPI_EXPLANATIONS = {
         definition: 'La suma acumulada de advertencias leves y notas informativas de desviación operativa que no representan un riesgo de negocio crítico inmediato.',
         interpretation: 'Indican oportunidades de mejora proactiva y preventiva. Deben auditarse semanalmente para evitar que escalen a incidentes críticos.',
         source: 'Alertas con nivel "warning" o "info" — system.alerts'
+    },
+    'Registros': {
+        icon: '📞',
+        definition: 'El volumen consolidado de todas las llamadas telefónicas realizadas por el equipo de asesores durante el periodo analizado.',
+        interpretation: 'Mide el esfuerzo bruto de marcación del call center. Un volumen alto refleja alta actividad, pero debe ser analizado en relación con los contactos únicos para medir la efectividad.',
+        source: 'CRM integrado — total_records'
+    },
+    'Contactos': {
+        icon: '👥',
+        definition: 'La cantidad de leads únicos (contactos de personas individuales) que han sido marcados al menos una vez en el ciclo operativo.',
+        interpretation: 'Indica la base de prospectos única que está siendo trabajada por la operación. Representa la cantidad de oportunidades individuales creadas.',
+        source: 'CRM integrado — unique_contacts'
+    },
+    'Intentos Avg': {
+        icon: '🔄',
+        definition: 'El promedio de intentos de marcación telefónica por lead antes de lograr contactarlo o clasificarlo como no-contactable.',
+        interpretation: 'El estándar recomendado es un máximo de 7 intentos. Si este promedio supera el umbral (por ejemplo, 11+), los agentes están sobre-contactando leads inactivos en lugar de priorizar leads frescos.',
+        source: 'CRM integrado — call_rank.avg'
+    },
+    'Intervalo Avg': {
+        icon: '⏳',
+        definition: 'El tiempo promedio transcurrido entre intentos de contacto consecutivos realizados a un mismo lead.',
+        interpretation: 'El speed-to-lead inicial y la insistencia oportuna son claves. Intervalos muy largos (por ejemplo, miles de minutos) degradan severamente la probabilidad de conversión ya que el prospecto se enfría.',
+        source: 'CRM integrado — minutes_since_prev.avg'
     }
 };
 
@@ -338,8 +362,8 @@ function switchTab(tabId) {
                 renderCampaignChart(dashboardData.investment.campaigns);
             }
         } else if (tabId === 'operations') {
-            if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.operations && dashboardData.operations.hourly_distribution) {
-                renderHourlyChart(dashboardData.operations.hourly_distribution);
+            if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.operations) {
+                renderOperationsTab(dashboardData);
             }
         }
     }
@@ -347,7 +371,7 @@ function switchTab(tabId) {
     // Update topbar header title
     const titles = {
         'dashboard': 'Resumen General',
-        'funnel': 'Embudo y Conversiones',
+        'funnel': 'Funnel y Conversiones',
         'forecast': 'Pronósticos y Regímenes',
         'investment': 'Inversión y Campañas',
         'operations': 'Operaciones Diarias',
@@ -585,7 +609,11 @@ function renderBOS(data) {
         
         if (label === 'Health Score') label = 'Salud del Sistema';
         if (label === 'Prevision diaria') { label = 'Pronóstico Diario'; sub = 'Media Estimada'; }
-        if (label === 'MASE') { label = 'Precisión del Modelo'; sub = 'Óptima'; }
+        if (label === 'MASE') { 
+            label = 'Precisión del Modelo'; 
+            sub = 'Óptima'; 
+            k.color = 'white';
+        }
         if (label === 'CPL implicito') { label = 'Costo Promedio por Lead'; sub = 'Global'; }
         if (label === 'Gasto total') { label = 'Inversión Publicitaria'; }
         if (label === 'HHI') { label = 'Diversificación de Pauta'; }
@@ -611,7 +639,7 @@ function renderBOS(data) {
                 value: String(data.operations.max_daily),
                 label: 'Máximo Diario',
                 sub: 'Pico histórico del periodo',
-                color: 'gold'
+                color: 'white'
             });
         }
         if (data.operations.contact_distribution && data.operations.contact_distribution.overcontact_pct != null) {
@@ -1490,6 +1518,20 @@ function renderSeasonalChart(indices, options = {}) {
                         return isLight ? '#e11d48' : '#f43f5e';
                     }
                 }),
+                hoverBackgroundColor: indices.map(i => {
+                    if (i.index >= 1) {
+                        return isLight ? 'rgba(132, 204, 22, 0.95)' : 'rgba(163, 230, 53, 0.9)';
+                    } else {
+                        return isLight ? 'rgba(225, 29, 72, 0.85)' : 'rgba(244, 63, 94, 0.8)';
+                    }
+                }),
+                hoverBorderColor: indices.map(i => {
+                    if (i.index >= 1) {
+                        return isLight ? '#84cc16' : '#a3e635';
+                    } else {
+                        return isLight ? '#e11d48' : '#f43f5e';
+                    }
+                }),
                 borderWidth: 1.5,
                 borderRadius: 6
             }]
@@ -1623,6 +1665,15 @@ function renderHourlyChart(hourly) {
                         return isLight ? 'rgba(132, 204, 22, 0.55)' : 'rgba(163, 230, 53, 0.45)';
                     }
                 }),
+                hoverBackgroundColor: hourly.map((h, i) => {
+                    const val = h.probability !== undefined ? (h.probability * 100) : (h.count || h.calls || h.total || 0);
+                    const max = Math.max(...hourly.map(x => x.probability !== undefined ? (x.probability * 100) : (x.count || x.calls || x.total || 0)));
+                    if (val === max) {
+                        return isLight ? 'rgba(225, 29, 72, 0.95)' : 'rgba(244, 63, 94, 0.95)';
+                    } else {
+                        return isLight ? 'rgba(132, 204, 22, 0.75)' : 'rgba(163, 230, 53, 0.65)';
+                    }
+                }),
                 borderRadius: 4
             }]
         },
@@ -1671,6 +1722,240 @@ function renderHourlyChart(hourly) {
             }
         }
     });
+}
+
+function renderDailyVolumeChart(ops) {
+    if (!ops || !Array.isArray(ops.daily_volumes) || ops.daily_volumes.length === 0) return;
+    if (charts.daily_volume) charts.daily_volume.destroy();
+    const element = document.getElementById('chart-daily-volume');
+    if (!element) return;
+
+    const isLight = document.body.classList.contains('light-mode');
+    const ctx = element.getContext('2d');
+    
+    // Calculate values
+    const labels = ops.daily_volumes.map(d => {
+        const parts = d.date.split('-');
+        if (parts.length === 3) {
+            const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+            const mIdx = parseInt(parts[1]) - 1;
+            return `${parts[2]}-${months[mIdx] || parts[1]}`;
+        }
+        return d.date;
+    });
+    const leads = ops.daily_volumes.map(d => d.leads);
+    const avgVal = ops.avg_daily || 0;
+    
+    const avgLine = Array(leads.length).fill(avgVal);
+
+    charts.daily_volume = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Promedio Diario',
+                    data: avgLine,
+                    type: 'line',
+                    borderColor: isLight ? '#b27415' : '#e0992a',
+                    borderDash: [5, 5],
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    fill: false,
+                    order: 1
+                },
+                {
+                    label: 'Leads Recibidos',
+                    data: leads,
+                    backgroundColor: isLight ? 'rgba(2, 132, 199, 0.75)' : 'rgba(56, 189, 248, 0.7)',
+                    borderColor: isLight ? '#0284c7' : '#38bdf8',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    order: 2
+                }
+            ]
+        },
+        options: {
+            animation: {
+                duration: 700,
+                easing: 'easeOutQuart',
+                delay: (context) => {
+                    let delay = 0;
+                    if (context.type === 'data' && context.mode === 'default' && !context.active) {
+                        delay = context.dataIndex * 8;
+                    }
+                    return delay;
+                }
+            },
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: {
+                        color: isLight ? '#475569' : '#94a3b8',
+                        font: { size: 10, family: 'Inter', weight: 'bold' },
+                        boxWidth: 12
+                    }
+                },
+                tooltip: {
+                    backgroundColor: isLight ? '#ffffff' : '#05080f',
+                    borderColor: isLight ? 'rgba(15, 23, 42, 0.08)' : 'rgba(163, 230, 53, 0.3)',
+                    borderWidth: 1,
+                    titleColor: isLight ? '#0f172a' : '#ffffff',
+                    bodyColor: isLight ? '#475569' : '#94a3b8',
+                    padding: 10,
+                    cornerRadius: 8,
+                    bodyFont: { family: 'JetBrains Mono' }
+                }
+            },
+            scales: {
+                x: { 
+                    grid: { display: false }, 
+                    ticks: { 
+                        color: isLight ? '#475569' : '#94a3b8', 
+                        font: { size: 9 }, 
+                        maxTicksLimit: 7 
+                    } 
+                },
+                y: {
+                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' },
+                    ticks: { color: isLight ? '#475569' : '#64748b', font: { family: 'JetBrains Mono' } }
+                }
+            }
+        }
+    });
+}
+
+function renderOperationsTab(data) {
+    if (!data || !data.operations) return;
+    const ops = data.operations;
+    const call = ops.call_metrics || {};
+    const dist = ops.contact_distribution || {};
+
+    // 1. Populate KPI Cards
+    const kpiCardsEl = document.getElementById('operations-kpi-cards');
+    if (kpiCardsEl) {
+        const totalRecords = call.total_records || 0;
+        const uniqueContacts = call.unique_contacts || 0;
+        const attemptsAvg = call.call_rank ? call.call_rank.avg : 0;
+        const intervalAvg = call.minutes_since_prev ? call.minutes_since_prev.avg : 0;
+
+        const kpis = [
+            {
+                label: 'Registros',
+                value: totalRecords.toLocaleString(),
+                sub: 'llamadas totales',
+                color: 'blue'
+            },
+            {
+                label: 'Contactos',
+                value: uniqueContacts.toLocaleString(),
+                sub: 'leads únicos',
+                color: 'blue'
+            },
+            {
+                label: 'Intentos Avg',
+                value: attemptsAvg.toFixed(2),
+                sub: `rango: 1-${call.call_rank ? call.call_rank.max : 365}`,
+                color: attemptsAvg > 7 ? 'red' : 'blue'
+            },
+            {
+                label: 'Intervalo Avg',
+                value: `${Math.round(intervalAvg).toLocaleString()} min`,
+                sub: `~${Math.round(intervalAvg / 60)}h entre intentos`,
+                color: intervalAvg > 1440 ? 'red' : 'blue'
+            }
+        ];
+
+        kpiCardsEl.innerHTML = kpis.map((kpi, idx) => {
+            const escapedLabel = kpi.label.replace(/'/g, "\\'");
+            const escapedValue = String(kpi.value).replace(/'/g, "\\'");
+            return `
+                <div class="card stat-card-${kpi.color} card-animate" style="animation-delay: ${idx * 0.025}s;"
+                    onclick="openKpiModal('${escapedLabel}', '${escapedValue}')">
+                    <div class="card-stat-label">${kpi.label}</div>
+                    <div class="card-stat-value" id="ops-kpi-val-${idx}">${kpi.value}</div>
+                    <div class="card-stat-sub">${kpi.sub}</div>
+                </div>
+            `;
+        }).join('');
+
+        kpis.forEach((kpi, idx) => {
+            const el = document.getElementById(`ops-kpi-val-${idx}`);
+            parseAndAnimate(el, kpi.value);
+        });
+    }
+
+    // 2. Render Daily Volume Chart
+    const volSub = document.getElementById('volume-chart-sub');
+    if (volSub) {
+        volSub.textContent = `${ops.total_days} días | Promedio: ${Math.round(ops.avg_daily)} leads/día`;
+    }
+    renderDailyVolumeChart(ops);
+
+    // 3. Populate Contact Distribution Bars
+    const totalCalls = call.total_records || 1;
+    const contactTotalEl = document.getElementById('contact-total-calls');
+    if (contactTotalEl) {
+        contactTotalEl.textContent = `${totalCalls.toLocaleString()} llamadas totales`;
+    }
+
+    const distBarsEl = document.getElementById('contact-distribution-bars');
+    if (distBarsEl) {
+        const items = [
+            {
+                label: '1er intento',
+                val: dist.first_attempts || 0,
+                color: 'var(--green)'
+            },
+            {
+                label: '1-3 intentos',
+                val: dist.attempts_1_to_3 || 0,
+                color: 'var(--blue)'
+            },
+            {
+                label: '1-5 intentos',
+                val: dist.attempts_1_to_5 || 0,
+                color: 'var(--gold)'
+            },
+            {
+                label: '>7 (sobre-contacto)',
+                val: dist.overcontact_calls || 0,
+                color: 'var(--red)'
+            }
+        ];
+
+        distBarsEl.innerHTML = items.map(item => {
+            const pct = ((item.val / totalCalls) * 100).toFixed(1);
+            return `
+                <div class="progress-bar-wrapper" style="width: 100%;">
+                    <div style="display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">
+                        <span>${item.label}</span>
+                        <span style="font-family: var(--mono); color: var(--text-main);">${item.val.toLocaleString()} (${pct}%)</span>
+                    </div>
+                    <div style="height: 8px; background: rgba(255,255,255,0.03); border-radius: 4px; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.02);">
+                        <div class="progress-bar-fill" style="width: ${pct}%; background: ${item.color};" data-pct="${pct}"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // 4. Update Warning Text
+    const overcontactWarningText = document.getElementById('contact-overcontact-warning-text');
+    if (overcontactWarningText) {
+        overcontactWarningText.textContent = `${dist.overcontact_pct || 0}% de llamadas exceden el sweet spot de intentos`;
+    }
+
+    // 5. Render Hourly Distribution Chart
+    const hourlySub = document.getElementById('hourly-chart-sub');
+    if (hourlySub && ops.peak_hour !== undefined) {
+        const peakStr = `${String(ops.peak_hour).padStart(2, '0')}:00`;
+        const valleyStr = `${String(ops.valley_hour !== undefined ? ops.valley_hour : 3).padStart(2, '0')}:00`;
+        hourlySub.textContent = `Pico: ${peakStr} | Valle: ${valleyStr}`;
+    }
+    renderHourlyChart(ops.hourly_distribution);
 }
 
 // =====================================================================
@@ -1907,8 +2192,8 @@ window.toggleTheme = function(event) {
             if (dashboardData.investment && dashboardData.investment.campaigns) {
                 renderCampaignChart(dashboardData.investment.campaigns);
             }
-            if (dashboardData.operations && dashboardData.operations.hourly_distribution) {
-                renderHourlyChart(dashboardData.operations.hourly_distribution);
+            if (dashboardData.operations) {
+                renderOperationsTab(dashboardData);
             }
         }
     }, 300);
