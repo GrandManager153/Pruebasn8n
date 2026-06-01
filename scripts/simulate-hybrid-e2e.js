@@ -119,6 +119,8 @@ function buildDashboardPayload(localEngine, apiPred, timeSeries) {
       mase: apiPred.mase,
       horizons: apiPred.forecast_horizons,
       backtest_models: apiPred.backtest?.models || [],
+      backtest_series: apiPred.backtest_series || [],
+      next_point: apiPred.next_point || null,
       time_series: timeSeries,
     };
   }

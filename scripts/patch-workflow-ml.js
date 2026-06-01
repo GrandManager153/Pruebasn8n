@@ -211,6 +211,8 @@ const newForecastBlock = `  forecast: (function() {
       intervals: api.intervals || {},
       horizons: api.forecast_horizons || {},
       backtest_models: api.backtest ? api.backtest.models : [],
+      backtest_series: api.backtest_series || [],
+      next_point: api.next_point || null,
       seasonal_indices: [],
       changepoint: { detected: false },
       time_series: ts

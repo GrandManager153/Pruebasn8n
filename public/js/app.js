@@ -793,10 +793,33 @@ function buildComparableModels(data) {
                 const e = rf.backtest_models.find(x => x.name === rfName);
                 if (e && Array.isArray(e.series)) series = e.series;
             }
+            // Serie real de predicciones del backtest (predicho por día), alineada
+            // por fecha a la serie histórica que define el eje X de la gráfica.
+            if (!series) series = buildRfAlignedSeries(data);
             list.push({ name: rfName, mase: rf.mase, series: series });
         }
     }
     return list;
+}
+
+// Alinea las predicciones diarias del backtest del Random Forest (forecast_rf.backtest_series)
+// contra las fechas de la serie histórica base, dejando null donde no hay predicción.
+function buildRfAlignedSeries(data) {
+    const rf = data ? data.forecast_rf : null;
+    if (!rf || !Array.isArray(rf.backtest_series) || !rf.backtest_series.length) return null;
+    const baseTs = (data.forecast && Array.isArray(data.forecast.time_series) && data.forecast.time_series.length)
+        ? data.forecast.time_series
+        : (Array.isArray(rf.time_series) ? rf.time_series : []);
+    if (!baseTs.length) return null;
+    const predByDate = {};
+    rf.backtest_series.forEach(p => {
+        if (p && p.date != null) predByDate[String(p.date).split('T')[0]] = p.predicted;
+    });
+    const aligned = baseTs.map(d => {
+        const key = String(d.date).split('T')[0];
+        return (key in predByDate) ? predByDate[key] : null;
+    });
+    return aligned.some(v => v != null) ? aligned : null;
 }
 
 // Construye el dataset de overlay para un modelo dado.

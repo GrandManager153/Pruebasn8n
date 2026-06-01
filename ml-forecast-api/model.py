@@ -46,6 +46,7 @@ def run_forecast(
 
     preds_bt: list[float] = []
     acts_bt: list[float] = []
+    dates_bt: list[str] = []
     for i in range(n - bt, n):
         train_df = df.iloc[:i].copy()
         X_train, y_train = build_feature_matrix(train_df)
@@ -66,6 +67,7 @@ def run_forecast(
         p = float(model.predict(X_next)[0])
         preds_bt.append(p)
         acts_bt.append(float(values[i]))
+        dates_bt.append(str(df["date"].iloc[i]))
 
     if not preds_bt:
         return {"error": "Backtest produced no predictions", "model_name": "random_forest"}
@@ -97,6 +99,27 @@ def run_forecast(
     fc_int = int(round(forecast))
     band_low = max(0, int(round(forecast - q80)))
     band_high = int(round(forecast + q80))
+
+    # Per-day backtest predictions (out-of-sample, one-step-ahead) so the
+    # dashboard can plot predicted-vs-actual. These reuse the exact same
+    # preds/acts already used for MASE, so the metric is unaffected.
+    backtest_series = [
+        {
+            "date": dates_bt[k],
+            "actual": round(float(acts_bt[k]), 2),
+            "predicted": round(float(preds_bt[k]), 2),
+        }
+        for k in range(len(preds_bt))
+    ]
+
+    last_date = pd.to_datetime(df["date"].iloc[-1])
+    next_date = (last_date + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    next_point = {
+        "date": next_date,
+        "forecast": fc_int,
+        "band_low": band_low,
+        "band_high": band_high,
+    }
 
     if mase < 0.8:
         mode, confidence = "model", "alta"
@@ -153,6 +176,8 @@ def run_forecast(
             "band_80": {"low": band_low, "high": band_high},
             "residual_points": len(residuals),
         },
+        "backtest_series": backtest_series,
+        "next_point": next_point,
         "diagnostics": {
             "total_history_days": n,
             "backtest_days": bt,
