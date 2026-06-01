@@ -12,6 +12,191 @@ let selectedCompareModel = '';
 let showAllModels = false;
 
 // =====================================================================
+//  📘 KPI EXPLANATION DICTIONARY & MODAL CONTROLLER
+// =====================================================================
+
+const KPI_EXPLANATIONS = {
+    'Salud del Sistema': {
+        icon: '💓',
+        definition: 'Indicador compuesto de 0 a 100 que resume el estado general de toda la operación comercial. Combina eficiencia del call center, calidad de contacto, velocidad de respuesta y balance de inversión publicitaria en un solo número.',
+        interpretation: 'Un valor de 80+ indica un sistema saludable. Entre 60-79, el sistema está bajo presión y requiere atención en áreas específicas. Por debajo de 60 indica estado crítico con problemas que afectan directamente los ingresos.',
+        source: 'Calculado por el Motor BOS desde n8n — combina métricas de operaciones, embudo y finanzas'
+    },
+    'Leads totales': {
+        icon: '👥',
+        definition: 'La cantidad total de prospectos (personas interesadas) que han ingresado al sistema durante el periodo analizado. Cada "lead" es un contacto potencial que podría convertirse en cliente.',
+        interpretation: 'Este número refleja el volumen de demanda que el equipo debe atender. Un volumen muy alto sin suficientes agentes puede saturar el call center; un volumen muy bajo puede indicar problemas con la pauta publicitaria.',
+        source: 'Conteo directo del CRM integrado vía n8n — campo: total_leads'
+    },
+    'Promedio diario': {
+        icon: '📊',
+        definition: 'El número promedio de leads nuevos que ingresan al sistema cada día. Se calcula dividiendo el total de leads entre la cantidad de días del periodo analizado.',
+        interpretation: 'Sirve para planear la capacidad operativa del equipo. Si el promedio es 265, el call center debe estar preparado para atender al menos esa cantidad de contactos nuevos diariamente.',
+        source: 'Cálculo: total_leads ÷ total_days — fuente: n8n operations.avg_daily'
+    },
+    'Cambio semanal': {
+        icon: '📈',
+        definition: 'El cambio porcentual de leads recibidos esta semana comparado con la semana anterior. Un valor negativo significa que se recibieron menos leads que la semana pasada.',
+        interpretation: 'Una caída mayor al -10% es preocupante y puede indicar fatiga de audiencia en las campañas o cambios en el mercado. Un aumento mayor al +15% puede significar que necesitas más agentes para absorber la demanda.',
+        source: 'Cálculo: (promedio 7d actual - promedio 7d anterior) ÷ promedio 7d anterior × 100 — fuente: n8n operations.wow_change_pct'
+    },
+    'Hora pico': {
+        icon: '⏰',
+        definition: 'La hora del día en que se recibe el mayor volumen de contactos telefónicos y leads. Es el momento de máxima actividad del call center.',
+        interpretation: 'El equipo de agentes debe estar a su máxima capacidad durante esta hora. Si los agentes están en turno en horarios distintos, se desperdicia capacidad de contacto cuando más se necesita.',
+        source: 'Análisis de distribución horaria del CRM — fuente: n8n operations.peak_hour'
+    },
+    'Pronóstico Diario': {
+        icon: '🔮',
+        definition: 'La predicción del modelo matemático sobre cuántos leads se recibirán mañana. Se calcula usando algoritmos de series de tiempo (theta_lite) que analizan patrones históricos y estacionalidad.',
+        interpretation: 'El símbolo "~" indica que es una aproximación. Si el pronóstico dice ~251, significa que se espera recibir entre 226 y 276 leads aproximadamente (con 80% de confianza). Útil para planear agentes del día siguiente.',
+        source: 'Modelo predictivo theta_lite con confianza alta — fuente: n8n forecast.recommended_value'
+    },
+    'Precisión del Modelo': {
+        icon: '🎯',
+        definition: 'El MASE (Error Medio Absoluto Escalado) mide qué tan precisas son las predicciones del modelo. Un valor menor a 1.0 significa que el modelo predice mejor que simplemente repetir el dato de la semana pasada.',
+        interpretation: 'Valores por debajo de 0.75 son excelentes. Entre 0.75 y 1.0, el modelo es aceptable. Por encima de 1.0, las predicciones no son confiables y deberían usarse con precaución.',
+        source: 'Backtesting automático del modelo theta_lite — fuente: n8n forecast.mase'
+    },
+    'Costo Promedio por Lead': {
+        icon: '💰',
+        definition: 'El CPL (Costo Por Lead) implícito representa cuánto cuesta en promedio adquirir cada prospecto. Se calcula dividiendo la inversión publicitaria total entre la cantidad de leads generados.',
+        interpretation: 'Un CPL más bajo es mejor. Si el CPL es $323, significa que se invirtieron $323 en publicidad por cada persona que contactó al despacho. Comparar este valor con el ingreso promedio por caso cerrado para evaluar la rentabilidad.',
+        source: 'Cálculo: gasto_total ÷ leads_totales — fuente: n8n investment.cpl.global_cpl'
+    },
+    'Inversión Publicitaria': {
+        icon: '📢',
+        definition: 'El monto total en pesos gastado en campañas de publicidad digital (Facebook Ads, Google Ads, etc.) durante el periodo analizado. Incluye todas las campañas activas.',
+        interpretation: 'Este número debe analizarse junto con el CPL y el volumen de leads generado. Un gasto alto solo es justificable si produce un volumen proporcional de leads de calidad que se conviertan en clientes.',
+        source: 'Suma directa de gastos de campañas reportados — fuente: n8n investment.total_spend'
+    },
+    'Diversificación de Pauta': {
+        icon: '🎲',
+        definition: 'El índice HHI (Herfindahl-Hirschman) mide qué tan concentrada está la inversión publicitaria entre las diferentes campañas. Un valor cercano a 0 indica alta diversificación, mientras que un valor cercano a 1 indica que todo el dinero está en pocas campañas.',
+        interpretation: 'Valores por debajo de 0.15 indican buena diversificación. Entre 0.15 y 0.25 es moderada. Por encima de 0.25 hay riesgo de concentración: si una campaña falla, el impacto sería severo en todo el flujo de leads.',
+        source: 'Cálculo de concentración de mercado (HHI) sobre el gasto por campaña — fuente: n8n investment.hhi.index'
+    },
+    'Leads Hoy': {
+        icon: '📅',
+        definition: 'La cantidad de leads recibidos en el día más reciente del que se tiene registro en el sistema. Este dato refleja el pulso operativo inmediato del negocio.',
+        interpretation: 'Compáralo con el promedio diario para saber si el día fue mejor o peor de lo esperado. Si es significativamente más alto que el pronóstico, verifica que los agentes puedan responder a todos los contactos entrantes.',
+        source: 'Dato del último día registrado — fuente: n8n operations.latest.leads'
+    },
+    'Máximo Diario': {
+        icon: '🔺',
+        definition: 'El mayor número de leads recibidos en un solo día durante todo el periodo analizado. Representa el pico histórico de demanda que el sistema ha tenido que procesar.',
+        interpretation: 'Este valor define el techo de capacidad que el call center debe poder manejar. Si el equipo no tuvo problemas ese día, la capacidad es adecuada. Si hubo colas y leads sin atender, se necesita aumentar personal para picos similares.',
+        source: 'Máximo de la serie diaria de volúmenes — fuente: n8n operations.max_daily'
+    },
+    'Tasa de Sobre-Contacto': {
+        icon: '⚠️',
+        definition: 'El porcentaje de llamadas que han excedido los 7 intentos de contacto (el "sweet spot" recomendado). Cada intento adicional después del séptimo tiene un retorno marginal decreciente, es decir, es muy poco probable que se logre el contacto.',
+        interpretation: 'Valores por debajo de 15% son aceptables. Entre 15% y 30% es moderado. Por encima de 30% indica un problema grave: los agentes están desperdiciando tiempo y esfuerzo en leads que probablemente nunca contestarán, en vez de atender leads frescos.',
+        source: 'Distribución de intentos de contacto del CRM — fuente: n8n operations.contact_distribution.overcontact_pct'
+    },
+    'Promedio Intentos': {
+        icon: '📞',
+        definition: 'El número promedio de veces que un agente marca a cada lead antes de lograr contacto o abandonar el intento. Es una medida directa de la eficiencia del call center.',
+        interpretation: 'El umbral saludable es de máximo 7 intentos. Un promedio de 11+ es alarmante porque significa que los agentes están insistiendo excesivamente en leads difíciles en vez de priorizar los contactos más recientes y con mayor probabilidad de conversión.',
+        source: 'Estadísticas de marcación del CRM — fuente: n8n operations.call_metrics.call_rank.avg'
+    },
+    'Tasa Global de Conversión': {
+        icon: '🎯',
+        definition: 'El porcentaje total de leads o prospectos que logran reservar una consulta o avanzar exitosamente a la fase clave del embudo, medido contra el total de leads entrantes en el sistema.',
+        interpretation: 'Una tasa superior al 5% es excelente para este sector. Por debajo de 3.5% sugiere una fuga importante de prospectos en el primer contacto o que la publicidad atrae leads no calificados.',
+        source: 'Cálculo: (Consultas reservadas ÷ Leads totales) × 100 — Motor BOS desde n8n'
+    },
+    'Ingresos en Riesgo Estimados': {
+        icon: '💸',
+        definition: 'Valoración financiera del costo de oportunidad que representan los leads perdidos (no interesados, sin respuesta, cortadas o números incorrectos) asumiendo un valor promedio de caso de $1,200 USD.',
+        interpretation: 'Representa el impacto de la ineficiencia del call center. Reducir esta cifra optimizando las llamadas incrementa de manera directa los ingresos facturados sin aumentar el presupuesto.',
+        source: 'Cálculo: Leads perdidos × Valor de caso promedio ($1,200) — Motor BOS'
+    },
+    'Pronóstico Mañana': {
+        icon: '🔮',
+        definition: 'La proyección de la cantidad de leads que entrarán al sistema el día de mañana utilizando el modelo predictivo matemático de la serie temporal (Theta Lite o Random Forest).',
+        interpretation: 'Se utiliza para prever la capacidad de agentes requerida. Si la proyección supera el promedio, se recomienda reforzar el call center para evitar desbordes.',
+        source: 'Modelos predictivos de series temporales (theta_lite / Random Forest) — Forecast API'
+    },
+    'Pronóstico 7 Días': {
+        icon: '📅',
+        definition: 'La estimación del volumen acumulado de leads que se recibirán en los próximos 7 días bajo condiciones normales de pauta y estacionalidad.',
+        interpretation: 'Indica la tendencia de demanda a corto plazo. Permite planear la agenda operativa semanal y balancear el flujo de trabajo de los asesores.',
+        source: 'Sumatoria de proyecciones diarias a 7 días — Forecast Engine'
+    },
+    'Pronóstico 14 Días': {
+        icon: '📆',
+        definition: 'El volumen total de leads proyectados para las próximas dos semanas. Ofrece una visión quincenal del comportamiento de la demanda.',
+        interpretation: 'Sirve para planear compras publicitarias y estructurar presupuestos quincenales. Permite corregir creativos de anuncios si la tendencia apunta a la baja.',
+        source: 'Proyección temporal a mediano plazo (14 días) — Forecast Engine'
+    },
+    'Inversión Total Ejecutada': {
+        icon: '💰',
+        definition: 'El presupuesto total devengado en pesos para publicidad digital en todas las plataformas (Facebook Ads, Google Ads, etc.) durante el periodo.',
+        interpretation: 'Debe analizarse en conjunto con el CPL global. Si el gasto aumenta sin un incremento proporcional en leads, existe fatiga de audiencias o saturación.',
+        source: 'Suma de gastos reportados en APIs de marketing — investment.total_spend'
+    },
+    'Campañas Activas Modeladas': {
+        icon: '📣',
+        definition: 'La cantidad de campañas publicitarias individuales auditadas y clasificadas por el motor de atribución durante el ciclo de análisis.',
+        interpretation: 'Una cantidad demasiado alta diluye el presupuesto e impide optimizar; una cantidad muy baja eleva el riesgo de depender de pocas audiencias.',
+        source: 'Conteo de campañas registradas — investment.campaign_count'
+    },
+    'Alertas Totales': {
+        icon: '⚠️',
+        definition: 'El recuento consolidado de todas las desviaciones, anomalías o advertencias detectadas por el sistema al cruzar los umbrales operativos y financieros de control.',
+        interpretation: 'Mide la estabilidad de la operación. Mantener este indicador bajo indica un sistema robusto y bien coordinado sin cuellos de botella.',
+        source: 'Conteo total de incidencias operativas activas — system.alerts'
+    },
+    'Alertas Críticas': {
+        icon: '🚨',
+        definition: 'El total de incidentes calificados con severidad grave, que representan un peligro inmediato para los ingresos o la absorción de leads del negocio.',
+        interpretation: 'Requieren resolución inmediata (máximo 24 horas). Cada alerta crítica activa indica pérdidas financieras en curso o ineficiencias críticas.',
+        source: 'Alertas con nivel "critical" — system.alerts.critical'
+    },
+    'Severidad Máxima': {
+        icon: '⚡',
+        definition: 'El puntaje de Número de Prioridad de Riesgo (RPN) más alto registrado entre las alertas de sistema activas en el periodo.',
+        interpretation: 'Un RPN arriba de 400 es crítico. Indica exactamente a qué alerta se le debe prestar atención primero para mitigar el mayor impacto financiero posible.',
+        source: 'Fórmula RPN: Severidad × Ocurrencia × Detección — system.alerts'
+    },
+    'Advertencias e Info': {
+        icon: 'ℹ️',
+        definition: 'La suma acumulada de advertencias leves y notas informativas de desviación operativa que no representan un riesgo de negocio crítico inmediato.',
+        interpretation: 'Indican oportunidades de mejora proactiva y preventiva. Deben auditarse semanalmente para evitar que escalen a incidentes críticos.',
+        source: 'Alertas con nivel "warning" o "info" — system.alerts'
+    }
+};
+
+function openKpiModal(label, value) {
+    const explain = KPI_EXPLANATIONS[label];
+    if (!explain) return;
+
+    document.getElementById('kpi-modal-title').textContent = label;
+    document.getElementById('kpi-modal-value').textContent = value;
+    document.getElementById('kpi-modal-definition').textContent = explain.definition;
+    document.getElementById('kpi-modal-interpretation').textContent = explain.interpretation;
+    document.getElementById('kpi-modal-source-text').textContent = explain.source;
+
+    document.getElementById('kpi-modal-overlay').classList.add('open');
+}
+
+function closeKpiModal(event) {
+    if (event && event.target !== event.currentTarget) return;
+    document.getElementById('kpi-modal-overlay').classList.remove('open');
+}
+
+// Close modal on Escape key press
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const overlay = document.getElementById('kpi-modal-overlay');
+        if (overlay && overlay.classList.contains('open')) {
+            overlay.classList.remove('open');
+        }
+    }
+});
+
+// =====================================================================
 //  TEXT CLEANING & SANITIZATION (No Emojis, No Technical Parentheses)
 // =====================================================================
 
@@ -411,16 +596,55 @@ function renderBOS(data) {
         return { ...k, label, sub };
     });
 
+    // Inject additional KPIs from available n8n data not yet shown
+    if (data.operations) {
+        if (data.operations.latest && data.operations.latest.leads) {
+            cleanedKpis.push({
+                value: String(data.operations.latest.leads),
+                label: 'Leads Hoy',
+                sub: data.operations.latest.date || 'Último día registrado',
+                color: 'blue'
+            });
+        }
+        if (data.operations.max_daily) {
+            cleanedKpis.push({
+                value: String(data.operations.max_daily),
+                label: 'Máximo Diario',
+                sub: 'Pico histórico del periodo',
+                color: 'gold'
+            });
+        }
+        if (data.operations.contact_distribution && data.operations.contact_distribution.overcontact_pct != null) {
+            cleanedKpis.push({
+                value: data.operations.contact_distribution.overcontact_pct + '%',
+                label: 'Tasa de Sobre-Contacto',
+                sub: 'Llamadas > 7 intentos',
+                color: 'red'
+            });
+        }
+        if (data.operations.call_metrics && data.operations.call_metrics.call_rank) {
+            cleanedKpis.push({
+                value: String(data.operations.call_metrics.call_rank.avg),
+                label: 'Promedio Intentos',
+                sub: 'Marcaciones por lead (umbral: 7)',
+                color: 'red'
+            });
+        }
+    }
+
     const healthScore = Math.min(100, Math.max(0, Number(data.system.health_score) || 0));
     const liquidTone = healthScore >= 80 ? 'good' : healthScore >= 60 ? 'warn' : 'critical';
 
     kpisGrid.innerHTML = cleanedKpis.map((kpi, idx) => {
         const isHealth = idx === 0;
+        const escapedLabel = kpi.label.replace(/'/g, "\\'");
+        const escapedValue = String(kpi.value).replace(/'/g, "\\'");
         if (isHealth) {
             return `
                 <div class="card liquid-tank liquid-tone-${liquidTone} card-animate"
                     style="--fill-level: 0; animation-delay: ${idx * 0.025}s;"
-                    data-fill-target="${healthScore}">
+                    data-fill-target="${healthScore}"
+                    onclick="openKpiModal('${escapedLabel}', '${escapedValue}')">
                     <div class="liquid-tank__fill" aria-hidden="true">
                         <div class="liquid-tank__surface liquid-tank__surface--1"></div>
                         <div class="liquid-tank__surface liquid-tank__surface--2"></div>
@@ -434,7 +658,8 @@ function renderBOS(data) {
             `;
         }
         return `
-            <div class="card stat-card-${kpi.color || 'blue'} card-animate" style="animation-delay: ${idx * 0.025}s;">
+            <div class="card stat-card-${kpi.color || 'blue'} card-animate" style="animation-delay: ${idx * 0.025}s;"
+                onclick="openKpiModal('${escapedLabel}', '${escapedValue}')">
                 <div class="card-stat-label">${kpi.label}</div>
                 <div class="card-stat-value" id="kpi-val-${idx}" data-value="${kpi.value}">0</div>
                 <div class="card-stat-sub">${kpi.sub || '&nbsp;'}</div>
@@ -685,13 +910,15 @@ function renderForecastDetails(forecast, options = {}) {
         const h14d = horizons.next_14d || {};
 
         let cardsHtml = `
-            <div class="card stat-card-blue card-animate" style="animation-delay: 0.03s;">
+            <div class="card stat-card-blue card-animate" style="animation-delay: 0.03s;"
+                onclick="openKpiModal('Pronóstico Mañana', '${h1d.forecast ?? 0}')">
                 <div class="card-stat-label">Pronóstico Mañana</div>
                 <div class="card-stat-value" id="${prefix}forecast-1d-val" data-value="${h1d.forecast ?? 0}">0</div>
                 <div class="card-stat-sub">Rango: ${h1d.band_low ?? 0} a ${h1d.band_high ?? 0} leads</div>
                 <div class="card-stat-compare" id="${prefix}forecast-1d-compare"></div>
             </div>
-            <div class="card stat-card-gold card-animate" style="animation-delay: 0.06s;">
+            <div class="card stat-card-gold card-animate" style="animation-delay: 0.06s;"
+                onclick="openKpiModal('Pronóstico 7 Días', '${h7d.forecast ?? 0}')">
                 <div class="card-stat-label">Pronóstico 7 Días</div>
                 <div class="card-stat-value" id="${prefix}forecast-7d-val" data-value="${h7d.forecast ?? 0}">0</div>
                 <div class="card-stat-sub">Rango: ${h7d.band_low ?? 0} a ${h7d.band_high ?? 0} leads</div>
@@ -700,7 +927,8 @@ function renderForecastDetails(forecast, options = {}) {
 
         if (show14d && horizons.next_14d) {
             cardsHtml += `
-            <div class="card stat-card-green card-animate" style="animation-delay: 0.09s;">
+            <div class="card stat-card-green card-animate" style="animation-delay: 0.09s;"
+                onclick="openKpiModal('Pronóstico 14 Días', '${h14d.forecast ?? 0}')">
                 <div class="card-stat-label">Pronóstico 14 Días</div>
                 <div class="card-stat-value" id="${prefix}forecast-14d-val" data-value="${h14d.forecast ?? 0}">0</div>
                 <div class="card-stat-sub">Rango: ${h14d.band_low ?? 0} a ${h14d.band_high ?? 0} leads</div>
@@ -996,22 +1224,26 @@ function renderAlertsCentre(alerts) {
     const maxRpn = alerts.length > 0 ? Math.max(...alerts.map(a => a.rpn_score || 0)) : 0;
 
     statsGrid.innerHTML = `
-        <div class="card stat-card-gold card-animate" style="animation-delay: 0.03s;">
+        <div class="card stat-card-gold card-animate" style="animation-delay: 0.03s;"
+            onclick="openKpiModal('Alertas Totales', '${total}')">
             <div class="card-stat-label">Alertas Totales</div>
             <div class="card-stat-value" id="alert-stat-total" data-value="${total}">0</div>
             <div class="card-stat-sub">Métricas bajo observación</div>
         </div>
-        <div class="card stat-card-crimson card-animate" style="animation-delay: 0.06s;">
+        <div class="card stat-card-crimson card-animate" style="animation-delay: 0.06s;"
+            onclick="openKpiModal('Alertas Críticas', '${criticalCount}')">
             <div class="card-stat-label">Alertas Críticas</div>
             <div class="card-stat-value" id="alert-stat-critical" data-value="${criticalCount}">0</div>
             <div class="card-stat-sub">Acción urgente requerida</div>
         </div>
-        <div class="card stat-card-blue card-animate" style="animation-delay: 0.09s;">
+        <div class="card stat-card-blue card-animate" style="animation-delay: 0.09s;"
+            onclick="openKpiModal('Severidad Máxima', '${maxRpn}')">
             <div class="card-stat-label">Severidad Máxima</div>
             <div class="card-stat-value" id="alert-stat-max-rpn" data-value="${maxRpn}">0</div>
             <div class="card-stat-sub">Puntaje RPN registrado</div>
         </div>
-        <div class="card stat-card-green card-animate" style="animation-delay: 0.12s;">
+        <div class="card stat-card-green card-animate" style="animation-delay: 0.12s;"
+            onclick="openKpiModal('Advertencias e Info', '${warningCount + infoCount}')">
             <div class="card-stat-label">Advertencias e Info</div>
             <div class="card-stat-value" id="alert-stat-warning-info" data-value="${warningCount + infoCount}">0</div>
             <div class="card-stat-sub">Desviaciones menores</div>
@@ -1524,6 +1756,7 @@ function loadReportInViewer(url, title, event) {
     const statusDot = document.getElementById('viewer-status-dot');
     const openLink = document.getElementById('viewer-open-link');
     const closeBtn = document.getElementById('viewer-close-btn');
+    const printBtn = document.getElementById('viewer-print-btn');
     const card = document.getElementById('report-viewer-card');
     
     if (!iframe || !placeholder) return;
@@ -1547,6 +1780,9 @@ function loadReportInViewer(url, title, event) {
     if (closeBtn) {
         closeBtn.style.display = 'inline-block';
     }
+    if (printBtn) {
+        printBtn.style.display = 'inline-flex';
+    }
     
     // Smooth scroll down to the embedded viewer card after a brief render delay
     setTimeout(() => {
@@ -1569,6 +1805,7 @@ function closeReportViewer() {
     const statusDot = document.getElementById('viewer-status-dot');
     const openLink = document.getElementById('viewer-open-link');
     const closeBtn = document.getElementById('viewer-close-btn');
+    const printBtn = document.getElementById('viewer-print-btn');
     
     if (!iframe || !placeholder) return;
     
@@ -1585,6 +1822,26 @@ function closeReportViewer() {
     
     if (openLink) openLink.style.display = 'none';
     if (closeBtn) closeBtn.style.display = 'none';
+    if (printBtn) printBtn.style.display = 'none';
+}
+
+function printActiveReport() {
+    const iframe = document.getElementById('viewer-iframe');
+    if (iframe && iframe.contentWindow) {
+        try {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        } catch (err) {
+            console.error("No se pudo iniciar la impresión del iframe:", err);
+            // Fallback: abrir en pestaña nueva e iniciar impresión
+            const newWindow = window.open(iframe.src, '_blank');
+            if (newWindow) {
+                newWindow.onload = () => {
+                    newWindow.print();
+                };
+            }
+        }
+    }
 }
 
 // =====================================================================
@@ -1689,6 +1946,33 @@ window.toggleTheme = function(event) {
     setTimeout(() => {
         ripple.remove();
     }, 700);
+};
+
+window.triggerSync = async function(event) {
+    const icon = document.getElementById('sync-icon-svg');
+    const sbarText = document.getElementById('main-sbar-text');
+    if (icon) {
+        icon.style.transform = 'rotate(360deg)';
+        setTimeout(() => {
+            icon.style.transition = 'none';
+            icon.style.transform = 'rotate(0deg)';
+            void icon.offsetWidth; // Force reflow
+            icon.style.transition = 'transform 1s ease';
+        }, 1000);
+    }
+    
+    if (sbarText) {
+        sbarText.innerHTML = "Sincronizando datos con n8n al instante...";
+    }
+    
+    // Call loadBOS to fetch the latest dynamic data from the server
+    await loadBOS();
+    
+    // Reload report viewer iframe if it is currently open
+    const iframe = document.getElementById('viewer-iframe');
+    if (iframe && iframe.style.display !== 'none' && iframe.src) {
+        iframe.src = iframe.src.split('?')[0] + '?_=' + Date.now();
+    }
 };
 
 // =====================================================================

@@ -1,46 +1,115 @@
 /* =====================================================================
-   BOS Panel — Motor de animaciones para informes HTML (n8n)
-   Contadores, gráficas, transiciones de sección y tanque líquido KPI
+   BOS Panel — Motor de Informes LaTeX (n8n)
+   Optimized for High-Contrast Static Print & Academic PDF Layout
    ===================================================================== */
 
 (function () {
     'use strict';
 
     let kpiChart = null;
-    let healthChart = null;
     let alertsChart = null;
 
-    // ── Tema (sincronizado con el panel principal) ──
+    // ── Standalone Theme Management ──
     function applyTheme(theme) {
-        document.body.classList.toggle('light-mode', theme === 'light');
-        if (kpiChart || healthChart || alertsChart) {
-            renderAllCharts();
-        }
+        // LaTeX reports are ALWAYS light-mode optimized (white background, black text)
+        // for print/pdf export. We force body class but adapt theme toggles for visual state if needed.
+        document.body.classList.remove('light-mode'); // Clear default class
+        document.body.classList.add('light-mode');    // Force light-mode styles in reports.css
     }
 
     function initTheme() {
-        applyTheme(localStorage.getItem('theme') || 'dark');
+        applyTheme('light');
+        
+        // Listen for parent messages if embedded inside iframe
         window.addEventListener('message', (e) => {
-            if (e.data === 'theme-light') applyTheme('light');
-            if (e.data === 'theme-dark') applyTheme('dark');
+            if (e.data === 'theme-light' || e.data === 'theme-dark') {
+                applyTheme('light'); // Always stay light-mode in LaTeX reports!
+            }
         });
-        if (window.parent !== window) {
-            const bar = document.querySelector('.report-back-bar');
-            if (bar) bar.style.display = 'none';
+        
+        // Handle standalone report theme toggle click if clicked
+        const reportToggle = document.getElementById('report-theme-toggle');
+        if (reportToggle) {
+            reportToggle.addEventListener('click', (event) => {
+                triggerRippleReveal(event);
+            });
+            updateToggleIcon();
         }
     }
 
-    function isLight() {
-        return document.body.classList.contains('light-mode');
+    function triggerRippleReveal(event) {
+        let x = window.innerWidth / 2;
+        let y = window.innerHeight / 2;
+        if (event && event.clientX !== undefined && event.clientY !== undefined) {
+            x = event.clientX;
+            y = event.clientY;
+        }
+        
+        // Create academic wave transition
+        const ripple = document.createElement('div');
+        ripple.className = 'theme-ripple';
+        ripple.style.left = `${x}px`;
+        ripple.style.top = `${y}px`;
+        ripple.style.backgroundColor = '#ffffff'; // Always white
+        document.body.appendChild(ripple);
+        
+        setTimeout(() => {
+            applyTheme('light');
+            updateToggleIcon();
+            if (window.parent !== window) {
+                // Post message back to parent to sync parent dashboard theme too!
+                const parentTheme = localStorage.getItem('theme') === 'light' ? 'dark' : 'light';
+                localStorage.setItem('theme', parentTheme);
+                window.parent.postMessage(parentTheme === 'light' ? 'theme-light' : 'theme-dark', '*');
+            } else {
+                const current = localStorage.getItem('theme') || 'dark';
+                localStorage.setItem('theme', current === 'light' ? 'dark' : 'light');
+            }
+            renderAllCharts();
+        }, 300);
+        
+        setTimeout(() => {
+            ripple.remove();
+        }, 700);
     }
 
+    function updateToggleIcon() {
+        const toggle = document.getElementById('report-theme-toggle');
+        if (!toggle) return;
+        const currentTheme = localStorage.getItem('theme') || 'dark';
+        if (currentTheme === 'light') {
+            toggle.innerHTML = `
+                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2;">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                </svg>
+            `;
+        } else {
+            toggle.innerHTML = `
+                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2;">
+                    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                </svg>
+            `;
+        }
+    }
+
+    // ── Academic Greyscale Chart Colors ──
     function chartColors() {
-        return isLight()
-            ? { text: '#475569', grid: 'rgba(15,23,42,0.06)', blue: '#0284c7', lime: '#84cc16', crimson: '#e11d48', amber: '#d97706' }
-            : { text: '#94a3b8', grid: 'rgba(255,255,255,0.04)', blue: '#38bdf8', lime: '#a3e635', crimson: '#f43f5e', amber: '#fbbf24' };
+        return {
+            text: '#111111',
+            grid: '#e5e5e5',
+            lineColor: '#000000',
+            barBg: 'rgba(0, 0, 0, 0.08)',
+            barBorder: '#000000',
+            tooltipBg: '#ffffff',
+            tooltipBorder: '#111111'
+        };
     }
 
-    // ── Contadores animados (misma lógica que app.js) ──
+    // ── Contadores animados (Sincronizado y suave) ──
     function animateValue(element, start, end, duration, options = {}) {
         if (!element) return;
         const { prefix = '', suffix = '', decimals = 0, useSeparator = false, isTime = false } = options;
@@ -87,7 +156,7 @@
         requestAnimationFrame(step);
     }
 
-    function parseAndAnimate(element, rawValue, duration = 750) {
+    function parseAndAnimate(element, rawValue, duration = 650) {
         if (!element) return;
         const valueStr = String(rawValue).trim();
 
@@ -127,45 +196,55 @@
         });
     }
 
-    // ── Tarjetas con entrada escalonada ──
+    // ── Tarjetas Estáticas LaTeX (Sin animaciones de rebote) ──
     function staggerCards(container) {
         if (!container) return;
         const cards = container.querySelectorAll('.card-animate');
-        cards.forEach((card, idx) => {
-            card.style.animationDelay = `${idx * 0.04}s`;
-            card.classList.remove('card-animate-run');
-            void card.offsetWidth;
+        cards.forEach((card) => {
+            card.style.opacity = '1';
+            card.style.transform = 'none';
             card.classList.add('card-animate-run');
         });
     }
 
-    // ── Tanque líquido en primer KPI (Health Score) ──
-    function initLiquidHealthKpi() {
-        const firstKpi = document.querySelector('.kpi-row .kpi');
-        if (!firstKpi) return;
-
-        const valEl = firstKpi.querySelector('.kpi-value');
-        if (!valEl) return;
-
-        const raw = valEl.textContent.trim();
-        valEl.setAttribute('data-value', raw);
-
-        const scoreMatch = raw.match(/(\d+)\s*\/\s*100/);
-        const score = scoreMatch ? Math.min(100, Math.max(0, parseInt(scoreMatch[1], 10))) : 0;
-        const tone = score >= 80 ? 'good' : score >= 60 ? 'warn' : 'critical';
-
-        firstKpi.classList.add('report-liquid-kpi', `liquid-tone-${tone}`);
-        firstKpi.dataset.fillTarget = score;
-
-        const fill = document.createElement('div');
-        fill.className = 'report-liquid-fill';
-        fill.innerHTML = '<div class="report-liquid-surface report-liquid-surface--1"></div><div class="report-liquid-surface report-liquid-surface--2"></div>';
-        firstKpi.insertBefore(fill, firstKpi.firstChild);
-
-        firstKpi.style.setProperty('--fill-level', '0');
-        requestAnimationFrame(() => {
-            firstKpi.style.setProperty('--fill-level', score);
-        });
+    // ── Dynamic LaTeX Abstract Injection (Tailored Content & n8n Data Scope) ──
+    function injectLatexAbstract() {
+        const hero = document.querySelector('.hero');
+        if (!hero || document.querySelector('.latex-abstract')) return;
+        
+        const heading = hero.querySelector('h1');
+        const titleText = heading ? heading.textContent.trim() : '';
+        
+        let targetRole = '';
+        let scopeText = '';
+        
+        if (titleText.includes('Direccion') || titleText.includes('C-Level') || titleText.includes('Executive') || titleText.includes('Dirección')) {
+            targetRole = 'Dirección Ejecutiva (C-Level)';
+            scopeText = 'Este informe presenta un análisis financiero consolidado de alto nivel. Extrae del flujo n8n el Health Score consolidado, costo por lead (CPL implícito), volumen acumulado de leads e inversión total de campañas. Proporciona directrices estratégicas de optimización de pauta comercial y mitigación de fugas para la toma de decisiones ejecutivas.';
+        } else if (titleText.includes('Supervisores') || titleText.includes('Managers') || titleText.includes('Manager') || titleText.includes('Gestión')) {
+            targetRole = 'Gestión de Operaciones y Ventas (Managers)';
+            scopeText = 'Este documento está estructurado para la dirección de equipos y supervisores de embudo. Extrae métricas clave sobre el volumen diario de leads, tasas de avance en estados críticos (Feeders de PreClosed) y anomalías operativas. Provee un plan táctico para equilibrar la carga telefónica y optimizar la conversión semanal.';
+        } else if (titleText.includes('Equipo BI') || titleText.includes('Data Science') || titleText.includes('Analyst') || titleText.includes('Estadístico')) {
+            targetRole = 'Científicos de Datos y Analistas de Negocios (BI Team)';
+            scopeText = 'Este reporte de auditoría científica detalla la robustez matemática del sistema. Contiene los coeficientes de regresión del volumen de leads ($R^2$, pendientes, interceptos), la distribución de concentración de pauta publicitaria (HHI de inversiones) y la precisión de los modelos predictivos implementados (MASE del modelo theta_lite).';
+        } else {
+            // Default to Operations
+            targetRole = 'Supervisores de Agentes y Capacidad Operativa';
+            scopeText = 'Este informe técnico diagnostica la eficiencia del call center y los tiempos de respuesta. Recopila desde n8n las estadísticas detalladas de llamadas por lead, demoras promedio en intentos de contacto e índice de sobre-contacto. El fin es dotar de alertas inmediatas y acciones tácticas correctivas para evitar la saturación de leads.';
+        }
+        
+        const abstractBlock = document.createElement('div');
+        abstractBlock.className = 'latex-abstract';
+        abstractBlock.innerHTML = `
+            <h4>Resumen de Datos & Alcance (Abstract)</h4>
+            <p>${scopeText}</p>
+            <div class="meta-row">
+                <span><strong>Destinatario:</strong> ${targetRole}</span>
+                <span><strong>Origen de Datos:</strong> n8n Analytics Engine</span>
+            </div>
+        `;
+        
+        hero.insertAdjacentElement('afterend', abstractBlock);
     }
 
     // ── Preparar KPIs con data-value ──
@@ -177,175 +256,28 @@
         });
     }
 
-    // ── Insertar contenedores de gráficas ──
+    // ── Insertar contenedor de gráfica de KPI único (No Health Chart!) ──
     function injectChartContainers() {
-        const narrativa = document.getElementById('narrativa');
-        if (!narrativa || narrativa.querySelector('.report-charts-row')) return;
-
-        const kpiRow = narrativa.querySelector('.kpi-row');
-        if (!kpiRow) return;
-
-        const chartsRow = document.createElement('div');
-        chartsRow.className = 'report-charts-row';
-        chartsRow.innerHTML = `
-            <div class="report-chart-card card-animate">
-                <div class="report-chart-title"><span class="dot"></span> Indicadores Clave del Informe</div>
-                <div class="report-chart-wrap"><canvas id="report-kpi-chart"></canvas></div>
-            </div>
-            <div class="report-chart-card card-animate">
-                <div class="report-chart-title"><span class="dot dot-lime"></span> Salud del Sistema</div>
-                <div class="report-chart-wrap report-chart-wrap--donut"><canvas id="report-health-chart"></canvas></div>
-            </div>
-        `;
-        kpiRow.insertAdjacentElement('afterend', chartsRow);
+        return; // Disabled: Pure typographic LaTeX report without charts
     }
 
     function injectAlertsChart() {
-        const alertas = document.getElementById('alertas');
-        if (!alertas || alertas.querySelector('#report-alerts-chart')) return;
-
-        const cards = alertas.querySelectorAll('.alert-card');
-        if (!cards.length) return;
-
-        const wrap = document.createElement('div');
-        wrap.className = 'report-chart-card card-animate report-alerts-chart-card';
-        wrap.innerHTML = `
-            <div class="report-chart-title"><span class="dot dot-crimson"></span> Distribución de Alertas</div>
-            <div class="report-chart-wrap report-chart-wrap--bar"><canvas id="report-alerts-chart"></canvas></div>
-        `;
-        alertas.insertBefore(wrap, alertas.firstChild);
+        return; // Disabled: Pure typographic LaTeX report without charts
     }
 
     function collectKpiChartData() {
-        const kpis = [];
-        document.querySelectorAll('#narrativa .kpi-row .kpi').forEach((kpi, idx) => {
-            if (idx === 0) return;
-            const label = kpi.querySelector('.kpi-label')?.textContent?.trim() || `KPI ${idx}`;
-            const raw = kpi.querySelector('.kpi-value')?.getAttribute('data-value') || '';
-            const num = parseFloat(String(raw).replace(/[$\s%,~]/g, '').split('/')[0]);
-            if (!isNaN(num) && isFinite(num) && Math.abs(num) > 0 && !raw.includes(':')) {
-                kpis.push({ label: label.length > 18 ? label.slice(0, 16) + '…' : label, value: Math.abs(num) });
-            }
-        });
-        return kpis.slice(0, 6);
-    }
-
-    function getHealthScore() {
-        const first = document.querySelector('.kpi-row .kpi .kpi-value');
-        if (!first) return 0;
-        const raw = first.getAttribute('data-value') || first.textContent;
-        const m = String(raw).match(/(\d+)\s*\/\s*100/);
-        return m ? parseInt(m[1], 10) : 0;
+        return [];
     }
 
     function countAlertsByType() {
-        let critical = 0, warning = 0, info = 0;
-        document.querySelectorAll('#alertas .alert-card').forEach(card => {
-            const badge = card.querySelector('.alert-badge')?.textContent?.toUpperCase() || '';
-            if (badge.includes('CRIT')) critical++;
-            else if (badge.includes('ALERT') || badge.includes('ADVERT')) warning++;
-            else info++;
-        });
-        return { critical, warning, info };
+        return { critical: 0, warning: 0, info: 0 };
     }
 
     function renderAllCharts() {
-        if (typeof Chart === 'undefined') return;
-        const c = chartColors();
-
-        // KPI bar chart
-        const kpiCanvas = document.getElementById('report-kpi-chart');
-        if (kpiCanvas) {
-            const data = collectKpiChartData();
-            if (kpiChart) kpiChart.destroy();
-            if (data.length) {
-                kpiChart = new Chart(kpiCanvas.getContext('2d'), {
-                    type: 'bar',
-                    data: {
-                        labels: data.map(d => d.label),
-                        datasets: [{
-                            label: 'Valor',
-                            data: data.map(d => d.value),
-                            backgroundColor: isLight() ? 'rgba(2,132,199,0.55)' : 'rgba(56,189,248,0.45)',
-                            borderColor: c.blue,
-                            borderWidth: 1,
-                            borderRadius: 8
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        animation: { duration: 900, easing: 'easeOutQuart' },
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            x: { ticks: { color: c.text, font: { size: 10, family: 'Inter' } }, grid: { display: false } },
-                            y: { ticks: { color: c.text, font: { size: 10, family: 'JetBrains Mono' } }, grid: { color: c.grid } }
-                        }
-                    }
-                });
-            }
-        }
-
-        // Health doughnut
-        const healthCanvas = document.getElementById('report-health-chart');
-        if (healthCanvas) {
-            const score = getHealthScore();
-            if (healthChart) healthChart.destroy();
-            healthChart = new Chart(healthCanvas.getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: ['Salud', 'Pendiente'],
-                    datasets: [{
-                        data: [score, Math.max(0, 100 - score)],
-                        backgroundColor: [c.lime, isLight() ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.06)'],
-                        borderWidth: 0,
-                        hoverOffset: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '72%',
-                    animation: { animateRotate: true, duration: 1200 },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { enabled: true }
-                    }
-                }
-            });
-        }
-
-        // Alerts bar chart
-        const alertsCanvas = document.getElementById('report-alerts-chart');
-        if (alertsCanvas) {
-            const counts = countAlertsByType();
-            if (alertsChart) alertsChart.destroy();
-            alertsChart = new Chart(alertsCanvas.getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: ['Críticas', 'Advertencias', 'Informativas'],
-                    datasets: [{
-                        data: [counts.critical, counts.warning, counts.info],
-                        backgroundColor: [c.crimson, c.amber, c.blue],
-                        borderRadius: 8,
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: { duration: 800 },
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { ticks: { color: c.text, font: { size: 11, family: 'Inter' } }, grid: { display: false } },
-                        y: { beginAtZero: true, ticks: { stepSize: 1, color: c.text }, grid: { color: c.grid } }
-                    }
-                }
-            });
-        }
+        return; // Disabled: Pure typographic LaTeX report without charts
     }
 
-    // ── Navegación entre secciones con animación ──
+    // ── Navegación entre secciones (Tabs) ──
     window.showTab = function (id, btn) {
         const current = document.querySelector('.tc.active');
         const next = document.getElementById(id);
@@ -354,35 +286,119 @@
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         if (btn) btn.classList.add('active');
 
-        const switchToNext = () => {
-            document.querySelectorAll('.tc').forEach(el => el.classList.remove('active', 'tc-leave', 'tc-enter'));
-            next.classList.add('active', 'tc-enter');
-            animateCountersIn(next);
-            staggerCards(next);
-            if (id === 'narrativa') renderAllCharts();
-            if (id === 'alertas') {
-                injectAlertsChart();
-                renderAllCharts();
-            }
-            setTimeout(() => next.classList.remove('tc-enter'), 450);
-        };
-
-        if (current) {
-            current.classList.add('tc-leave');
-            setTimeout(switchToNext, 220);
-        } else {
-            switchToNext();
+        document.querySelectorAll('.tc').forEach(el => el.classList.remove('active', 'tc-leave', 'tc-enter'));
+        next.classList.add('active');
+        animateCountersIn(next);
+        staggerCards(next);
+        
+        if (id === 'narrativa') renderAllCharts();
+        if (id === 'alertas') {
+            injectAlertsChart();
+            renderAllCharts();
         }
     };
 
-    // ── Spotlight en tarjetas (como el panel) ──
-    function initSpotlight() {
-        document.querySelectorAll('.kpi, .content-block, .alert-card, .action-card, .report-chart-card').forEach(card => {
-            card.addEventListener('mousemove', (e) => {
-                const rect = card.getBoundingClientRect();
-                card.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
-                card.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+    // ── Dynamic Audience Filtering Helpers ──
+    function getAudience() {
+        const titleEl = document.querySelector('.hero h1');
+        const titleText = titleEl ? titleEl.textContent.trim() : '';
+        if (titleText.includes('Direccion') || titleText.includes('C-Level') || titleText.includes('Executive') || titleText.includes('Dirección')) {
+            return 'executive';
+        } else if (titleText.includes('Supervisores') || titleText.includes('Managers') || titleText.includes('Manager') || titleText.includes('Gestión')) {
+            return 'manager';
+        } else if (titleText.includes('Equipo BI') || titleText.includes('Data Science') || titleText.includes('Analyst') || titleText.includes('Estadístico')) {
+            return 'analyst';
+        }
+        return 'operations';
+    }
+
+    function filterKpisByAudience(audience) {
+        const kpis = document.querySelectorAll('.kpi-row .kpi');
+        const kpiMap = {
+            executive: ['HEALTH SCORE', 'LEADS TOTALES', 'CAMBIO SEMANAL', 'CPL IMPLICITO', 'GASTO TOTAL', 'COSTO POR LEAD'],
+            manager: ['LEADS TOTALES', 'PROMEDIO DIARIO', 'CAMBIO SEMANAL', 'HORA PICO', 'PREVISION DIARIA'],
+            analyst: ['LEADS TOTALES', 'PROMEDIO DIARIO', 'PREVISION DIARIA', 'MASE', 'HHI', 'CAMBIO SEMANAL', 'CPL IMPLICITO', 'GASTO TOTAL', 'COSTO POR LEAD'],
+            operations: ['HEALTH SCORE', 'PROMEDIO DIARIO', 'HORA PICO', 'LEADS TOTALES']
+        };
+        const allowedKpis = kpiMap[audience] || [];
+        kpis.forEach(kpi => {
+            const label = kpi.querySelector('.kpi-label')?.textContent?.trim()?.toUpperCase() || '';
+            const isAllowed = allowedKpis.some(allowed => label.includes(allowed));
+            if (!isAllowed) {
+                kpi.style.setProperty('display', 'none', 'important');
+            } else {
+                kpi.style.setProperty('display', 'block', 'important');
+            }
+        });
+    }
+
+    function filterContentByAudience(audience) {
+        const contentBlock = document.querySelector('.content-block');
+        if (!contentBlock) return;
+        const children = Array.from(contentBlock.children);
+        let hidingCurrentSection = false;
+        
+        const relevantSections = {
+            executive: ['ESTADO GENERAL', 'QUE ESTA PASANDO', 'QUE ESTÁ PASANDO', 'DONDE SE PIERDE DINERO', 'DÓNDE SE PIERDE DINERO', 'DECISIONES RECOMENDADAS', 'CONCLUSION', 'CONCLUSIÓN'],
+            manager: ['QUE CAMBIO HOY', 'LO QUE FUNCIONA BIEN', 'PROBLEMAS DEL FUNNEL', 'PLAN DEL DIA', 'PLAN DEL DÍA', 'KPIS A VIGILAR', 'ALERTA ESPECIAL'],
+            analyst: ['RESUMEN DE FUENTES Y CALIDAD', 'HALLAZGOS CLAVE', 'SUPUESTOS Y LIMITACIONES', 'ALERTAS TECNICAS', 'ALERTAS TÉCNICAS', 'ANALISIS SUGERIDOS', 'ANÁLISIS SUGERIDOS', 'DATOS CLAVE EN TABLA', 'CONCLUSION', 'CONCLUSIÓN'],
+            operations: ['PLAN DEL DIA', 'PLAN DEL DÍA', 'ALERTA ESPECIAL', 'PROBLEMAS DEL FUNNEL', 'ESTADO GENERAL']
+        };
+        const audienceSections = relevantSections[audience] || [];
+        
+        children.forEach(child => {
+            const isHeading = child.tagName === 'H2' || child.tagName === 'H3' || 
+                              (child.tagName === 'P' && child.querySelector('strong')) ||
+                              (child.tagName === 'P' && (child.style.fontWeight === '800' || child.style.fontWeight === 'bold' || 
+                               child.getAttribute('style')?.includes('font-weight:800') || child.getAttribute('style')?.includes('font-weight: 800')));
+                               
+            if (isHeading) {
+                const headingText = child.textContent.trim().toUpperCase().replace(/[ÁÉÍÓÚ]/g, m => {
+                    return {'Á':'A','É':'E','Í':'I','Ó':'O','Ú':'U'}[m];
+                });
+                const isRelevant = audienceSections.some(sec => headingText.includes(sec));
+                hidingCurrentSection = !isRelevant;
+            }
+            if (hidingCurrentSection) {
+                child.style.display = 'none';
+            } else {
+                child.style.display = '';
+            }
+        });
+    }
+
+    function filterAlertsAndActionsByAudience(audience) {
+        const alerts = document.querySelectorAll('#alertas .alert-card');
+        const actions = document.querySelectorAll('#acciones .action-card');
+        const keywords = {
+            executive: ['cpl', 'gasto', 'inversion', 'concentracion', 'hhi', 'sobre-contacto', 'mase', 'prevision', 'health score'],
+            manager: ['feeder', 'conversion', 'intentos', 'intervalo', 'llamadas', 'sobre-contacto'],
+            analyst: ['mase', 'ensemble', 'theta_lite', 'hhi', 'regresion', 'prevision', 'sweet spot', 'diversificacion'],
+            operations: ['intentos', 'intervalo', 'demoras', 'sobre-contacto', 'marcacion', 'llamadas']
+        };
+        const allowedKeywords = keywords[audience] || [];
+        
+        alerts.forEach(card => {
+            const text = card.textContent.trim().toLowerCase().replace(/[áéíóú]/g, m => {
+                return {'á':'a','é':'e','í':'i','ó':'o','ú':'u'}[m];
             });
+            const isAllowed = allowedKeywords.some(kw => text.includes(kw));
+            if (!isAllowed) {
+                card.style.setProperty('display', 'none', 'important');
+            } else {
+                card.style.setProperty('display', 'block', 'important');
+            }
+        });
+        actions.forEach(card => {
+            const text = card.textContent.trim().toLowerCase().replace(/[áéíóú]/g, m => {
+                return {'á':'a','é':'e','í':'i','ó':'o','ú':'u'}[m];
+            });
+            const isAllowed = allowedKeywords.some(kw => text.includes(kw));
+            if (!isAllowed) {
+                card.style.setProperty('display', 'none', 'important');
+            } else {
+                card.style.setProperty('display', 'block', 'important');
+            }
         });
     }
 
@@ -390,24 +406,24 @@
     function initReportAnimations() {
         initTheme();
         prepareKpiValues();
-        initLiquidHealthKpi();
+        injectLatexAbstract();
+        
+        const audience = getAudience();
+        filterKpisByAudience(audience);
+        filterContentByAudience(audience);
+        filterAlertsAndActionsByAudience(audience);
+        
         injectChartContainers();
         injectAlertsChart();
 
-        document.querySelectorAll('.kpi, .content-block, .alert-card, .action-card, .hero, .report-chart-card').forEach(el => {
-            el.classList.add('card-animate');
-        });
-
         const active = document.querySelector('.tc.active') || document.getElementById('narrativa');
         if (active) {
-            active.classList.add('tc-enter');
+            active.classList.add('active');
             animateCountersIn(active);
             staggerCards(active);
-            setTimeout(() => active.classList.remove('tc-enter'), 450);
         }
 
         renderAllCharts();
-        initSpotlight();
     }
 
     if (document.readyState === 'loading') {
