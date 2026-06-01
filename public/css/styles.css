@@ -1116,8 +1116,8 @@ body.light-mode .wave-4 svg path {
 
 .card:hover {
     transform: translateY(-4px);
-    border-color: var(--border-hover) !important;
-    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1), 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 20px var(--chartreuse-glow) !important;
+    border-color: rgba(255, 255, 255, 0.35) !important;
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1), 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 255, 255, 0.15) !important;
 }
 
 /* Sequential Entry Animations for Dashboard Cards */
@@ -1196,6 +1196,19 @@ body.light-mode .wave-4 svg path {
     text-transform: uppercase;
     letter-spacing: 1px;
     margin-bottom: 8px;
+    transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+/* Card hover triggers stat label white glow in dark mode */
+.card:hover .card-stat-label {
+    color: #ffffff !important;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
+/* Light mode override to keep corporate blue on card hover */
+body.light-mode .card:hover .card-stat-label {
+    color: var(--blue) !important;
+    text-shadow: 0 0 8px rgba(2, 132, 199, 0.3) !important;
 }
 
 .card-stat-value {
@@ -1970,8 +1983,8 @@ body.light-mode .model-compare-select option {
 .brand-text p:hover,
 .topbar-left h2:hover,
 .action-text:hover {
-    color: var(--chartreuse) !important;
-    text-shadow: 0 0 8px rgba(163, 230, 53, 0.5);
+    color: #ffffff !important;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.6), 0 0 15px rgba(255, 255, 255, 0.3);
 }
 
 /* Statistics numbers scale up and glow with their respective themed colors */
@@ -2469,7 +2482,8 @@ body.light-mode .chart-tool-btn.active {
 #dashboard-kpis .card:hover,
 #dashboard-kpis .liquid-tank:hover {
     transform: translateY(-3px) !important;
-    border-color: var(--border-hover) !important;
+    border-color: rgba(255, 255, 255, 0.6) !important;
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.15), 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 24px rgba(255, 255, 255, 0.25) !important;
 }
 
 /* Light mode overrides for the KPI modal */

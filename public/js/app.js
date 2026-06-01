@@ -8,6 +8,7 @@ let charts = {};
 let currentTab = 'dashboard';
 let currentAlertFilter = 'all';
 let timeSeriesType = 'line';
+let dailyVolumeType = 'bar';
 let selectedCompareModel = '';
 let showAllModels = false;
 
@@ -614,7 +615,7 @@ function renderBOS(data) {
             sub = 'Óptima'; 
             k.color = 'white';
         }
-        if (label === 'CPL implicito') { label = 'Costo Promedio por Lead'; sub = 'Global'; }
+        if (label === 'CPL implicito') { label = 'Costo Promedio por Lead'; sub = 'Global'; k.color = 'blue'; }
         if (label === 'Gasto total') { label = 'Inversión Publicitaria'; }
         if (label === 'HHI') { label = 'Diversificación de Pauta'; }
 
@@ -1747,9 +1748,10 @@ function renderDailyVolumeChart(ops) {
     const avgVal = ops.avg_daily || 0;
     
     const avgLine = Array(leads.length).fill(avgVal);
+    const isBar = dailyVolumeType === 'bar';
 
     charts.daily_volume = new Chart(ctx, {
-        type: 'bar',
+        type: dailyVolumeType,
         data: {
             labels: labels,
             datasets: [
@@ -1767,10 +1769,20 @@ function renderDailyVolumeChart(ops) {
                 {
                     label: 'Leads Recibidos',
                     data: leads,
-                    backgroundColor: isLight ? 'rgba(2, 132, 199, 0.75)' : 'rgba(56, 189, 248, 0.7)',
+                    type: isBar ? 'bar' : 'line',
+                    backgroundColor: isBar 
+                        ? (isLight ? 'rgba(2, 132, 199, 0.75)' : 'rgba(56, 189, 248, 0.7)')
+                        : (isLight ? 'rgba(2, 132, 199, 0.15)' : 'rgba(56, 189, 248, 0.15)'),
                     borderColor: isLight ? '#0284c7' : '#38bdf8',
-                    borderWidth: 1,
-                    borderRadius: 4,
+                    borderWidth: isBar ? 1 : 2,
+                    borderRadius: isBar ? 4 : 0,
+                    fill: !isBar,
+                    tension: isBar ? 0 : 0.35,
+                    pointRadius: isBar ? 0 : 2,
+                    pointHoverRadius: isBar ? 0 : 6,
+                    hoverBackgroundColor: isLight ? 'rgba(2, 132, 199, 0.95)' : 'rgba(56, 189, 248, 0.95)',
+                    hoverBorderColor: isLight ? '#0284c7' : '#ffffff',
+                    hoverBorderWidth: 2,
                     order: 2
                 }
             ]
@@ -1789,6 +1801,10 @@ function renderDailyVolumeChart(ops) {
             },
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+                mode: 'nearest',
+                intersect: true
+            },
             plugins: {
                 legend: {
                     display: true,
@@ -1825,6 +1841,21 @@ function renderDailyVolumeChart(ops) {
             }
         }
     });
+}
+
+function setDailyVolumeType(type, ev) {
+    if (ev) ev.preventDefault();
+    dailyVolumeType = type;
+    document.querySelectorAll('.chart-toolbar button').forEach(btn => {
+        if (btn.id === 'btn-vol-bar') {
+            btn.classList.toggle('active', type === 'bar');
+        } else if (btn.id === 'btn-vol-line') {
+            btn.classList.toggle('active', type === 'line');
+        }
+    });
+    if (dashboardData && dashboardData.operations) {
+        renderDailyVolumeChart(dashboardData.operations);
+    }
 }
 
 function renderOperationsTab(data) {
