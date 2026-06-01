@@ -49,18 +49,34 @@
         </div>
     </div>
 
+    <div class="kpi-modal-overlay" id="kpi-modal-overlay" onclick="closeKpiModal(event)">
+        <div class="kpi-modal" onclick="event.stopPropagation()">
+            <button class="kpi-modal-close" onclick="closeKpiModal()">&times;</button>
+            <div class="kpi-modal-title" id="kpi-modal-title"></div>
+            <div class="kpi-modal-value" id="kpi-modal-value"></div>
+            <div class="kpi-modal-section">
+                <div class="kpi-modal-section-label">¿Qué significa?</div>
+                <div class="kpi-modal-section-text" id="kpi-modal-definition"></div>
+            </div>
+            <div class="kpi-modal-section">
+                <div class="kpi-modal-section-label">¿Cómo interpretar el valor actual?</div>
+                <div class="kpi-modal-section-text" id="kpi-modal-interpretation"></div>
+            </div>
+            <hr class="kpi-modal-divider">
+            <div class="kpi-modal-source">
+                <div class="kpi-modal-source-dot"></div>
+                <span id="kpi-modal-source-text">Fuente: n8n Analytics Engine</span>
+            </div>
+        </div>
+    </div>
+
     <div class="app-container sidebar-layout">
         <!-- Sidebar Menu (Left - Option A) -->
         <aside class="sidebar">
             <div class="sidebar-brand">
-                <div class="brand-icon-wrapper">
-                    <svg viewBox="0 0 24 24" style="width: 28px; height: 28px; fill: none; stroke: var(--chartreuse); stroke-width: 2.5;">
-                        <path d="M3 3v18h18M7 17v-4M11 17V9M15 17V5M19 17v-8"/>
-                    </svg>
-                </div>
                 <div class="brand-text">
-                    <h1>BOS Panel</h1>
-                    <p>Manuel Solis Law Offices</p>
+                    <h1>Manuel Solis</h1>
+                    <p>Law Offices</p>
                 </div>
             </div>
 
@@ -110,6 +126,12 @@
                     <h2 id="topbar-section-title">Resumen General</h2>
                 </div>
                 <div class="topbar-right" style="display: flex; align-items: center; gap: 14px;">
+                    <!-- Real-time Sync Button -->
+                    <button id="sync-btn" class="theme-toggle-btn" onclick="triggerSync(event)" title="Sincronizar Datos al Instante">
+                        <svg viewBox="0 0 24 24" id="sync-icon-svg" style="width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; transition: transform 1s ease;">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                        </svg>
+                    </button>
                     <!-- Theme Toggle Button (Circular Reveal) -->
                     <button id="theme-toggle" class="theme-toggle-btn" onclick="toggleTheme(event)" title="Alternar Modo Claro / Oscuro">
                         <svg viewBox="0 0 24 24" class="theme-icon-svg" style="width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; transition: transform 0.5s ease;">
@@ -179,13 +201,15 @@
                             hasta la consolidación.</p>
                         <div class="v-grid-1-1">
                             <div class="card card-animate"
-                                style="background: rgba(255,255,255,0.01) !important; border-color: rgba(255,255,255,0.05) !important; animation-delay: 0.04s;">
+                                style="background: rgba(255,255,255,0.01) !important; border-color: rgba(255,255,255,0.05) !important; animation-delay: 0.04s;"
+                                onclick="openKpiModal('Tasa Global de Conversión', document.getElementById('funnel-conv-pct').textContent)">
                                 <div class="card-stat-label" style="font-size: 9px;">Tasa Global de Conversión</div>
                                 <div class="card-stat-value" id="funnel-conv-pct"
                                     style="font-size: 26px; color: var(--green);">0%</div>
                             </div>
                             <div class="card card-animate"
-                                style="background: rgba(255,255,255,0.01) !important; border-color: rgba(255,255,255,0.05) !important; animation-delay: 0.06s;">
+                                style="background: rgba(255,255,255,0.01) !important; border-color: rgba(255,255,255,0.05) !important; animation-delay: 0.06s;"
+                                onclick="openKpiModal('Ingresos en Riesgo Estimados', document.getElementById('funnel-risk-revenue').textContent)">
                                 <div class="card-stat-label" style="font-size: 9px;">Ingresos en Riesgo Estimados</div>
                                 <div class="card-stat-value" id="funnel-risk-revenue"
                                     style="font-size: 26px; color: var(--red);">$0</div>
@@ -334,12 +358,14 @@
                             <div class="chart-wrapper"><canvas id="chart-campaigns"></canvas></div>
                         </div>
                         <div class="v-flex-col justify-content-center">
-                            <div class="card stat-card-gold card-animate" style="animation-delay: 0.04s;">
+                            <div class="card stat-card-gold card-animate" style="animation-delay: 0.04s;"
+                                onclick="openKpiModal('Inversión Total Ejecutada', document.getElementById('spend-total').textContent)">
                                 <div class="card-stat-label">Inversión Total Ejecutada</div>
                                 <div class="card-stat-value" id="spend-total">$0</div>
                                 <div class="card-stat-sub">Registrado en bases de datos financieras</div>
                             </div>
-                            <div class="card stat-card-blue card-animate" style="animation-delay: 0.06s;">
+                            <div class="card stat-card-blue card-animate" style="animation-delay: 0.06s;"
+                                onclick="openKpiModal('Campañas Activas Modeladas', document.getElementById('spend-count').textContent)">
                                 <div class="card-stat-label">Campañas Activas Modeladas</div>
                                 <div class="card-stat-value" id="spend-count">0</div>
                                 <div class="card-stat-sub">Modeladas por el motor de atribución</div>
@@ -430,42 +456,42 @@
                     </div>
                     <div class="v-grid-1-1">
                         <a href="/reports/executive"
-                            onclick="loadReportInViewer('/reports/executive', 'Informe de Dirección Corporativa', event)"
+                            onclick="loadReportInViewer('/reports/executive', 'Dirección / C-Level', event)"
                             class="report-card card-animate" style="animation-delay: 0.02s;">
-                            <div class="icon-box exec">DIR</div>
+                            <div class="icon-box exec" style="background: linear-gradient(135deg, #1e3a8a, #3b82f6) !important;">EXEC</div>
                             <div class="report-info">
-                                <h4>Informe de Dirección Corporativa</h4>
-                                <p>Visión ejecutiva consolidada y proyecciones de alto nivel para Directores.</p>
+                                <h4>Dirección / C-Level</h4>
+                                <p>Dirigido a: Executive / Directores Corporativos</p>
                             </div>
                             <span class="arrow">→</span>
                         </a>
                         <a href="/reports/manager"
-                            onclick="loadReportInViewer('/reports/manager', 'Informe de Gestión de Embudo', event)"
+                            onclick="loadReportInViewer('/reports/manager', 'Supervisores / Managers', event)"
                             class="report-card card-animate" style="animation-delay: 0.04s;">
-                            <div class="icon-box mgr">GES</div>
+                            <div class="icon-box mgr" style="background: linear-gradient(135deg, #065f46, #10b981) !important;">MGR</div>
                             <div class="report-info">
-                                <h4>Informe de Gestión de Embudo</h4>
-                                <p>Control del funnel comercial, pauta y flujos de conversión de leads.</p>
+                                <h4>Supervisores / Managers</h4>
+                                <p>Dirigido a: Manager / Gestión de Conversiones</p>
                             </div>
                             <span class="arrow">→</span>
                         </a>
                         <a href="/reports/analyst"
-                            onclick="loadReportInViewer('/reports/analyst', 'Informe de Análisis Estadístico', event)"
+                            onclick="loadReportInViewer('/reports/analyst', 'Equipo BI / Data Science', event)"
                             class="report-card card-animate" style="animation-delay: 0.06s;">
-                            <div class="icon-box analyst">EST</div>
+                            <div class="icon-box analyst" style="background: linear-gradient(135deg, #581c87, #8b5cf6) !important;">BI</div>
                             <div class="report-info">
-                                <h4>Informe de Análisis Estadístico</h4>
-                                <p>Detalle analítico profundo de modelos de regresión, Markov y atribución.</p>
+                                <h4>Equipo BI / Data Science</h4>
+                                <p>Dirigido a: Analyst / Analistas y Científicos de Datos</p>
                             </div>
                             <span class="arrow">→</span>
                         </a>
                         <a href="/reports/operations"
-                            onclick="loadReportInViewer('/reports/operations', 'Informe de Capacidad Operativa', event)"
+                            onclick="loadReportInViewer('/reports/operations', 'Agentes / Operaciones', event)"
                             class="report-card card-animate" style="animation-delay: 0.08s;">
-                            <div class="icon-box ops">OPE</div>
+                            <div class="icon-box ops" style="background: linear-gradient(135deg, #7c2d12, #ea580c) !important;">OPS</div>
                             <div class="report-info">
-                                <h4>Informe de Capacidad Operativa</h4>
-                                <p>Auditoría de tiempos de espera, reintentos de contacto y eficiencia telefónica.</p>
+                                <h4>Agentes / Operaciones</h4>
+                                <p>Dirigido a: Operations / Control de Capacidad Telefónica</p>
                             </div>
                             <span class="arrow">→</span>
                         </a>
@@ -485,6 +511,11 @@
                                     Visor de Informe Interactivo</h4>
                             </div>
                             <div style="display: flex; align-items: center; gap: 12px;">
+                                <button id="viewer-print-btn" class="btn-sec"
+                                    style="padding: 6px 12px; font-size: 11px; cursor: pointer; display: none; border-radius: 6px; background: var(--chartreuse); color: #080c14; font-weight: 700; border: none; align-items: center; gap: 6px;"
+                                    onclick="printActiveReport()">
+                                    Descargar PDF / Imprimir 📥
+                                </button>
                                 <a id="viewer-open-link" href="#" target="_blank" class="btn-sec"
                                     style="padding: 6px 12px; font-size: 11px; display: none; align-items: center; gap: 6px; border-radius: 6px;">
                                     Pantalla Completa ↗
