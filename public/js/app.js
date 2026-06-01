@@ -1051,10 +1051,10 @@ function buildRfAlignedSeries(data) {
 }
 
 // Construye el dataset de overlay para un modelo dado.
+// La leyenda muestra solo el nombre del modelo; el MASE vive únicamente en la tabla de abajo.
 function overlayForModel(m) {
-    const maseTxt = (typeof m.mase === 'number') ? ` (MASE ${m.mase.toFixed(3)})` : '';
     return {
-        label: cleanTechnicalTerms(m.name.replace(/_/g, ' ').toUpperCase()) + maseTxt,
+        label: cleanTechnicalTerms(m.name.replace(/_/g, ' ').toUpperCase()),
         series: m.series,
         color: getModelColor(m.name)
     };
@@ -1147,41 +1147,12 @@ function getModelHorizons(name) {
 // Actualiza las tarjetas de "Pronóstico de Demanda a Mediano Plazo" con los datos
 // del modelo seleccionado para comparar (valor + variación vs modelo base).
 function updateHorizonComparison() {
-    const slots = [
-        { key: 'next_1d', slot: 'forecast-1d-compare' },
-        { key: 'next_7d', slot: 'forecast-7d-compare' },
-        { key: 'next_14d', slot: 'forecast-14d-compare' },
-    ];
-    slots.forEach(o => { const el = document.getElementById(o.slot); if (el) el.innerHTML = ''; });
-
-    // En modo "todos los modelos" no se llenan las tarjetas (sería ilegible).
-    const name = selectedCompareModel;
-    if (showAllModels || !name || !dashboardData) return;
-
-    const label = cleanTechnicalTerms(name.replace(/_/g, ' ').toUpperCase());
-    const color = getModelColor(name);
-    const baseH = (dashboardData.forecast && dashboardData.forecast.horizons) ? dashboardData.forecast.horizons : {};
-    const modelH = getModelHorizons(name);
-
-    if (!modelH) {
-        const first = document.getElementById('forecast-1d-compare');
-        if (first) first.innerHTML = `<span class="hz-compare-none" style="color:${color}">${label}: sin datos de pronóstico</span>`;
-        return;
-    }
-
-    slots.forEach(o => {
-        const el = document.getElementById(o.slot);
-        if (!el) return;
-        const mv = (modelH[o.key] && modelH[o.key].forecast != null) ? modelH[o.key].forecast : null;
-        if (mv == null) { el.innerHTML = ''; return; }
-        const bv = (baseH[o.key] && baseH[o.key].forecast != null) ? baseH[o.key].forecast : null;
-        let deltaTxt = '';
-        if (bv != null && bv !== 0) {
-            const pct = ((mv - bv) / bv) * 100;
-            const up = pct >= 0;
-            deltaTxt = ` <span class="hz-compare-delta ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${Math.abs(pct).toFixed(1)}%</span>`;
-        }
-        el.innerHTML = `<span class="hz-compare-label" style="color:${color}">${label}:</span> <span class="hz-compare-val" style="color:${color}">${Number(mv).toLocaleString('es-MX')}</span>${deltaTxt}`;
+    // Las tarjetas de pronóstico muestran únicamente el modelo base/original.
+    // La comparación por tarjeta (p. ej. "RANDOM FOREST: 80 ▼ 69.7%") quedó
+    // deshabilitada a pedido; la comparación de modelos sigue disponible en la gráfica.
+    ['forecast-1d-compare', 'forecast-7d-compare', 'forecast-14d-compare'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
     });
 }
 

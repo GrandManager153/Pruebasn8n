@@ -274,14 +274,14 @@
                                 <button type="button" class="model-compare-btn" onclick="showAllModelOverlays()" title="Sobreponer todas las curvas de modelos">Mostrar todas</button>
                                 <button type="button" class="model-compare-btn ghost" onclick="clearModelOverlays()" title="Volver a la gráfica original">Limpiar</button>
                                 <span id="model-compare-meta" class="model-compare-meta"></span>
-                            </div>
-                            <div class="chart-wrapper">
                                 <div class="chart-toolbar">
                                     <button class="chart-tool-btn active" data-ts-type="line"
                                         onclick="setTimeSeriesType('line', event)" title="Vista de línea">∿</button>
                                     <button class="chart-tool-btn" data-ts-type="bar"
                                         onclick="setTimeSeriesType('bar', event)" title="Vista de barras">▮</button>
                                 </div>
+                            </div>
+                            <div class="chart-wrapper">
                                 <canvas id="chart-timeseries"></canvas>
                             </div>
                         </div>
