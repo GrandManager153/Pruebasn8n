@@ -315,10 +315,10 @@
     function filterKpisByAudience(audience) {
         const kpis = document.querySelectorAll('.kpi-row .kpi');
         const kpiMap = {
-            executive: ['HEALTH SCORE', 'LEADS TOTALES', 'CAMBIO SEMANAL', 'CPL IMPLICITO', 'GASTO TOTAL', 'COSTO POR LEAD'],
-            manager: ['LEADS TOTALES', 'PROMEDIO DIARIO', 'CAMBIO SEMANAL', 'HORA PICO', 'PREVISION DIARIA'],
-            analyst: ['LEADS TOTALES', 'PROMEDIO DIARIO', 'PREVISION DIARIA', 'MASE', 'HHI', 'CAMBIO SEMANAL', 'CPL IMPLICITO', 'GASTO TOTAL', 'COSTO POR LEAD'],
-            operations: ['HEALTH SCORE', 'PROMEDIO DIARIO', 'HORA PICO', 'LEADS TOTALES']
+            executive: ['SHS', 'SYSTEM HEALTH', 'HEALTH SCORE', 'TOTAL LEADS', 'LEADS TOTALES', 'WOW', 'WEEK OVER', 'CAMBIO SEMANAL', 'CPL', 'AD SPEND', 'GASTO TOTAL'],
+            manager: ['TOTAL LEADS', 'LEADS TOTALES', 'DAILY AVG', 'PROMEDIO DIARIO', 'WOW', 'WEEK OVER', 'PEAK HOUR', 'HORA PICO', 'DAILY FORECAST', 'PREVISION'],
+            analyst: ['TOTAL LEADS', 'LEADS TOTALES', 'DAILY AVG', 'PROMEDIO DIARIO', 'DAILY FORECAST', 'PREVISION', 'MASE', 'HHI', 'WOW', 'CPL', 'AD SPEND', 'GASTO TOTAL'],
+            operations: ['SHS', 'SYSTEM HEALTH', 'HEALTH SCORE', 'DAILY AVG', 'PROMEDIO DIARIO', 'PEAK HOUR', 'HORA PICO', 'TOTAL LEADS', 'LEADS TOTALES']
         };
         const allowedKpis = kpiMap[audience] || [];
         kpis.forEach(kpi => {

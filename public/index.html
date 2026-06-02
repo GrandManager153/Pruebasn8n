@@ -90,7 +90,7 @@
                         Funnel y Conversiones
                     </button>
                     <button class="list-group-item" data-tab="forecast" onclick="switchTab('forecast')">
-                        Pronósticos y Regímenes
+                        Pronósticos
                     </button>
                     <button class="list-group-item" data-tab="investment" onclick="switchTab('investment')">
                         Inversión y Campañas
@@ -199,15 +199,15 @@
                         <div class="v-grid-1-1">
                             <div class="card card-animate"
                                 style="background: rgba(255,255,255,0.01) !important; border-color: rgba(255,255,255,0.05) !important; animation-delay: 0.04s;"
-                                onclick="openKpiModal('Tasa Global de Conversión', document.getElementById('funnel-conv-pct').textContent)">
-                                <div class="card-stat-label" style="font-size: 9px;">Tasa Global de Conversión</div>
+                                onclick="openKpiModal('Global CVR (tasa de conversión global)', document.getElementById('funnel-conv-pct').textContent)">
+                                <div class="card-stat-label" style="font-size: 9px;">Global CVR (tasa de conversión)</div>
                                 <div class="card-stat-value" id="funnel-conv-pct"
                                     style="font-size: 26px; color: var(--green);">0%</div>
                             </div>
                             <div class="card card-animate"
                                 style="background: rgba(255,255,255,0.01) !important; border-color: rgba(255,255,255,0.05) !important; animation-delay: 0.06s;"
-                                onclick="openKpiModal('Ingresos en Riesgo Estimados', document.getElementById('funnel-risk-revenue').textContent)">
-                                <div class="card-stat-label" style="font-size: 9px;">Ingresos en Riesgo Estimados</div>
+                                onclick="openKpiModal('Revenue at Risk (ingreso en riesgo)', document.getElementById('funnel-risk-revenue').textContent)">
+                                <div class="card-stat-label" style="font-size: 9px;">Revenue at Risk (ingreso en riesgo)</div>
                                 <div class="card-stat-value" id="funnel-risk-revenue"
                                     style="font-size: 26px; color: var(--red);">$0</div>
                             </div>
@@ -217,14 +217,14 @@
                     <div class="v-grid-1-1">
                         <!-- Top Feeders -->
                         <div class="card card-animate" style="animation-delay: 0.08s;">
-                            <div class="chart-title"><span class="dot" style="background: var(--green)"></span> Estados
-                                con Mayor Conversión</div>
+                            <div class="chart-title"><span class="dot" style="background: var(--green)"></span> Feeders
+                                (rutas que convierten)</div>
                             <div class="v-flex-col v-mt-2" id="funnel-feeders-list"></div>
                         </div>
                         <!-- Key Leaks -->
                         <div class="card card-animate" style="animation-delay: 0.10s;">
                             <div class="chart-title"><span class="dot" style="background: var(--red)"></span>
-                                Principales Fugas del Embudo</div>
+                                Leaks (fugas del embudo)</div>
                             <div class="v-flex-col v-mt-2" id="funnel-leaks-list"></div>
                         </div>
                     </div>
@@ -251,7 +251,7 @@
                     </div>
                 </section>
 
-                <!-- 3. TAB: PRONÓSTICOS Y REGÍMENES (FORECAST) -->
+                <!-- 3. TAB: PRONÓSTICOS (FORECAST) -->
                 <section class="tab-content" id="tab-forecast">
                     <!-- Regime Shift / Changepoint Banner -->
                     <div id="forecast-changepoint-banner" class="v-mb-4"></div>
@@ -302,9 +302,9 @@
                                     <thead>
                                         <tr>
                                             <th>Modelo de Proyección</th>
-                                            <th style="text-align: right;">Error Medio Absoluto Escalado</th>
-                                            <th style="text-align: right;">Desviación Promedio</th>
-                                            <th style="text-align: right;">Error Cuadrático Medio</th>
+                                            <th style="text-align: right;">MASE (error medio absoluto escalado)</th>
+                                            <th style="text-align: right;">MAE (error absoluto medio)</th>
+                                            <th style="text-align: right;">RMSE (error cuadrático medio)</th>
                                             <th>Estado de Ajuste</th>
                                         </tr>
                                     </thead>
@@ -432,7 +432,7 @@
                         </div>
                         <p class="text-muted v-mb-4" style="font-size: 13px;">Supervisión en tiempo real de desviaciones
                             operativas, reintentos de contacto por lead y anomalías de inversión publicitaria. Los
-                            incidentes se ponderan según el riesgo de negocio (RPN).</p>
+                            incidentes se ponderan con RPN (prioridad de riesgo FMEA).</p>
                         <div class="custom-table-container">
                             <table class="custom-table">
                                 <thead>
@@ -441,7 +441,7 @@
                                         <th>Alerta de Sistema</th>
                                         <th style="text-align: right;">Valor Observado</th>
                                         <th style="text-align: right;">Umbral Tolerado</th>
-                                        <th>Puntaje de Severidad (RPN)</th>
+                                        <th>RPN (prioridad de riesgo)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="alerts-centre-table-body"></tbody>

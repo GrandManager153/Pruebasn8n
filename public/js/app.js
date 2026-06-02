@@ -13,15 +13,93 @@ let selectedCompareModel = '';
 let showAllModels = false;
 
 // =====================================================================
+//  📘 INDUSTRY TERMS — English term + Spanish gloss in parentheses
+// =====================================================================
+
+/** Backend KPI label → display label (término en inglés + descripción en español). */
+const KPI_BACKEND_LABEL_MAP = {
+    'Health Score': 'SHS (salud operativa consolidada)',
+    'Leads totales': 'Total Leads (volumen total del periodo)',
+    'Promedio diario': 'Daily Avg (promedio diario de leads)',
+    'Cambio semanal': 'WoW (cambio vs semana anterior)',
+    'Hora pico': 'Peak Hour (hora pico de contactos)',
+    'Prevision diaria': 'Daily Forecast (pronóstico diario de demanda)',
+    'MASE': 'MASE (error medio absoluto escalado)',
+    'CPL implicito': 'CPL (costo por lead implícito)',
+    'Gasto total': 'Ad Spend (gasto total en pauta)',
+    'HHI': 'HHI (concentración del gasto en campañas)',
+    'Conversion global': 'Global CVR (tasa de conversión entrada a cierre)',
+    'Revenue at Risk': 'Revenue at Risk (ingreso en riesgo por fugas)',
+    'Utilizacion capacidad': 'Capacity Utilization (uso de capacidad operativa)',
+    'Cambio regimen': 'Regime Shift (cambio estructural de demanda)',
+};
+
+const INDUSTRY_INLINE_REPLACEMENTS = [
+    [/\bCPL implicito\b/gi, 'CPL (costo por lead)'],
+    [/\bensemble_weighted\b/gi, 'ensemble ponderado'],
+    [/\bsupera baseline\b/gi, 'supera línea base (<1)'],
+    [/\bno supera baseline\b/gi, 'no supera línea base (≥1)'],
+    [/\bbaseline\b/gi, 'baseline (línea base)'],
+    [/\bFeeder a conversion:\s*/gi, 'Feeder (ruta de conversión): '],
+    [/\bfeeders\b/gi, 'feeders (rutas que convierten)'],
+    [/\bfugas\b/gi, 'leaks (fugas del embudo)'],
+    [/\bRPN\b/g, 'RPN (prioridad de riesgo)'],
+    [/\bMASE comparado:\s*/gi, 'MASE (comparado): '],
+    [/\bIntentos Avg\b/g, 'Avg Dial Attempts (intentos promedio)'],
+    [/\bIntervalo Avg\b/g, 'Avg Callback Interval (min entre intentos)'],
+];
+
+function formatKpiLabel(backendLabel) {
+    if (!backendLabel || typeof backendLabel !== 'string') return backendLabel;
+    return KPI_BACKEND_LABEL_MAP[backendLabel] || backendLabel;
+}
+
+function applyIndustryInlineTerms(text) {
+    if (!text || typeof text !== 'string') return text;
+    let out = text;
+    INDUSTRY_INLINE_REPLACEMENTS.forEach(([pattern, replacement]) => {
+        out = out.replace(pattern, replacement);
+    });
+    return out;
+}
+
+function resolveKpiExplanationKey(label) {
+    if (!label) return null;
+    if (KPI_EXPLANATIONS[label]) return label;
+    const backendKey = Object.keys(KPI_BACKEND_LABEL_MAP).find(
+        (k) => KPI_BACKEND_LABEL_MAP[k] === label
+    );
+    if (backendKey && KPI_EXPLANATIONS[backendKey]) return backendKey;
+    const alias = KPI_EXPLANATION_ALIASES[label];
+    if (alias && KPI_EXPLANATIONS[alias]) return alias;
+    return null;
+}
+
+// =====================================================================
 //  📘 KPI EXPLANATION DICTIONARY & MODAL CONTROLLER
 // =====================================================================
 
+/** Legacy Spanish labels still used in static HTML onclick handlers. */
+const KPI_EXPLANATION_ALIASES = {
+    'Salud del Sistema': 'Health Score',
+    'Pronóstico Diario': 'Prevision diaria',
+    'Precisión del Modelo': 'MASE',
+    'Costo Promedio por Lead': 'CPL implicito',
+    'Inversión Publicitaria': 'Gasto total',
+    'Diversificación de Pauta': 'HHI',
+    'Tasa Global de Conversión': 'Conversion global',
+    'Global CVR (tasa de conversión global)': 'Conversion global',
+    'Ingresos en Riesgo Estimados': 'Revenue at Risk',
+    'Revenue at Risk (ingreso en riesgo)': 'Revenue at Risk',
+    'Severidad Máxima': 'RPN max',
+};
+
 const KPI_EXPLANATIONS = {
-    'Salud del Sistema': {
+    'Health Score': {
         icon: '💓',
-        definition: 'Indicador compuesto de 0 a 100 que resume el estado general de toda la operación comercial. Combina eficiencia del call center, calidad de contacto, velocidad de respuesta y balance de inversión publicitaria en un solo número.',
+        definition: 'SHS: indicador compuesto de 0 a 100 que resume el estado general de toda la operación comercial. Combina eficiencia del call center, calidad de contacto, velocidad de respuesta y balance de inversión publicitaria.',
         interpretation: 'Un valor de 80+ indica un sistema saludable. Entre 60-79, el sistema está bajo presión y requiere atención en áreas específicas. Por debajo de 60 indica estado crítico con problemas que afectan directamente los ingresos.',
-        source: 'Calculado por el Motor BOS desde n8n — combina métricas de operaciones, embudo y finanzas'
+        source: 'Calculado por el Motor BOS — combina métricas de operaciones, embudo y finanzas'
     },
     'Leads totales': {
         icon: '👥',
@@ -35,47 +113,65 @@ const KPI_EXPLANATIONS = {
         interpretation: 'Sirve para planear la capacidad operativa del equipo. Si el promedio es 265, el call center debe estar preparado para atender al menos esa cantidad de contactos nuevos diariamente.',
         source: 'Cálculo: total_leads ÷ total_days — fuente: n8n operations.avg_daily'
     },
-    'Cambio semanal': {
-        icon: '📈',
-        definition: 'El cambio porcentual de leads recibidos esta semana comparado con la semana anterior. Un valor negativo significa que se recibieron menos leads que la semana pasada.',
-        interpretation: 'Una caída mayor al -10% es preocupante y puede indicar fatiga de audiencia en las campañas o cambios en el mercado. Un aumento mayor al +15% puede significar que necesitas más agentes para absorber la demanda.',
-        source: 'Cálculo: (promedio 7d actual - promedio 7d anterior) ÷ promedio 7d anterior × 100 — fuente: n8n operations.wow_change_pct'
-    },
     'Hora pico': {
         icon: '⏰',
         definition: 'La hora del día en que se recibe el mayor volumen de contactos telefónicos y leads. Es el momento de máxima actividad del call center.',
         interpretation: 'El equipo de agentes debe estar a su máxima capacidad durante esta hora. Si los agentes están en turno en horarios distintos, se desperdicia capacidad de contacto cuando más se necesita.',
         source: 'Análisis de distribución horaria del CRM — fuente: n8n operations.peak_hour'
     },
-    'Pronóstico Diario': {
+    'Prevision diaria': {
         icon: '🔮',
-        definition: 'La predicción del modelo matemático sobre cuántos leads se recibirán mañana. Se calcula usando algoritmos de series de tiempo (theta_lite) que analizan patrones históricos y estacionalidad.',
-        interpretation: 'El símbolo "~" indica que es una aproximación. Si el pronóstico dice ~251, significa que se espera recibir entre 226 y 276 leads aproximadamente (con 80% de confianza). Útil para planear agentes del día siguiente.',
-        source: 'Modelo predictivo theta_lite con confianza alta — fuente: n8n forecast.recommended_value'
+        definition: 'Daily Forecast: predicción del modelo sobre cuántos leads se recibirán mañana. Se calcula con time-series models (p. ej. theta_lite) que capturan patrones históricos y estacionalidad.',
+        interpretation: 'El símbolo "~" indica aproximación. Con intervalos de confianza (p. ej. 80%), útil para staffing del call center al día siguiente.',
+        source: 'forecast.recommended_value — modelo recomendado por backtest'
     },
-    'Precisión del Modelo': {
+    'MASE': {
         icon: '🎯',
-        definition: 'El MASE (Error Medio Absoluto Escalado) mide qué tan precisas son las predicciones del modelo. Un valor menor a 1.0 significa que el modelo predice mejor que simplemente repetir el dato de la semana pasada.',
-        interpretation: 'Valores por debajo de 0.75 son excelentes. Entre 0.75 y 1.0, el modelo es aceptable. Por encima de 1.0, las predicciones no son confiables y deberían usarse con precaución.',
-        source: 'Backtesting automático del modelo theta_lite — fuente: n8n forecast.mase'
+        definition: 'MASE (error medio absoluto escalado): mide el error promedio del pronóstico ajustado por una línea base estacional. Si el valor es menor a 1.0, el modelo predice mejor que repetir el dato de la semana pasada.',
+        interpretation: 'Referencia del área: < 0.75 excelente; 0.75–1.0 aceptable; ≥ 1.0 no supera la línea base (usar con cautela).',
+        source: 'Backtest rolling — forecast.diagnostics.best_mase'
     },
-    'Costo Promedio por Lead': {
+    'CPL implicito': {
         icon: '💰',
-        definition: 'El CPL (Costo Por Lead) implícito representa cuánto cuesta en promedio adquirir cada prospecto. Se calcula dividiendo la inversión publicitaria total entre la cantidad de leads generados.',
-        interpretation: 'Un CPL más bajo es mejor. Si el CPL es $323, significa que se invirtieron $323 en publicidad por cada persona que contactó al despacho. Comparar este valor con el ingreso promedio por caso cerrado para evaluar la rentabilidad.',
-        source: 'Cálculo: gasto_total ÷ leads_totales — fuente: n8n investment.cpl.global_cpl'
+        definition: 'CPL: costo implícito por prospecto. Gasto total ÷ leads totales en el periodo.',
+        interpretation: 'A menor CPL, mejor. Comparar contra el ingreso promedio por caso cerrado para evaluar rentabilidad de pauta.',
+        source: 'investment.cpl.global_cpl'
     },
-    'Inversión Publicitaria': {
+    'Gasto total': {
         icon: '📢',
-        definition: 'El monto total en pesos gastado en campañas de publicidad digital (Facebook Ads, Google Ads, etc.) durante el periodo analizado. Incluye todas las campañas activas.',
-        interpretation: 'Este número debe analizarse junto con el CPL y el volumen de leads generado. Un gasto alto solo es justificable si produce un volumen proporcional de leads de calidad que se conviertan en clientes.',
-        source: 'Suma directa de gastos de campañas reportados — fuente: n8n investment.total_spend'
+        definition: 'Ad Spend: monto total invertido en paid media (Meta, Google, etc.) en el periodo.',
+        interpretation: 'Analizar junto con CPL y volumen de leads. Spend alto sin leads proporcionales sugiere audience fatigue o mala segmentación.',
+        source: 'investment.total_spend'
     },
-    'Diversificación de Pauta': {
+    'HHI': {
         icon: '🎲',
-        definition: 'El índice HHI (Herfindahl-Hirschman) mide qué tan concentrada está la inversión publicitaria entre las diferentes campañas. Un valor cercano a 0 indica alta diversificación, mientras que un valor cercano a 1 indica que todo el dinero está en pocas campañas.',
-        interpretation: 'Valores por debajo de 0.15 indican buena diversificación. Entre 0.15 y 0.25 es moderada. Por encima de 0.25 hay riesgo de concentración: si una campaña falla, el impacto sería severo en todo el flujo de leads.',
-        source: 'Cálculo de concentración de mercado (HHI) sobre el gasto por campaña — fuente: n8n investment.hhi.index'
+        definition: 'HHI: índice de concentración del gasto entre campañas. Cerca de 0 = diversificado; cerca de 1 = dependencia de pocas campañas.',
+        interpretation: '< 0.15 diversificado; 0.15–0.25 moderado; > 0.25 riesgo de concentración en poca pauta.',
+        source: 'investment.mmm.hhi_index'
+    },
+    'Conversion global': {
+        icon: '🎯',
+        definition: 'Global CVR: porcentaje de leads que avanzan a la etapa clave del embudo (p. ej. consulta reservada) vs total de entradas.',
+        interpretation: '> 5% suele ser fuerte en este sector; < 3.5% sugiere fuga temprana o leads no calificados por creativo/audiencia.',
+        source: 'funnel.global_conversion_pct'
+    },
+    'Revenue at Risk': {
+        icon: '💸',
+        definition: 'Revenue at Risk: valoración del opportunity cost de leads perdidos en el funnel, con case value assumption (p. ej. $1,200 USD).',
+        interpretation: 'Proxy del costo de ineficiencia operativa. Reducirlo vía mejor speed-to-lead y menos over-dialing mejora revenue sin subir ad spend.',
+        source: 'funnel.total_revenue_at_risk'
+    },
+    'Cambio semanal': {
+        icon: '📈',
+        definition: 'WoW: cambio porcentual del volumen de leads vs la semana anterior.',
+        interpretation: 'Caídas > 10% pueden indicar fatiga de creativos o cambio de mercado. Subidas > 15% pueden requerir más agentes en el floor.',
+        source: 'operations.wow_change_pct'
+    },
+    'RPN max': {
+        icon: '⚡',
+        definition: 'RPN: puntaje estilo FMEA = Severidad × Ocurrencia × Detección. El máximo activo prioriza qué alerta atender primero.',
+        interpretation: 'RPN > 400 = prioridad crítica en la cola de incidentes operativos.',
+        source: 'system.alerts — max rpn_score'
     },
     'Leads Hoy': {
         icon: '📅',
@@ -179,22 +275,23 @@ const KPI_EXPLANATIONS = {
         interpretation: 'Indica la base de prospectos única que está siendo trabajada por la operación. Representa la cantidad de oportunidades individuales creadas.',
         source: 'CRM integrado — unique_contacts'
     },
-    'Intentos Avg': {
+    'Avg Dial Attempts (intentos promedio)': {
         icon: '🔄',
-        definition: 'El promedio de intentos de marcación telefónica por lead antes de lograr contactarlo o clasificarlo como no-contactable.',
-        interpretation: 'El estándar recomendado es un máximo de 7 intentos. Si este promedio supera el umbral (por ejemplo, 11+), los agentes están sobre-contactando leads inactivos en lugar de priorizar leads frescos.',
-        source: 'CRM integrado — call_rank.avg'
+        definition: 'Avg Dial Attempts: promedio de intentos de marcación por lead antes de contacto o disposición final.',
+        interpretation: 'Buena práctica en intake: ≤ 7 marcaciones por lead. Promedios 11+ sugieren sobre-contacto en leads fríos vs priorizar speed-to-lead en leads nuevos.',
+        source: 'call_metrics.call_rank.avg'
     },
-    'Intervalo Avg': {
+    'Avg Callback Interval (min entre intentos)': {
         icon: '⏳',
-        definition: 'El tiempo promedio transcurrido entre intentos de contacto consecutivos realizados a un mismo lead.',
-        interpretation: 'El speed-to-lead inicial y la insistencia oportuna son claves. Intervalos muy largos (por ejemplo, miles de minutos) degradan severamente la probabilidad de conversión ya que el prospecto se enfría.',
-        source: 'CRM integrado — minutes_since_prev.avg'
+        definition: 'Avg Callback Interval: tiempo medio entre intentos consecutivos al mismo lead (minutos).',
+        interpretation: 'Speed-to-lead y follow-up cadence importan. Intervalos muy largos (horas/días) reducen connect rate y conversión.',
+        source: 'call_metrics.minutes_since_prev.avg'
     }
 };
 
 function openKpiModal(label, value) {
-    const explain = KPI_EXPLANATIONS[label];
+    const explainKey = resolveKpiExplanationKey(label);
+    const explain = explainKey ? KPI_EXPLANATIONS[explainKey] : null;
     if (!explain) return;
 
     document.getElementById('kpi-modal-title').textContent = label;
@@ -231,11 +328,8 @@ function cleanText(str) {
     // Remove all emojis and emoticons
     let clean = str.replace(/[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{27BF}\u{2000}-\u{3300}\u{1F000}-\u{1F0FF}\u{1F100}-\u{1F1FF}\u{1F200}-\u{1F2FF}\u{1F700}-\u{1F7FF}\u{1FA00}-\u{1FAFF}]/gu, '');
     
-    // Remove metadata/backend labels inside parentheses (e.g., "(umbral: 7)", "(37 leads)", etc.)
-    clean = clean.replace(/\s*\([^)]*(?:umbral|baseline|ensemble|FactsBuilder|n8n|IA|AI|server|webhook|error|mase|rpn|score|pct|leads|intentos|gasto)[^)]*\)/gi, '');
-    
-    // Remove generic trailing parentheses
-    clean = clean.replace(/\s*\([^)]*\)\s*$/g, '');
+    // Remove backend/metadata parentheses only (keep industry glossary parens)
+    clean = clean.replace(/\s*\([^)]*(?:umbral:\s*\d|FactsBuilder|n8n|webhook|server error)[^)]*\)/gi, '');
     
     // Standardize white spaces
     clean = clean.replace(/\s+/g, ' ').trim();
@@ -245,14 +339,8 @@ function cleanText(str) {
 
 function cleanTechnicalTerms(str) {
     if (!str || typeof str !== 'string') return str;
-    let text = str;
-    
-    // Replace technical models and internal jargon with elegant corporate terminology
-    text = text.replace(/ensemble_weighted/gi, 'Modelo Predictivo');
+    let text = applyIndustryInlineTerms(str);
     text = text.replace(/FactsBuilder/gi, 'Motor BOS');
-    text = text.replace(/baseline/gi, 'Línea Base');
-    text = text.replace(/CPL implicito/gi, 'Costo por Lead');
-    
     return cleanText(text);
 }
 
@@ -373,7 +461,7 @@ function switchTab(tabId) {
     const titles = {
         'dashboard': 'Resumen General',
         'funnel': 'Funnel y Conversiones',
-        'forecast': 'Pronósticos y Regímenes',
+        'forecast': 'Pronósticos',
         'investment': 'Inversión y Campañas',
         'operations': 'Operaciones Diarias',
         'alerts': 'Alertas de Operación',
@@ -605,23 +693,19 @@ function renderBOS(data) {
     const kpisGrid = document.getElementById('dashboard-kpis');
     
     const cleanedKpis = data.kpis.map(k => {
-        let label = k.label;
-        let sub = k.sub || '';
-        
-        if (label === 'Health Score') label = 'Salud del Sistema';
-        if (label === 'Prevision diaria') { label = 'Pronóstico Diario'; sub = 'Media Estimada'; }
-        if (label === 'MASE') { 
-            label = 'Precisión del Modelo'; 
-            sub = 'Óptima'; 
+        let label = formatKpiLabel(k.label);
+        let sub = applyIndustryInlineTerms(k.sub || '');
+
+        if (k.label === 'MASE') {
+            sub = applyIndustryInlineTerms(k.sub || '') || 'vs línea base naive';
             k.color = 'white';
         }
-        if (label === 'CPL implicito') { label = 'Costo Promedio por Lead'; sub = 'Global'; k.color = 'blue'; }
-        if (label === 'Gasto total') { label = 'Inversión Publicitaria'; }
-        if (label === 'HHI') { label = 'Diversificación de Pauta'; }
+        if (k.label === 'CPL implicito') {
+            sub = sub || 'global';
+            k.color = 'blue';
+        }
+        if (k.label === 'Prevision diaria' && !sub) sub = 'estimación puntual';
 
-        sub = cleanTechnicalTerms(sub);
-        label = cleanTechnicalTerms(label);
-        
         return { ...k, label, sub };
     });
 
@@ -1199,7 +1283,7 @@ function onModelCompareChange() {
     const meta = document.getElementById('model-compare-meta');
     if (meta) {
         const m = buildComparableModels(dashboardData).find(x => x.name === selectedCompareModel);
-        meta.textContent = (m && typeof m.mase === 'number') ? `MASE comparado: ${m.mase.toFixed(3)}` : '';
+        meta.textContent = (m && typeof m.mase === 'number') ? `MASE (comparado): ${m.mase.toFixed(3)}` : '';
         meta.style.color = color;
     }
 
@@ -1240,7 +1324,7 @@ function renderAlertsCentre(alerts) {
             onclick="openKpiModal('Severidad Máxima', '${maxRpn}')">
             <div class="card-stat-label">Severidad Máxima</div>
             <div class="card-stat-value" id="alert-stat-max-rpn" data-value="${maxRpn}">0</div>
-            <div class="card-stat-sub">Puntaje RPN registrado</div>
+            <div class="card-stat-sub">RPN (prioridad de riesgo)</div>
         </div>
         <div class="card stat-card-green card-animate" style="animation-delay: 0.12s;"
             onclick="openKpiModal('Advertencias e Info', '${warningCount + infoCount}')">
@@ -1886,15 +1970,15 @@ function renderOperationsTab(data) {
                 color: 'blue'
             },
             {
-                label: 'Intentos Avg',
+                label: 'Avg Dial Attempts (intentos promedio)',
                 value: attemptsAvg.toFixed(2),
                 sub: `rango: 1-${call.call_rank ? call.call_rank.max : 365}`,
                 color: attemptsAvg > 7 ? 'red' : 'blue'
             },
             {
-                label: 'Intervalo Avg',
+                label: 'Avg Callback Interval (min entre intentos)',
                 value: `${Math.round(intervalAvg).toLocaleString()} min`,
-                sub: `~${Math.round(intervalAvg / 60)}h entre intentos`,
+                sub: `~${Math.round(intervalAvg / 60)}h entre marcaciones`,
                 color: intervalAvg > 1440 ? 'red' : 'blue'
             }
         ];
