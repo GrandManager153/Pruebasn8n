@@ -44,7 +44,7 @@ export default function DashboardPage() {
       label: 'WoW (cambio semanal)',
       value: ops.wow_change_pct || '0%',
       sub: 'vs semana anterior',
-      color: (ops.wow_change_pct || '').includes('-') ? 'red' : 'green',
+      color: String(ops.wow_change_pct || '').includes('-') ? 'red' : 'green',
       key: 'Cambio semanal',
       animateValue: false,
     },
