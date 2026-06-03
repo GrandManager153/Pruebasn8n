@@ -92,6 +92,8 @@ const KPI_EXPLANATION_ALIASES = {
     'Ingresos en Riesgo Estimados': 'Revenue at Risk',
     'Revenue at Risk (ingreso en riesgo)': 'Revenue at Risk',
     'Severidad Máxima': 'RPN max',
+    'Regime Shift (cambio estructural de demanda)': 'Cambio de Régimen',
+    'Cambio regimen': 'Cambio de Régimen',
 };
 
 const KPI_EXPLANATIONS = {
@@ -753,7 +755,7 @@ function renderBOS(data) {
             <p class="text-muted" style="font-size: 13.5px; line-height: 1.6;">Auditoría integral de la pauta publicitaria, flujo operativo en centros de llamadas y proyecciones basadas en modelos predictivos matemáticos de precisión.</p>
             <div class="health-reasons">
                 ${data.system.status.reasons.map(r => `
-                    <div class="health-reason"><span style="color: var(--gold); font-weight: bold;">*</span> ${cleanTechnicalTerms(r)}</div>
+                    <div class="health-reason"><span style="color: var(--text-main); font-weight: bold;">*</span> ${cleanTechnicalTerms(r)}</div>
                 `).join('')}
             </div>
         </div>

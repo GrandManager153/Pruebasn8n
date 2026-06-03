@@ -421,12 +421,8 @@ function injectStatisticalModelSeries(forecast) {
     
     const series = [];
     for (let t = 0; t < n; t++) {
-      if (t < btStart) {
-        series.push(null);
-      } else {
-        const p = fn(vols, t);
-        series.push(p !== null && !isNaN(p) ? Math.round(p) : null);
-      }
+      const p = fn(vols, t);
+      series.push(p !== null && !isNaN(p) ? Math.round(p) : null);
     }
     m.series = series;
   });
@@ -499,7 +495,7 @@ app.post('/api/webhook', async (req, res) => {
                     },
                     body: JSON.stringify({
                       series: timeSeries,
-                      backtest_days: 14,
+                      backtest_days: 28,
                       model: "random_forest"
                     })
                   });
