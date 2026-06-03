@@ -275,12 +275,175 @@ app.get('/api/reports', (req, res) => {
   res.json({ reports: available });
 });
 
+// Function to dynamically calculate and inject the backtest series for the statistical models
+function injectStatisticalModelSeries(forecast) {
+  const ts = forecast.time_series;
+  if (!Array.isArray(ts) || ts.length < 14) return;
+  
+  const dates = ts.map(r => new Date(r.date));
+  const vols = ts.map(r => parseInt(r.value) || 0);
+  const n = vols.length;
+  
+  const volMean = vols.reduce((a, b) => a + b, 0) / n;
+  const dowS = [0,0,0,0,0,0,0], dowC = [0,0,0,0,0,0,0];
+  for (let i = 0; i < n; i++) { const d = dates[i].getDay(); dowS[d] += vols[i]; dowC[d]++; }
+  const dowA = dowS.map((s, i) => dowC[i] > 0 ? s / dowC[i] : volMean);
+  const dowGM = dowA.reduce((a, b) => a + b, 0) / 7;
+  const sIdx = dowA.map(a => dowGM > 0 ? a / dowGM : 1);
+  
+  const btWin = Math.min(14, n - 14);
+  const btStart = n - btWin;
+  
+  function matInv(m) {
+    const n = m.length;
+    const a = m.map((r, i) => [...r, ...Array(n).fill(0).map((_, j) => i === j ? 1 : 0)]);
+    for (let c = 0; c < n; c++) {
+      let mx = c;
+      for (let r = c + 1; r < n; r++) if (Math.abs(a[r][c]) > Math.abs(a[mx][c])) mx = r;
+      [a[c], a[mx]] = [a[mx], a[c]];
+      if (Math.abs(a[c][c]) < 1e-10) return null;
+      const pv = a[c][c];
+      for (let j = 0; j < 2 * n; j++) a[c][j] /= pv;
+      for (let r = 0; r < n; r++) { if (r === c) continue; const f = a[r][c]; for (let j = 0; j < 2 * n; j++) a[r][j] -= f * a[c][j]; }
+    }
+    return a.map(r => r.slice(n));
+  }
+  function matVecMul(A, v) {
+    return A.map(row => row.reduce((s, a, k) => s + a * v[k], 0));
+  }
+  
+  const modelsFn = {
+    mean_7d: (h, idx) => {
+      if (idx < 7) return null;
+      return h.slice(idx - 7, idx).reduce((a, b) => a + b, 0) / 7;
+    },
+    seasonal_naive: (h, idx) => {
+      return idx >= 7 ? h[idx - 7] : null;
+    },
+    ewma: (h, idx) => {
+      if (idx < 2) return null;
+      let e = h[0]; const alpha = 0.3;
+      for (let i = 1; i < idx; i++) e = alpha * h[i] + (1 - alpha) * e;
+      return e;
+    },
+    theta_lite: (h, idx) => {
+      if (idx < 14) return null;
+      const w = h.slice(0, idx);
+      const dw = w.map((v, i) => { const d = dates[i].getDay(); return sIdx[d] > 0 ? v / sIdx[d] : v; });
+      const wn = dw.length;
+      let sx = 0, sy = 0, sxy = 0, sx2 = 0;
+      for (let i = 0; i < wn; i++) { sx += i; sy += dw[i]; sxy += i * dw[i]; sx2 += i * i; }
+      const sl = (wn * sxy - sx * sy) / (wn * sx2 - sx * sx || 1);
+      const ic = (sy - sl * sx) / wn;
+      const tz = ic + sl * wn;
+      let ses = dw[0]; const sa = 0.2;
+      for (let i = 1; i < wn; i++) ses = sa * dw[i] + (1 - sa) * ses;
+      const combined = (tz + ses) / 2;
+      const tgtDate = idx < dates.length ? dates[idx] : new Date(dates[dates.length - 1].getTime() + 86400000);
+      return combined * sIdx[tgtDate.getDay()];
+    },
+    trend_season: (h, idx) => {
+      if (idx < 7) return null;
+      const r3 = idx >= 3 ? h.slice(idx - 3, idx).reduce((a, b) => a + b, 0) / 3 : h[idx - 1];
+      const bDate = idx < dates.length ? dates[idx] : new Date(dates[dates.length - 1].getTime() + 86400000);
+      return r3 * sIdx[bDate.getDay()];
+    },
+    fourier_regression: (h, idx) => {
+      if (idx < 14) return null;
+      const P = 7;
+      const rows = [];
+      const yVec = [];
+      for (let t = 7; t < idx; t++) {
+        const dow = dates[t].getDay();
+        rows.push([
+          1,
+          Math.sin(2 * Math.PI * 1 * dow / P),
+          Math.cos(2 * Math.PI * 1 * dow / P),
+          Math.sin(2 * Math.PI * 2 * dow / P),
+          Math.cos(2 * Math.PI * 2 * dow / P),
+          h[t - 7]
+        ]);
+        yVec.push(h[t]);
+      }
+      if (rows.length < 10) return null;
+      const nf = 6;
+      const Xt = Array.from({length: nf}, (_, i) => rows.map(r => r[i]));
+      const XtX = Array.from({length: nf}, (_, i) =>
+        Array.from({length: nf}, (_, j) =>
+          Xt[i].reduce((s, _, k) => s + Xt[i][k] * Xt[j][k], 0)
+        )
+      );
+      const XtY = Xt.map(col => col.reduce((s, v, k) => s + v * yVec[k], 0));
+      const inv = matInv(XtX);
+      if (!inv) return null;
+      const beta = matVecMul(inv, XtY);
+      const fDate = idx < dates.length ? dates[idx] : new Date(dates[dates.length - 1].getTime() + 86400000);
+      const tgtDow = fDate.getDay();
+      const xNew = [
+        1,
+        Math.sin(2 * Math.PI * 1 * tgtDow / P),
+        Math.cos(2 * Math.PI * 1 * tgtDow / P),
+        Math.sin(2 * Math.PI * 2 * tgtDow / P),
+        Math.cos(2 * Math.PI * 2 * tgtDow / P),
+        h[idx - 7]
+      ];
+      return xNew.reduce((s, x, i) => s + x * beta[i], 0);
+    },
+    holt_winters: (h, idx) => {
+      if (idx < 14) return null;
+      const P = 7;
+      const w = h.slice(0, idx);
+      const wn = w.length;
+      const fw = w.slice(0, P);
+      let L = fw.reduce((a, b) => a + b, 0) / P;
+      let T = 0;
+      if (wn >= 2 * P) {
+        const sw = w.slice(P, 2 * P);
+        T = (sw.reduce((a, b) => a + b, 0) / P - L) / P;
+      }
+      const S = fw.map(v => v - L);
+      const alpha = 0.3, beta2 = 0.1, gamma2 = 0.2;
+      for (let t = P; t < wn; t++) {
+        const si = t % P;
+        const y = w[t];
+        const Ln = alpha * (y - S[si]) + (1 - alpha) * (L + T);
+        const Tn = beta2 * (Ln - L) + (1 - beta2) * T;
+        S[si] = gamma2 * (y - Ln) + (1 - gamma2) * S[si];
+        L = Ln; T = Tn;
+      }
+      return L + T + S[wn % P];
+    }
+  };
+  
+  forecast.backtest_models.forEach(m => {
+    const fn = modelsFn[m.name];
+    if (!fn) return;
+    
+    const series = [];
+    for (let t = 0; t < n; t++) {
+      if (t < btStart) {
+        series.push(null);
+      } else {
+        const p = fn(vols, t);
+        series.push(p !== null && !isNaN(p) ? Math.round(p) : null);
+      }
+    }
+    m.series = series;
+  });
+}
+
 // Endpoint: Datos del Dashboard (JSON desde n8n)
 app.get('/api/dashboard', (req, res) => {
   const payloadPath = path.join(DATA_DIR, 'dashboard_payload.json');
   try {
     if (fs.existsSync(payloadPath)) {
       const data = JSON.parse(fs.readFileSync(payloadPath, 'utf-8'));
+      
+      // Inject the series for statistical models dynamically
+      if (data && data.forecast && Array.isArray(data.forecast.time_series) && Array.isArray(data.forecast.backtest_models)) {
+        injectStatisticalModelSeries(data.forecast);
+      }
+      
       res.json({ success: true, data });
     } else {
       res.status(404).json({ success: false, message: 'No hay datos de dashboard disponibles aún. Ejecuta el workflow de n8n.' });
@@ -294,7 +457,7 @@ app.get('/api/dashboard', (req, res) => {
 //  WEBHOOK ENDPOINT (recibe datos de n8n)
 // =====================================================================
 
-app.post('/api/webhook', (req, res) => {
+app.post('/api/webhook', async (req, res) => {
   // Autenticación opcional
   if (API_SECRET) {
     const token = req.headers['x-api-key'] || req.query.token;
@@ -315,11 +478,59 @@ app.post('/api/webhook', (req, res) => {
 
   // Extraer y guardar reportes HTML de las narrativas en memoria + disco
   if (receivedData && Array.isArray(receivedData.tree)) {
-    receivedData.tree.forEach(file => {
+    for (const file of receivedData.tree) {
       if (file.path && file.content) {
         // Guardar dashboard_payload.json
         if (file.path.includes('dashboard_payload.json')) {
           try {
+            let payload = typeof file.content === 'string' ? JSON.parse(file.content) : file.content;
+
+            // Check if forecast_rf needs patching (either not available or missing)
+            if (payload && (!payload.forecast_rf || payload.forecast_rf.available === false)) {
+              console.log("  [BOS Patch] Internally generating Random Forest forecast from local ML API...");
+              const timeSeries = (payload.forecast && payload.forecast.time_series) || (payload.forecast_rf && payload.forecast_rf.time_series) || [];
+              if (timeSeries.length > 0) {
+                try {
+                  const mlResponse = await fetch("http://127.0.0.1:8000/predict", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "X-API-Key": "mkt-bi-ia-dev-key"
+                    },
+                    body: JSON.stringify({
+                      series: timeSeries,
+                      backtest_days: 14,
+                      model: "random_forest"
+                    })
+                  });
+
+                  if (mlResponse.ok) {
+                    const resData = await mlResponse.json();
+                    payload.forecast_rf = {
+                      available: true,
+                      model_name: "random_forest",
+                      recommended_value: resData.recommended_value,
+                      mase: resData.mase,
+                      confidence: resData.confidence,
+                      backtest_series: resData.backtest_series,
+                      time_series: timeSeries,
+                      horizons: resData.forecast_horizons,
+                      intervals: resData.intervals,
+                      backtest_models: (resData.backtest && resData.backtest.models) || []
+                    };
+                    file.content = JSON.stringify(payload, null, 2);
+                    console.log("  [BOS Patch] Success: Patched Random Forest data on the fly!");
+                  } else {
+                    console.warn(`  [BOS Patch] Local ML API returned status: ${mlResponse.status}`);
+                  }
+                } catch (mlErr) {
+                  console.error("  [BOS Patch] Failed to call local ML API:", mlErr.message);
+                }
+              } else {
+                console.warn("  [BOS Patch] No historical time_series found to forecast.");
+              }
+            }
+
             const payloadPath = path.join(DATA_DIR, 'dashboard_payload.json');
             fs.writeFileSync(payloadPath, file.content, 'utf-8');
             console.log(`  📊 Dashboard payload guardado en disco (${file.content.length} bytes)`);
@@ -345,7 +556,7 @@ app.post('/api/webhook', (req, res) => {
           }
         }
       }
-    });
+    }
   }
 
   // Respuesta estructurada
