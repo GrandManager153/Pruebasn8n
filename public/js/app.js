@@ -778,6 +778,9 @@ function renderBOS(data) {
         let label = formatKpiLabel(k.label);
         let sub = applyIndustryInlineTerms(k.sub || '');
 
+        if (k.label === 'Health Score') {
+            label = 'Salud del Sistema';
+        }
         if (k.label === 'Prevision diaria') {
             let bestModelVal = 264;
             let bestModelName = 'Theta Lite';
@@ -804,6 +807,7 @@ function renderBOS(data) {
             let formattedName = bestModelName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
             k.value = `~${bestModelVal}`;
             sub = `${formattedName} | ${bestConfidence.replace(/\b\w/g, c => c.toUpperCase())}`;
+            label = 'Pronóstico Diario';
         }
         if (k.label === 'MASE') {
             let bestModelName = 'Random Forest';
@@ -822,15 +826,26 @@ function renderBOS(data) {
             }
             let formattedName = bestModelName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
             k.value = Number(bestMase).toFixed(2);
-            sub = applyIndustryInlineTerms(formattedName);
+            sub = formattedName;
             k.color = 'white';
+            label = 'Precisión del Modelo';
         }
         if (k.label === 'CPL implicito') {
-            sub = sub || 'global';
+            label = 'Costo Promedio por Lead';
+            sub = 'Global';
             k.color = 'blue';
         }
         if (k.label === 'Cambio regimen' || k.label === 'Cambio de Régimen') {
             k.color = 'blue';
+        }
+        if (k.label === 'Gasto total') {
+            label = 'Inversión Publicitaria';
+        }
+        if (k.label === 'HHI') {
+            label = 'Diversificación de Pauta';
+        }
+        if (k.label === 'Prevision diaria' && !sub) {
+            sub = 'estimación puntual';
         }
 
         return { ...k, label, sub };
