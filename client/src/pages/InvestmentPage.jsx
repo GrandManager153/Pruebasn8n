@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
-import useDashboardStore from '../../stores/useDashboardStore';
-import KpiCard from '../shared/KpiCard';
+import useDashboardStore from '../stores/useDashboardStore';
+import KpiCard from '../components/shared/KpiCard';
 
 const COLORS = ['#3b82f6', '#10b981', '#e0992a', '#f43f5e', '#8b5cf6', '#06b6d4', '#ec4899', '#fbbf24'];
 

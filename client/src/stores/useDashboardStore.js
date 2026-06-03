@@ -45,12 +45,22 @@ const useDashboardStore = create((set, get) => ({
   fetchDashboard: async () => {
     try {
       set({ syncing: true });
-      const res = await fetch('/api/status');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
+      const res = await fetch('/api/dashboard');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          set({
+            data: json.data,
+            loading: false,
+            error: null,
+            lastUpdate: new Date(),
+            syncing: false,
+          });
+          return;
+        }
+      }
 
-      // The full BOS data comes from the webhook stored payload
-      // Try fetching the latest webhook data
+      // Fallback: The full BOS data might come from the webhook stored payload (logs)
       const webhookRes = await fetch('/api/logs');
       const logs = await webhookRes.json();
 
@@ -68,11 +78,13 @@ const useDashboardStore = create((set, get) => ({
           syncing: false,
         });
       } else {
-        // Use API status data as fallback
+        // Fallback to /api/status just in case
+        const statusRes = await fetch('/api/status');
+        const statusJson = await statusRes.json();
         set({
-          data: json,
+          data: statusJson,
           loading: false,
-          error: null,
+          error: 'No se encontraron datos en /api/dashboard. Esperando inicialización.',
           lastUpdate: new Date(),
           syncing: false,
         });

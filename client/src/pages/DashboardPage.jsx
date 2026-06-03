@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import useDashboardStore from '../../stores/useDashboardStore';
-import KpiCard from '../shared/KpiCard';
-import KpiModal from '../shared/KpiModal';
-import HealthHero from '../shared/HealthHero';
+import useDashboardStore from '../stores/useDashboardStore';
+import KpiCard from '../components/shared/KpiCard';
+import KpiModal from '../components/shared/KpiModal';
+import HealthHero from '../components/shared/HealthHero';
 
 export default function DashboardPage() {
   const { data, loading } = useDashboardStore();

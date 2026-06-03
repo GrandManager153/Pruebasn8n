@@ -14,8 +14,8 @@ import {
   Area,
   AreaChart,
 } from 'recharts';
-import useDashboardStore from '../../stores/useDashboardStore';
-import KpiCard from '../shared/KpiCard';
+import useDashboardStore from '../stores/useDashboardStore';
+import KpiCard from '../components/shared/KpiCard';
 
 export default function ForecastPage() {
   const { data, loading } = useDashboardStore();

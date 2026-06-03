@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import useDashboardStore from '../../stores/useDashboardStore';
-import KpiCard from '../shared/KpiCard';
+import useDashboardStore from '../stores/useDashboardStore';
+import KpiCard from '../components/shared/KpiCard';
 
 export default function AlertsPage() {
   const { data, loading } = useDashboardStore();
