@@ -46,6 +46,20 @@ export default function ReportsPage() {
     setIframeUrl('');
   };
 
+  const handlePrint = () => {
+    const iframe = document.getElementById('report-iframe');
+    if (iframe && iframe.contentWindow) {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch (e) {
+        window.open(iframeUrl, '_blank');
+      }
+    } else {
+      window.open(iframeUrl, '_blank');
+    }
+  };
+
   return (
     <>
       <div className="section-header">
@@ -114,6 +128,21 @@ export default function ReportsPage() {
           </div>
           {activeReport && (
             <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                onClick={handlePrint}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: 11,
+                  borderRadius: 6,
+                  background: 'var(--chartreuse)',
+                  border: '1px solid var(--chartreuse)',
+                  color: '#080c14',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Descargar PDF / Imprimir 📥
+              </button>
               <a
                 href={iframeUrl}
                 target="_blank"
@@ -153,6 +182,7 @@ export default function ReportsPage() {
         {/* Content */}
         {activeReport ? (
           <iframe
+            id="report-iframe"
             src={iframeUrl}
             style={{ width: '100%', height: 800, border: 'none', background: '#070d19' }}
             title={activeReport.title}
