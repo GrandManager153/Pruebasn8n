@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import useDashboardStore from '../stores/useDashboardStore';
 
 const reports = [
   {
@@ -35,15 +36,32 @@ const reports = [
 export default function ReportsPage() {
   const [activeReport, setActiveReport] = useState(null);
   const [iframeUrl, setIframeUrl] = useState('');
+  const lastUpdate = useDashboardStore((state) => state.lastUpdate);
+  const theme = useDashboardStore((state) => state.theme);
+
+  // Sync iframe URL with active report and cache buster on data updates
+  useEffect(() => {
+    if (activeReport) {
+      setIframeUrl(`/reports/${activeReport.key}?_=${Date.now()}`);
+    }
+  }, [lastUpdate, activeReport]);
 
   const openReport = (report) => {
     setActiveReport(report);
-    setIframeUrl(`/reports/${report.key}`);
+    setIframeUrl(`/reports/${report.key}?_=${Date.now()}`);
   };
 
   const closeViewer = () => {
     setActiveReport(null);
     setIframeUrl('');
+  };
+
+  // Sync theme to iframe when theme or iframe loads
+  const handleIframeLoad = () => {
+    const iframe = document.getElementById('report-iframe');
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage(theme === 'light' ? 'theme-light' : 'theme-dark', '*');
+    }
   };
 
   const handlePrint = () => {
@@ -184,6 +202,7 @@ export default function ReportsPage() {
           <iframe
             id="report-iframe"
             src={iframeUrl}
+            onLoad={handleIframeLoad}
             style={{ width: '100%', height: 800, border: 'none', background: '#070d19' }}
             title={activeReport.title}
           />

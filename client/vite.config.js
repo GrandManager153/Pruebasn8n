@@ -20,6 +20,14 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
       },
+      '/css/reports.css': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/js/reports.js': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
     },
   },
 })

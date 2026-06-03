@@ -41,6 +41,16 @@ const useDashboardStore = create((set, get) => ({
     set({ theme: next });
   },
 
+  setTheme: (theme) => {
+    localStorage.setItem('bos-theme', theme);
+    if (theme === 'light') {
+      document.body.classList.add('light-mode');
+    } else {
+      document.body.classList.remove('light-mode');
+    }
+    set({ theme });
+  },
+
   // ── Fetch Dashboard Data ──
   fetchDashboard: async () => {
     try {

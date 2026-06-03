@@ -35,6 +35,27 @@ function AppLayout() {
     }
   }, []);
 
+  // Listen to message events from report iframe to sync theme
+  useEffect(() => {
+    const handleMessage = (e) => {
+      if (e.data === 'theme-light') {
+        useDashboardStore.getState().setTheme('light');
+      } else if (e.data === 'theme-dark') {
+        useDashboardStore.getState().setTheme('dark');
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  // Post theme updates to the iframe when the theme changes
+  useEffect(() => {
+    const iframe = document.getElementById('report-iframe');
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage(theme === 'light' ? 'theme-light' : 'theme-dark', '*');
+    }
+  }, [theme]);
+
   // Fetch data on mount & set up auto-refresh
   useEffect(() => {
     fetchDashboard();
