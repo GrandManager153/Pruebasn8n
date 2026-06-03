@@ -137,20 +137,42 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="grid-3">
-            {actions.map((action, i) => (
-              <motion.div
-                key={i}
-                className="card action-card"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 + i * 0.06 }}
-              >
-                <div className="action-title">{action.title || action}</div>
-                {action.description && (
-                  <div className="action-text">{action.description}</div>
-                )}
-              </motion.div>
-            ))}
+            {actions.map((action, i) => {
+              const isObj = typeof action === 'object' && action !== null;
+              const titleText = isObj ? action.action || action.title : action;
+              const descriptionText = isObj ? action.reason || action.description : '';
+              
+              // Border color based on urgency
+              let borderColor = 'var(--chartreuse)';
+              if (isObj && action.urgency) {
+                if (action.urgency === 'immediate') borderColor = 'var(--crimson)';
+                else if (action.urgency === 'this_week') borderColor = 'var(--amber)';
+                else if (action.urgency === 'this_month') borderColor = 'var(--blue)';
+              }
+              
+              const metaText = isObj ? `Plazo: ${action.horizon || 'N/A'} | Resp: ${action.owner || 'N/A'}` : '';
+
+              return (
+                <motion.div
+                  key={i}
+                  className="card action-card"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 + i * 0.06 }}
+                  style={{ borderLeftColor: borderColor }}
+                >
+                  <div className="action-title">{titleText}</div>
+                  {descriptionText && (
+                    <div className="action-text">{descriptionText}</div>
+                  )}
+                  {metaText && (
+                    <div className="action-meta" style={{ marginTop: 12, fontSize: 10.5, color: 'var(--text-dim)', fontWeight: 500 }}>
+                      {metaText}
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       )}
