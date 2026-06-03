@@ -40,10 +40,7 @@ export default function KpiCard({
       whileHover={{ y: -3, transition: { duration: 0.25 } }}
     >
       <div className="card-stat-label">{label}</div>
-      <div
-        className="card-stat-value"
-        style={{ color: colorVar, textShadow: `0 0 20px ${glowVar}` }}
-      >
+      <div className="card-stat-value">
         {isNumeric ? (
           <AnimatedNumber
             value={numericValue}
