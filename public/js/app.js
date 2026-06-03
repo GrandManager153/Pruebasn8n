@@ -123,13 +123,13 @@ const KPI_EXPLANATIONS = {
         icon: '🔮',
         definition: 'Daily Forecast: predicción del modelo sobre cuántos leads se recibirán mañana. Se calcula con time-series models (p. ej. theta_lite) que capturan patrones históricos y estacionalidad.',
         interpretation: 'El símbolo "~" indica aproximación. Con intervalos de confianza (p. ej. 80%), útil para staffing del call center al día siguiente.',
-        source: 'forecast.recommended_value — modelo recomendado por backtest'
+        source: 'Mejor modelo por MASE en forecast + forecast_rf — recommended_value / next_1d'
     },
     'MASE': {
         icon: '🎯',
         definition: 'MASE (error medio absoluto escalado): mide el error promedio del pronóstico ajustado por una línea base estacional. Si el valor es menor a 1.0, el modelo predice mejor que repetir el dato de la semana pasada.',
         interpretation: 'Referencia del área: < 0.75 excelente; 0.75–1.0 aceptable; ≥ 1.0 no supera la línea base (usar con cautela).',
-        source: 'Backtest rolling — forecast.diagnostics.best_mase'
+        source: 'Menor MASE entre todos los modelos en backtest_models, forecast y forecast_rf'
     },
     'CPL implicito': {
         icon: '💰',
@@ -691,14 +691,16 @@ function renderBOS(data) {
 
     // 2. Render KPIs in Dashboard Tab
     const kpisGrid = document.getElementById('dashboard-kpis');
-    
-    const cleanedKpis = data.kpis.map(k => {
+
+    const kpisWithBestForecast = applyBestForecastToKpis(data.kpis, data);
+
+    const cleanedKpis = kpisWithBestForecast.map(k => {
         let label = formatKpiLabel(k.label);
         let sub = applyIndustryInlineTerms(k.sub || '');
 
         if (k.label === 'MASE') {
             sub = applyIndustryInlineTerms(k.sub || '') || 'vs línea base naive';
-            k.color = 'white';
+            if (!k.color) k.color = 'white';
         }
         if (k.label === 'CPL implicito') {
             sub = sub || 'global';
@@ -1114,6 +1116,96 @@ function getModelColor(name) {
     let h = 0;
     for (const c of String(name)) h = (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0;
     return `hsl(${h % 360}, 70%, 62%)`;
+}
+
+function normModelName(name) {
+    return String(name || '').trim().toLowerCase();
+}
+
+/** Pronóstico 1d y confianza del bloque forecast o forecast_rf que corresponde al modelo. */
+function resolveDailyForecastForModel(data, modelName) {
+    const key = normModelName(modelName);
+    const f = data.forecast || {};
+    const rf = data.forecast_rf;
+
+    if (rf && rf.available !== false && normModelName(rf.model_name || 'random_forest') === key) {
+        const v = rf.recommended_value ?? rf.horizons?.next_1d?.forecast;
+        if (v != null && isFinite(v)) return { value: v, confidence: rf.confidence };
+    }
+    if (normModelName(f.method) === key) {
+        const v = f.recommended_value ?? f.horizons?.next_1d?.forecast;
+        if (v != null && isFinite(v)) return { value: v, confidence: f.confidence };
+    }
+    const entry = (f.backtest_models || []).find(m => normModelName(m.name) === key);
+    if (entry && Array.isArray(entry.series) && entry.series.length) {
+        const last = entry.series[entry.series.length - 1];
+        if (typeof last === 'number' && isFinite(last)) {
+            return { value: last, confidence: f.confidence };
+        }
+    }
+    return null;
+}
+
+/** Menor MASE entre forecast.backtest_models, forecast (recomendado) y forecast_rf. */
+function getBestForecastRecord(data) {
+    if (!data) return null;
+    const byName = new Map();
+
+    const register = (name, mase) => {
+        if (name == null || mase == null || !isFinite(mase)) return;
+        const key = normModelName(name);
+        const prev = byName.get(key);
+        if (!prev || mase < prev.mase) byName.set(key, { name: String(name), mase });
+    };
+
+    const f = data.forecast || {};
+    (f.backtest_models || []).forEach(m => register(m.name, m.mase));
+    if (f.method != null && f.mase != null) register(f.method, f.mase);
+
+    const rf = data.forecast_rf;
+    if (rf && rf.available !== false) {
+        register(rf.model_name || 'random_forest', rf.mase);
+        (rf.backtest_models || []).forEach(m => register(m.name, m.mase));
+    }
+
+    let best = null;
+    byName.forEach(rec => {
+        if (!best || rec.mase < best.mase) best = rec;
+    });
+    if (!best) return null;
+
+    const daily = resolveDailyForecastForModel(data, best.name);
+    return {
+        modelName: best.name,
+        mase: best.mase,
+        dailyValue: daily?.value ?? null,
+        confidence: daily?.confidence || f.confidence || (rf && rf.confidence) || 'media'
+    };
+}
+
+function applyBestForecastToKpis(kpis, data) {
+    const best = getBestForecastRecord(data);
+    if (!best || !Array.isArray(kpis)) return kpis;
+
+    const maseSub = best.mase < 1.0 ? 'supera línea base (<1)' : 'no supera línea base (≥1)';
+    const maseColor = best.mase < 0.75 ? 'green' : best.mase < 1.0 ? '' : 'red';
+    const modelSub = best.modelName.replace(/_/g, ' ');
+    const conf = best.confidence ? String(best.confidence) : 'media';
+    const dailySub = `${modelSub} | ${conf}`;
+    const dailyVal = best.dailyValue != null ? `~${Math.round(best.dailyValue)}` : null;
+
+    const forecastLabels = new Set(['Prevision diaria', 'Pronóstico Diario']);
+    const maseLabels = new Set(['MASE', 'Precisión del Modelo']);
+
+    return kpis.map(k => {
+        if (forecastLabels.has(k.label) && dailyVal) {
+            return { ...k, value: dailyVal, sub: dailySub };
+        }
+        if (maseLabels.has(k.label)) {
+            return { ...k, value: best.mase.toFixed(3), sub: maseSub, color: maseColor };
+        }
+        return k;
+    });
 }
 
 // Construye la lista de modelos comparables: los del backtest estadistico
