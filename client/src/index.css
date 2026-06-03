@@ -419,6 +419,74 @@ body.light-mode .card {
 .stat-card-red .card-stat-value { color: var(--crimson); text-shadow: 0 0 20px var(--crimson-glow); }
 .stat-card-green .card-stat-value { color: var(--green); }
 
+/* ── Card Gradient Variations (Aesthetic Enhancement) ── */
+.stat-card-blue {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(7, 10, 17, 0.9) 100%) !important;
+  border-color: rgba(56, 189, 248, 0.2) !important;
+}
+.stat-card-blue:hover {
+  border-color: var(--blue) !important;
+  box-shadow: var(--soft-shadow), 0 0 25px var(--blue-glow) !important;
+}
+
+.stat-card-gold {
+  background: linear-gradient(135deg, rgba(224, 153, 42, 0.12) 0%, rgba(7, 10, 17, 0.9) 100%) !important;
+  border-color: rgba(224, 153, 42, 0.2) !important;
+}
+.stat-card-gold:hover {
+  border-color: var(--chartreuse) !important;
+  box-shadow: var(--soft-shadow), 0 0 25px var(--chartreuse-glow) !important;
+}
+
+.stat-card-red {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.12) 0%, rgba(7, 10, 17, 0.9) 100%) !important;
+  border-color: rgba(244, 63, 94, 0.2) !important;
+}
+.stat-card-red:hover {
+  border-color: var(--crimson) !important;
+  box-shadow: var(--soft-shadow), 0 0 25px var(--crimson-glow) !important;
+}
+
+.stat-card-green {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(7, 10, 17, 0.9) 100%) !important;
+  border-color: rgba(16, 185, 129, 0.2) !important;
+}
+.stat-card-green:hover {
+  border-color: var(--green) !important;
+  box-shadow: var(--soft-shadow), 0 0 25px rgba(16, 185, 129, 0.15) !important;
+}
+
+.stat-card-white {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(7, 10, 17, 0.9) 100%) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+.stat-card-white:hover {
+  border-color: #ffffff !important;
+  box-shadow: var(--soft-shadow), 0 0 25px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Light Theme Card Gradient Variations */
+body.light-mode .stat-card-blue {
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.10) 0%, rgba(255, 255, 255, 0.95) 100%) !important;
+  border-color: rgba(2, 132, 199, 0.15) !important;
+}
+body.light-mode .stat-card-gold {
+  background: linear-gradient(135deg, rgba(178, 116, 21, 0.10) 0%, rgba(255, 255, 255, 0.95) 100%) !important;
+  border-color: rgba(178, 116, 21, 0.15) !important;
+}
+body.light-mode .stat-card-red {
+  background: linear-gradient(135deg, rgba(225, 29, 72, 0.10) 0%, rgba(255, 255, 255, 0.95) 100%) !important;
+  border-color: rgba(225, 29, 72, 0.15) !important;
+}
+body.light-mode .stat-card-green {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.10) 0%, rgba(255, 255, 255, 0.95) 100%) !important;
+  border-color: rgba(16, 185, 129, 0.15) !important;
+}
+body.light-mode .stat-card-white {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.06) 0%, rgba(255, 255, 255, 0.95) 100%) !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
 /* ── Grid Layouts ── */
 .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--gap-bento); }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap-bento); }

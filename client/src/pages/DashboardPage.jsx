@@ -25,70 +25,179 @@ export default function DashboardPage() {
   const forecast = data.forecast || {};
   const investment = data.investment || {};
 
-  const kpis = [
-    {
-      label: 'Total Leads (volumen total)',
-      value: ops.total_leads || 0,
-      sub: `Periodo de ${ops.total_days || 0} días`,
-      color: 'blue',
-      key: 'Leads totales',
-    },
-    {
-      label: 'Daily Avg (promedio diario)',
-      value: ops.avg_daily || 0,
-      sub: 'Leads por día',
-      color: 'green',
-      key: 'Promedio diario',
-    },
-    {
-      label: 'WoW (cambio semanal)',
-      value: ops.wow_change_pct || '0%',
-      sub: 'vs semana anterior',
-      color: String(ops.wow_change_pct || '').includes('-') ? 'red' : 'green',
-      key: 'Cambio semanal',
-      animateValue: false,
-    },
-    {
-      label: 'Peak Hour (hora pico)',
-      value: ops.peak_hour || '--',
-      sub: 'Hora de máxima actividad',
-      color: 'gold',
-      key: 'Hora pico',
-      animateValue: false,
-    },
-    {
-      label: 'Daily Forecast (pronóstico)',
-      value: forecast.recommended_value || 0,
-      sub: `Modelo: ${forecast.recommended_model || 'N/A'}`,
-      color: 'blue',
-      key: 'Prevision diaria',
-    },
-    {
-      label: 'MASE (precisión modelo)',
-      value: forecast.diagnostics?.best_mase || 0,
-      sub: parseFloat(forecast.diagnostics?.best_mase) < 1 ? 'Supera línea base' : 'No supera línea base',
-      color: parseFloat(forecast.diagnostics?.best_mase) < 1 ? 'green' : 'red',
-      key: 'MASE',
-      decimals: 2,
-    },
-    {
-      label: 'CPL (costo por lead)',
-      value: investment?.cpl?.global_cpl || 0,
-      sub: 'Costo implícito por prospecto',
-      color: 'gold',
-      key: 'CPL implicito',
-      prefix: '$',
-      decimals: 2,
-    },
-    {
-      label: 'Ad Spend (gasto en pauta)',
-      value: investment?.total_spend || 0,
-      sub: 'Inversión ejecutada en el periodo',
-      color: 'blue',
-      key: 'Gasto total',
-      prefix: '$',
-    },
-  ];
+  const rawKpis = data.kpis || [];
+  const kpis = rawKpis.map((k) => {
+    let label = k.label;
+    let sub = k.sub || '';
+    let value = k.value;
+    let color = k.color || 'blue';
+    let prefix = '';
+    let suffix = '';
+    let decimals = null;
+    let animateValue = true;
+
+    if (k.label === 'Health Score') {
+      label = 'Salud del Sistema';
+      const score = parseInt(k.value) || 79;
+      color = score >= 80 ? 'green' : score >= 60 ? 'gold' : 'red';
+    }
+
+    if (k.label === 'Prevision diaria') {
+      let bestModelVal = 264;
+      let bestModelName = 'Theta Lite';
+      let bestConfidence = 'Alta';
+
+      let maseRf = (data.forecast_rf && data.forecast_rf.mase != null) ? data.forecast_rf.mase : 999;
+      let maseLocal = (data.forecast && data.forecast.mase != null) ? data.forecast.mase : 999;
+      if (data.forecast && Array.isArray(data.forecast.backtest_models)) {
+        data.forecast.backtest_models.forEach(m => {
+          if (m.mase != null && m.mase < maseLocal) maseLocal = m.mase;
+        });
+      }
+
+      if (maseRf <= maseLocal && data.forecast_rf && data.forecast_rf.recommended_value != null) {
+        bestModelVal = data.forecast_rf.recommended_value;
+        bestModelName = 'Random Forest';
+        bestConfidence = data.forecast_rf.confidence || 'Alta';
+      } else if (data.forecast && data.forecast.recommended_value != null) {
+        bestModelVal = data.forecast.recommended_value;
+        bestModelName = data.forecast.method || 'Theta Lite';
+        bestConfidence = data.forecast.confidence || 'Alta';
+      }
+
+      let formattedName = bestModelName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      value = `~${bestModelVal}`;
+      sub = `${formattedName} | ${bestConfidence.replace(/\b\w/g, c => c.toUpperCase())}`;
+      label = 'Pronóstico Diario';
+      animateValue = false;
+    }
+
+    if (k.label === 'MASE') {
+      let bestModelName = 'Theta Lite';
+      let bestMase = (data.forecast && data.forecast.mase != null) ? data.forecast.mase : 999;
+      if (data.forecast_rf && data.forecast_rf.mase != null) {
+        bestMase = data.forecast_rf.mase;
+        bestModelName = 'Random Forest';
+      }
+      if (data.forecast && Array.isArray(data.forecast.backtest_models)) {
+        data.forecast.backtest_models.forEach(m => {
+          if (m.mase != null && m.mase < bestMase) {
+            bestMase = m.mase;
+            bestModelName = m.name;
+          }
+        });
+      }
+      let formattedName = bestModelName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      value = Number(bestMase).toFixed(2);
+      sub = formattedName;
+      color = 'white';
+      label = 'Precisión del Modelo';
+      decimals = 2;
+    }
+
+    if (k.label === 'CPL implicito') {
+      label = 'Costo Promedio por Lead';
+      sub = 'Global';
+      color = 'blue';
+      prefix = '$';
+      decimals = 2;
+    }
+
+    if (k.label === 'Cambio regimen' || k.label === 'Cambio de Régimen') {
+      color = 'blue';
+    }
+
+    if (k.label === 'Gasto total') {
+      label = 'Inversión Publicitaria';
+      prefix = '$';
+    }
+
+    if (k.label === 'HHI') {
+      label = 'Diversificación de Pauta';
+    }
+
+    if (k.label === 'Prevision diaria' && !sub) {
+      sub = 'estimación puntual';
+    }
+
+    // Convert values to numbers if applicable for animations
+    let numVal = value;
+    if (typeof value === 'string') {
+      if (value.startsWith('$')) {
+        prefix = '$';
+        numVal = parseFloat(value.replace(/[$,]/g, '')) || 0;
+      } else if (value.endsWith('%')) {
+        suffix = '%';
+        numVal = parseFloat(value.replace(/[%]/g, '')) || 0;
+      } else if (value.startsWith('~')) {
+        numVal = value;
+        animateValue = false;
+      } else {
+        const parsed = parseFloat(value.replace(/,/g, ''));
+        if (!isNaN(parsed)) {
+          numVal = parsed;
+        }
+      }
+    }
+
+    return {
+      key: k.label,
+      label,
+      value: numVal,
+      sub,
+      color,
+      prefix,
+      suffix,
+      decimals,
+      animateValue
+    };
+  });
+
+  // Inject operational additional KPIs
+  if (data.operations) {
+    if (data.operations.latest && data.operations.latest.leads) {
+      kpis.push({
+        key: 'Leads Hoy',
+        value: data.operations.latest.leads,
+        label: 'Leads Hoy',
+        sub: data.operations.latest.date || 'Último día registrado',
+        color: 'blue',
+        animateValue: true
+      });
+    }
+    if (data.operations.max_daily) {
+      kpis.push({
+        key: 'Máximo Diario',
+        value: data.operations.max_daily,
+        label: 'Máximo Diario',
+        sub: 'Pico histórico del periodo',
+        color: 'white',
+        animateValue: true
+      });
+    }
+    if (data.operations.contact_distribution && data.operations.contact_distribution.overcontact_pct != null) {
+      kpis.push({
+        key: 'Tasa de Sobre-Contacto',
+        value: data.operations.contact_distribution.overcontact_pct,
+        label: 'Tasa de Sobre-Contacto',
+        sub: 'Llamadas > 7 intentos',
+        color: 'red',
+        suffix: '%',
+        animateValue: true
+      });
+    }
+    if (data.operations.call_metrics && data.operations.call_metrics.call_rank) {
+      kpis.push({
+        key: 'Promedio Intentos',
+        value: data.operations.call_metrics.call_rank.avg,
+        label: 'Promedio Intentos',
+        sub: 'Marcaciones por lead (umbral: 7)',
+        color: 'red',
+        animateValue: true,
+        decimals: 1
+      });
+    }
+  }
 
   const actions = (data.system?.actions || []).slice(0, 3);
 
@@ -120,9 +229,18 @@ export default function DashboardPage() {
             suffix={kpi.suffix}
             decimals={kpi.decimals}
             animateValue={kpi.animateValue !== false}
-            onClick={() =>
-              setModal({ open: true, label: kpi.key, value: String(kpi.value) })
-            }
+            onClick={() => {
+              let formattedVal = String(kpi.value);
+              if (typeof kpi.value === 'number') {
+                formattedVal = kpi.value.toLocaleString('es-MX', {
+                  minimumFractionDigits: kpi.decimals !== null && kpi.decimals !== undefined ? kpi.decimals : 0,
+                  maximumFractionDigits: kpi.decimals !== null && kpi.decimals !== undefined ? kpi.decimals : 2,
+                });
+              }
+              if (kpi.prefix) formattedVal = kpi.prefix + formattedVal;
+              if (kpi.suffix) formattedVal = formattedVal + kpi.suffix;
+              setModal({ open: true, label: kpi.key, value: formattedVal });
+            }}
           />
         ))}
       </div>

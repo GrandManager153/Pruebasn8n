@@ -96,6 +96,30 @@ export const KPI_EXPLANATIONS = {
     interpretation: 'Valor negativo = reducción persistente. Valor positivo = incremento sostenido.',
     source: 'Algoritmo CUSUM integrado en el motor de predicción BOS',
   },
+  'Leads Hoy': {
+    icon: '📈',
+    definition: 'El volumen de prospectos registrados en el día actual.',
+    interpretation: 'Muestra el tráfico entrante inmediato del día de hoy.',
+    source: 'Carga en tiempo real desde el CRM',
+  },
+  'Máximo Diario': {
+    icon: '🏆',
+    definition: 'El número máximo de leads recibidos en un solo día durante este periodo.',
+    interpretation: 'Representa la capacidad pico histórica a la que se ha visto sometida la operación.',
+    source: 'Valor máximo de la serie temporal del CRM',
+  },
+  'Tasa de Sobre-Contacto': {
+    icon: '📞',
+    definition: 'Porcentaje de prospectos con llamadas que superan el umbral óptimo de marcaciones (7 intentos).',
+    interpretation: 'Una tasa alta indica desgaste innecesario de leads y baja eficiencia operativa de agentes.',
+    source: 'Distribución de contactos del CRM',
+  },
+  'Promedio Intentos': {
+    icon: '⚡',
+    definition: 'El promedio general de intentos de llamadas por lead.',
+    interpretation: 'Valores mayores a 7 sugieren sobre-contacto y saturación de la base de datos.',
+    source: 'Métricas operativas del CRM',
+  },
 };
 
 /** Map display labels back to explanation keys */
