@@ -13,15 +13,93 @@ let selectedCompareModel = '';
 let showAllModels = false;
 
 // =====================================================================
+//  📘 INDUSTRY TERMS — English term + Spanish gloss in parentheses
+// =====================================================================
+
+/** Backend KPI label → display label (término en inglés + descripción en español). */
+const KPI_BACKEND_LABEL_MAP = {
+    'Health Score': 'SHS (salud operativa consolidada)',
+    'Leads totales': 'Total Leads (volumen total del periodo)',
+    'Promedio diario': 'Daily Avg (promedio diario de leads)',
+    'Cambio semanal': 'WoW (cambio vs semana anterior)',
+    'Hora pico': 'Peak Hour (hora pico de contactos)',
+    'Prevision diaria': 'Daily Forecast (pronóstico diario de demanda)',
+    'MASE': 'MASE (error medio absoluto escalado)',
+    'CPL implicito': 'CPL (costo por lead implícito)',
+    'Gasto total': 'Ad Spend (gasto total en pauta)',
+    'HHI': 'HHI (concentración del gasto en campañas)',
+    'Conversion global': 'Global CVR (tasa de conversión entrada a cierre)',
+    'Revenue at Risk': 'Revenue at Risk (ingreso en riesgo por fugas)',
+    'Utilizacion capacidad': 'Capacity Utilization (uso de capacidad operativa)',
+    'Cambio regimen': 'Regime Shift (cambio estructural de demanda)',
+};
+
+const INDUSTRY_INLINE_REPLACEMENTS = [
+    [/\bCPL implicito\b/gi, 'CPL (costo por lead)'],
+    [/\bensemble_weighted\b/gi, 'ensemble ponderado'],
+    [/\bsupera baseline\b/gi, 'supera línea base (<1)'],
+    [/\bno supera baseline\b/gi, 'no supera línea base (≥1)'],
+    [/\bbaseline\b/gi, 'baseline (línea base)'],
+    [/\bFeeder a conversion:\s*/gi, 'Feeder (ruta de conversión): '],
+    [/\bfeeders\b/gi, 'feeders (rutas que convierten)'],
+    [/\bfugas\b/gi, 'leaks (fugas del embudo)'],
+    [/\bRPN\b/g, 'RPN (prioridad de riesgo)'],
+    [/\bMASE comparado:\s*/gi, 'MASE (comparado): '],
+    [/\bIntentos Avg\b/g, 'Avg Dial Attempts (intentos promedio)'],
+    [/\bIntervalo Avg\b/g, 'Avg Callback Interval (min entre intentos)'],
+];
+
+function formatKpiLabel(backendLabel) {
+    if (!backendLabel || typeof backendLabel !== 'string') return backendLabel;
+    return KPI_BACKEND_LABEL_MAP[backendLabel] || backendLabel;
+}
+
+function applyIndustryInlineTerms(text) {
+    if (!text || typeof text !== 'string') return text;
+    let out = text;
+    INDUSTRY_INLINE_REPLACEMENTS.forEach(([pattern, replacement]) => {
+        out = out.replace(pattern, replacement);
+    });
+    return out;
+}
+
+function resolveKpiExplanationKey(label) {
+    if (!label) return null;
+    if (KPI_EXPLANATIONS[label]) return label;
+    const backendKey = Object.keys(KPI_BACKEND_LABEL_MAP).find(
+        (k) => KPI_BACKEND_LABEL_MAP[k] === label
+    );
+    if (backendKey && KPI_EXPLANATIONS[backendKey]) return backendKey;
+    const alias = KPI_EXPLANATION_ALIASES[label];
+    if (alias && KPI_EXPLANATIONS[alias]) return alias;
+    return null;
+}
+
+// =====================================================================
 //  📘 KPI EXPLANATION DICTIONARY & MODAL CONTROLLER
 // =====================================================================
 
+/** Legacy Spanish labels still used in static HTML onclick handlers. */
+const KPI_EXPLANATION_ALIASES = {
+    'Salud del Sistema': 'Health Score',
+    'Pronóstico Diario': 'Prevision diaria',
+    'Precisión del Modelo': 'MASE',
+    'Costo Promedio por Lead': 'CPL implicito',
+    'Inversión Publicitaria': 'Gasto total',
+    'Diversificación de Pauta': 'HHI',
+    'Tasa Global de Conversión': 'Conversion global',
+    'Global CVR (tasa de conversión global)': 'Conversion global',
+    'Ingresos en Riesgo Estimados': 'Revenue at Risk',
+    'Revenue at Risk (ingreso en riesgo)': 'Revenue at Risk',
+    'Severidad Máxima': 'RPN max',
+};
+
 const KPI_EXPLANATIONS = {
-    'Salud del Sistema': {
+    'Health Score': {
         icon: '💓',
-        definition: 'Indicador compuesto de 0 a 100 que resume el estado general de toda la operación comercial. Combina eficiencia del call center, calidad de contacto, velocidad de respuesta y balance de inversión publicitaria en un solo número.',
+        definition: 'SHS: indicador compuesto de 0 a 100 que resume el estado general de toda la operación comercial. Combina eficiencia del call center, calidad de contacto, velocidad de respuesta y balance de inversión publicitaria.',
         interpretation: 'Un valor de 80+ indica un sistema saludable. Entre 60-79, el sistema está bajo presión y requiere atención en áreas específicas. Por debajo de 60 indica estado crítico con problemas que afectan directamente los ingresos.',
-        source: 'Calculado por el Motor BOS desde n8n — combina métricas de operaciones, embudo y finanzas'
+        source: 'Calculado por el Motor BOS — combina métricas de operaciones, embudo y finanzas'
     },
     'Leads totales': {
         icon: '👥',
@@ -35,47 +113,65 @@ const KPI_EXPLANATIONS = {
         interpretation: 'Sirve para planear la capacidad operativa del equipo. Si el promedio es 265, el call center debe estar preparado para atender al menos esa cantidad de contactos nuevos diariamente.',
         source: 'Cálculo: total_leads ÷ total_days — fuente: n8n operations.avg_daily'
     },
-    'Cambio semanal': {
-        icon: '📈',
-        definition: 'El cambio porcentual de leads recibidos esta semana comparado con la semana anterior. Un valor negativo significa que se recibieron menos leads que la semana pasada.',
-        interpretation: 'Una caída mayor al -10% es preocupante y puede indicar fatiga de audiencia en las campañas o cambios en el mercado. Un aumento mayor al +15% puede significar que necesitas más agentes para absorber la demanda.',
-        source: 'Cálculo: (promedio 7d actual - promedio 7d anterior) ÷ promedio 7d anterior × 100 — fuente: n8n operations.wow_change_pct'
-    },
     'Hora pico': {
         icon: '⏰',
         definition: 'La hora del día en que se recibe el mayor volumen de contactos telefónicos y leads. Es el momento de máxima actividad del call center.',
         interpretation: 'El equipo de agentes debe estar a su máxima capacidad durante esta hora. Si los agentes están en turno en horarios distintos, se desperdicia capacidad de contacto cuando más se necesita.',
         source: 'Análisis de distribución horaria del CRM — fuente: n8n operations.peak_hour'
     },
-    'Pronóstico Diario': {
+    'Prevision diaria': {
         icon: '🔮',
-        definition: 'La predicción del modelo matemático sobre cuántos leads se recibirán mañana. Se calcula usando algoritmos de series de tiempo (theta_lite) que analizan patrones históricos y estacionalidad.',
-        interpretation: 'El símbolo "~" indica que es una aproximación. Si el pronóstico dice ~251, significa que se espera recibir entre 226 y 276 leads aproximadamente (con 80% de confianza). Útil para planear agentes del día siguiente.',
-        source: 'Modelo predictivo theta_lite con confianza alta — fuente: n8n forecast.recommended_value'
+        definition: 'Daily Forecast: predicción del modelo sobre cuántos leads se recibirán mañana. Se calcula con time-series models (p. ej. theta_lite) que capturan patrones históricos y estacionalidad.',
+        interpretation: 'El símbolo "~" indica aproximación. Con intervalos de confianza (p. ej. 80%), útil para staffing del call center al día siguiente.',
+        source: 'forecast.recommended_value — modelo recomendado por backtest'
     },
-    'Precisión del Modelo': {
+    'MASE': {
         icon: '🎯',
-        definition: 'El MASE (Error Medio Absoluto Escalado) mide qué tan precisas son las predicciones del modelo. Un valor menor a 1.0 significa que el modelo predice mejor que simplemente repetir el dato de la semana pasada.',
-        interpretation: 'Valores por debajo de 0.75 son excelentes. Entre 0.75 y 1.0, el modelo es aceptable. Por encima de 1.0, las predicciones no son confiables y deberían usarse con precaución.',
-        source: 'Backtesting automático del modelo theta_lite — fuente: n8n forecast.mase'
+        definition: 'MASE (error medio absoluto escalado): mide el error promedio del pronóstico ajustado por una línea base estacional. Si el valor es menor a 1.0, el modelo predice mejor que repetir el dato de la semana pasada.',
+        interpretation: 'Referencia del área: < 0.75 excelente; 0.75–1.0 aceptable; ≥ 1.0 no supera la línea base (usar con cautela).',
+        source: 'Backtest rolling — forecast.diagnostics.best_mase'
     },
-    'Costo Promedio por Lead': {
+    'CPL implicito': {
         icon: '💰',
-        definition: 'El CPL (Costo Por Lead) implícito representa cuánto cuesta en promedio adquirir cada prospecto. Se calcula dividiendo la inversión publicitaria total entre la cantidad de leads generados.',
-        interpretation: 'Un CPL más bajo es mejor. Si el CPL es $323, significa que se invirtieron $323 en publicidad por cada persona que contactó al despacho. Comparar este valor con el ingreso promedio por caso cerrado para evaluar la rentabilidad.',
-        source: 'Cálculo: gasto_total ÷ leads_totales — fuente: n8n investment.cpl.global_cpl'
+        definition: 'CPL: costo implícito por prospecto. Gasto total ÷ leads totales en el periodo.',
+        interpretation: 'A menor CPL, mejor. Comparar contra el ingreso promedio por caso cerrado para evaluar rentabilidad de pauta.',
+        source: 'investment.cpl.global_cpl'
     },
-    'Inversión Publicitaria': {
+    'Gasto total': {
         icon: '📢',
-        definition: 'El monto total en pesos gastado en campañas de publicidad digital (Facebook Ads, Google Ads, etc.) durante el periodo analizado. Incluye todas las campañas activas.',
-        interpretation: 'Este número debe analizarse junto con el CPL y el volumen de leads generado. Un gasto alto solo es justificable si produce un volumen proporcional de leads de calidad que se conviertan en clientes.',
-        source: 'Suma directa de gastos de campañas reportados — fuente: n8n investment.total_spend'
+        definition: 'Ad Spend: monto total invertido en paid media (Meta, Google, etc.) en el periodo.',
+        interpretation: 'Analizar junto con CPL y volumen de leads. Spend alto sin leads proporcionales sugiere audience fatigue o mala segmentación.',
+        source: 'investment.total_spend'
     },
-    'Diversificación de Pauta': {
+    'HHI': {
         icon: '🎲',
-        definition: 'El índice HHI (Herfindahl-Hirschman) mide qué tan concentrada está la inversión publicitaria entre las diferentes campañas. Un valor cercano a 0 indica alta diversificación, mientras que un valor cercano a 1 indica que todo el dinero está en pocas campañas.',
-        interpretation: 'Valores por debajo de 0.15 indican buena diversificación. Entre 0.15 y 0.25 es moderada. Por encima de 0.25 hay riesgo de concentración: si una campaña falla, el impacto sería severo en todo el flujo de leads.',
-        source: 'Cálculo de concentración de mercado (HHI) sobre el gasto por campaña — fuente: n8n investment.hhi.index'
+        definition: 'HHI: índice de concentración del gasto entre campañas. Cerca de 0 = diversificado; cerca de 1 = dependencia de pocas campañas.',
+        interpretation: '< 0.15 diversificado; 0.15–0.25 moderado; > 0.25 riesgo de concentración en poca pauta.',
+        source: 'investment.mmm.hhi_index'
+    },
+    'Conversion global': {
+        icon: '🎯',
+        definition: 'Global CVR: porcentaje de leads que avanzan a la etapa clave del embudo (p. ej. consulta reservada) vs total de entradas.',
+        interpretation: '> 5% suele ser fuerte en este sector; < 3.5% sugiere fuga temprana o leads no calificados por creativo/audiencia.',
+        source: 'funnel.global_conversion_pct'
+    },
+    'Revenue at Risk': {
+        icon: '💸',
+        definition: 'Revenue at Risk: valoración del opportunity cost de leads perdidos en el funnel, con case value assumption (p. ej. $1,200 USD).',
+        interpretation: 'Proxy del costo de ineficiencia operativa. Reducirlo vía mejor speed-to-lead y menos over-dialing mejora revenue sin subir ad spend.',
+        source: 'funnel.total_revenue_at_risk'
+    },
+    'Cambio semanal': {
+        icon: '📈',
+        definition: 'WoW: cambio porcentual del volumen de leads vs la semana anterior.',
+        interpretation: 'Caídas > 10% pueden indicar fatiga de creativos o cambio de mercado. Subidas > 15% pueden requerir más agentes en el floor.',
+        source: 'operations.wow_change_pct'
+    },
+    'RPN max': {
+        icon: '⚡',
+        definition: 'RPN: puntaje estilo FMEA = Severidad × Ocurrencia × Detección. El máximo activo prioriza qué alerta atender primero.',
+        interpretation: 'RPN > 400 = prioridad crítica en la cola de incidentes operativos.',
+        source: 'system.alerts — max rpn_score'
     },
     'Leads Hoy': {
         icon: '📅',
@@ -179,13 +275,13 @@ const KPI_EXPLANATIONS = {
         interpretation: 'Indica la base de prospectos única que está siendo trabajada por la operación. Representa la cantidad de oportunidades individuales creadas.',
         source: 'CRM integrado — unique_contacts'
     },
-    'Intentos Avg': {
+    'Avg Dial Attempts (intentos promedio)': {
         icon: '🔄',
-        definition: 'El promedio de intentos de marcación telefónica por lead antes de lograr contactarlo o clasificarlo como no-contactable.',
-        interpretation: 'El estándar recomendado es un máximo de 7 intentos. Si este promedio supera el umbral (por ejemplo, 11+), los agentes están sobre-contactando leads inactivos en lugar de priorizar leads frescos.',
-        source: 'CRM integrado — call_rank.avg'
+        definition: 'Avg Dial Attempts: promedio de intentos de marcación por lead antes de contacto o disposición final.',
+        interpretation: 'Buena práctica en intake: ≤ 7 marcaciones por lead. Promedios 11+ sugieren sobre-contacto en leads fríos vs priorizar speed-to-lead en leads nuevos.',
+        source: 'call_metrics.call_rank.avg'
     },
-    'Intervalo Avg': {
+    'Avg Callback Interval (min entre intentos)': {
         icon: '⏳',
         definition: 'El tiempo promedio transcurrido entre intentos de contacto consecutivos realizados a un mismo lead.',
         interpretation: 'El speed-to-lead inicial y la insistencia oportuna son claves. Intervalos muy largos (por ejemplo, miles de minutos) degradan severamente la probabilidad de conversión ya que el prospecto se enfría.',
@@ -196,17 +292,12 @@ const KPI_EXPLANATIONS = {
         definition: 'Indica un cambio o quiebre estructural significativo en el volumen diario de entrada de leads, detectado mediante el algoritmo de Sumas Acumuladas (CUSUM).',
         interpretation: 'Un valor negativo (como -14%) confirma que la media de entrada diaria ha sufrido una reducción persistente en su línea base, indicando fatiga en canales de adquisición o pauta publicitaria. Un valor positivo refleja un incremento sostenido en la demanda.',
         source: 'Algoritmo estadístico CUSUM (Suma Acumulada) integrado en el motor de predicción BOS'
-    },
-    'Cambio regimen': {
-        icon: '📉',
-        definition: 'Indica un cambio o quiebre estructural significativo en el volumen diario de entrada de leads, detectado mediante el algoritmo de Sumas Acumuladas (CUSUM).',
-        interpretation: 'Un valor negativo (como -14%) confirma que la media de entrada diaria ha sufrido una reducción persistente en su línea base, indicando fatiga en canales de adquisición o pauta publicitaria. Un valor positivo refleja un incremento sostenido en la demanda.',
-        source: 'Algoritmo estadístico CUSUM (Suma Acumulada) integrado en el motor de predicción BOS'
     }
 };
 
 function openKpiModal(label, value) {
-    const explain = KPI_EXPLANATIONS[label];
+    const explainKey = resolveKpiExplanationKey(label);
+    const explain = explainKey ? KPI_EXPLANATIONS[explainKey] : null;
     if (!explain) return;
 
     document.getElementById('kpi-modal-title').textContent = label;
@@ -239,19 +330,16 @@ document.addEventListener('keydown', (e) => {
 
 function cleanText(str) {
     if (!str || typeof str !== 'string') return str;
-    
+
     // Remove all emojis and emoticons
     let clean = str.replace(/[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{27BF}\u{2000}-\u{3300}\u{1F000}-\u{1F0FF}\u{1F100}-\u{1F1FF}\u{1F200}-\u{1F2FF}\u{1F700}-\u{1F7FF}\u{1FA00}-\u{1FAFF}]/gu, '');
-    
-    // Remove metadata/backend labels inside parentheses (e.g., "(umbral: 7)", "(37 leads)", etc.)
-    clean = clean.replace(/\s*\([^)]*(?:umbral|baseline|ensemble|FactsBuilder|n8n|IA|AI|server|webhook|error|mase|rpn|score|pct|leads|intentos|gasto)[^)]*\)/gi, '');
-    
-    // Remove generic trailing parentheses
-    clean = clean.replace(/\s*\([^)]*\)\s*$/g, '');
-    
+
+    // Remove backend/metadata parentheses only (keep industry glossary parens)
+    clean = clean.replace(/\s*\([^)]*(?:umbral:\s*\d|FactsBuilder|n8n|webhook|server error)[^)]*\)/gi, '');
+
     // Standardize white spaces
     clean = clean.replace(/\s+/g, ' ').trim();
-    
+
     return clean;
 }
 
@@ -312,29 +400,29 @@ const CRM_TRANSLATIONS = {
 
 function cleanTechnicalTerms(str) {
     if (!str || typeof str !== 'string') return str;
-    let text = str.trim();
-    
+    let text = applyIndustryInlineTerms(str.trim());
+
     // Check exact match in CRM translations
     if (CRM_TRANSLATIONS[text]) {
         return CRM_TRANSLATIONS[text];
     }
-    
+
     // Check partial/regex replacements or replace inline parts of the text
     for (const [key, val] of Object.entries(CRM_TRANSLATIONS)) {
         const escapedKey = key.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
         const regex = new RegExp(escapedKey, 'gi');
         text = text.replace(regex, val);
     }
-    
+
     // Replace technical models and internal jargon with elegant corporate terminology
     text = text.replace(/ensemble_weighted/gi, 'Modelo Predictivo');
     text = text.replace(/FactsBuilder/gi, 'Motor BOS');
     text = text.replace(/baseline/gi, 'Línea Base');
     text = text.replace(/CPL implicito/gi, 'Costo por Lead');
-    
+
     // Standardize CUSUM changepoint labels to elegant corporate terminology
     text = text.replace(/Cambio regimen/gi, 'Cambio de Régimen');
-    
+
     return cleanText(text);
 }
 
@@ -346,22 +434,22 @@ function restartHealthRing() {
     const ring = document.getElementById('health-fg-ring');
     const numVal = document.getElementById('health-num-val');
     if (!dashboardData || !dashboardData.system) return;
-    
+
     const scoreVal = dashboardData.system.health_score;
     const circumference = 2 * Math.PI * 58;
     const dashOffset = circumference - (scoreVal / 100) * circumference;
-    
+
     if (ring) {
         ring.style.transition = 'none';
         ring.style.strokeDashoffset = circumference;
         void ring.offsetWidth; // Force reflow
-        
+
         requestAnimationFrame(() => {
             ring.style.transition = 'stroke-dashoffset 0.85s cubic-bezier(0.16, 1, 0.3, 1)';
             ring.style.strokeDashoffset = dashOffset;
         });
     }
-    
+
     if (numVal) {
         numVal.textContent = '0';
         parseAndAnimate(numVal, scoreVal, 750);
@@ -418,7 +506,7 @@ function switchTab(tabId) {
                     wave.style.transition = 'none';
                     wave.style.height = '0%';
                     void wave.offsetWidth; // Force reflow
-                    
+
                     requestAnimationFrame(() => {
                         wave.style.transition = 'height 1.5s cubic-bezier(0.16, 1, 0.3, 1)';
                         wave.style.height = wave.getAttribute('data-target-height');
@@ -455,7 +543,7 @@ function switchTab(tabId) {
     const titles = {
         'dashboard': 'Resumen General',
         'funnel': 'Funnel y Conversiones',
-        'forecast': 'Pronósticos y Regímenes',
+        'forecast': 'Pronósticos',
         'investment': 'Inversión y Campañas',
         'operations': 'Operaciones Diarias',
         'alerts': 'Alertas de Operación',
@@ -487,17 +575,17 @@ function animateValue(element, start, end, duration, options = {}) {
         useSeparator = false,
         isTime = false
     } = options;
-    
+
     let startTimestamp = null;
     const step = (timestamp) => {
         if (!startTimestamp) startTimestamp = timestamp;
         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        
+
         // Easing function: easeOutQuad
         const easeProgress = progress * (2 - progress);
-        
+
         let currentVal = easeProgress * (end - start) + start;
-        
+
         if (isTime) {
             const totalMinutes = Math.floor(currentVal);
             const hrs = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
@@ -512,7 +600,7 @@ function animateValue(element, start, end, duration, options = {}) {
             }
             element.textContent = `${prefix}${formatted}${suffix}`;
         }
-        
+
         if (progress < 1) {
             window.requestAnimationFrame(step);
         } else {
@@ -540,7 +628,7 @@ function animateValue(element, start, end, duration, options = {}) {
 function parseAndAnimate(element, rawValue, duration = 700) {
     if (!element) return;
     const valueStr = String(rawValue).trim();
-    
+
     // Check if it's clock format (e.g., "19:00")
     if (valueStr.includes(':') && !valueStr.includes('$')) {
         const parts = valueStr.split(':');
@@ -551,7 +639,7 @@ function parseAndAnimate(element, rawValue, duration = 700) {
     } else {
         // Strip $, %, approximate sign (~), commas and spaces
         const stripped = valueStr.replace(/[$\s%,~]/g, '');
-        
+
         // Check for fractional/ratio formats like "79/100"
         if (stripped.includes('/')) {
             const parts = stripped.split('/');
@@ -560,11 +648,11 @@ function parseAndAnimate(element, rawValue, duration = 700) {
             animateValue(element, 0, current, duration, { suffix: `/${maxVal}` });
         } else {
             const parsedNumber = parseFloat(stripped) || 0;
-            
+
             const isCurrency = valueStr.includes('$');
             const isPercentage = valueStr.includes('%');
             const isApprox = valueStr.includes('~');
-            
+
             let decimals = 0;
             if (stripped.includes('.')) {
                 decimals = Math.min(stripped.split('.')[1].length, 2);
@@ -572,11 +660,11 @@ function parseAndAnimate(element, rawValue, duration = 700) {
             if (isCurrency && parsedNumber >= 1000) {
                 decimals = 0; // Large currencies look cleaner without decimals
             }
-            
+
             const prefix = isApprox ? '~' + (isCurrency ? '$' : '') : (isCurrency ? '$' : '');
             const suffix = isPercentage ? '%' : '';
             const useSeparator = parsedNumber >= 1000 || stripped.length > 4;
-            
+
             animateValue(element, 0, parsedNumber, duration, {
                 prefix,
                 suffix,
@@ -685,18 +773,16 @@ function renderBOS(data) {
 
     // 2. Render KPIs in Dashboard Tab
     const kpisGrid = document.getElementById('dashboard-kpis');
-    
+
     const cleanedKpis = data.kpis.map(k => {
-        let label = k.label;
-        let sub = k.sub || '';
-        
-        if (label === 'Health Score') label = 'Salud del Sistema';
-        if (label === 'Prevision diaria') { 
-            label = 'Pronóstico Diario'; 
+        let label = formatKpiLabel(k.label);
+        let sub = applyIndustryInlineTerms(k.sub || '');
+
+        if (k.label === 'Prevision diaria') {
             let bestModelVal = 264;
             let bestModelName = 'Theta Lite';
             let bestConfidence = 'Alta';
-            
+
             let maseRf = (data.forecast_rf && data.forecast_rf.mase != null) ? data.forecast_rf.mase : 999;
             let maseLocal = (data.forecast && data.forecast.mase != null) ? data.forecast.mase : 999;
             if (data.forecast && Array.isArray(data.forecast.backtest_models)) {
@@ -704,7 +790,7 @@ function renderBOS(data) {
                     if (m.mase != null && m.mase < maseLocal) maseLocal = m.mase;
                 });
             }
-            
+
             if (maseRf <= maseLocal && data.forecast_rf && data.forecast_rf.recommended_value != null) {
                 bestModelVal = data.forecast_rf.recommended_value;
                 bestModelName = 'Random Forest';
@@ -714,13 +800,12 @@ function renderBOS(data) {
                 bestModelName = data.forecast.method || 'Theta Lite';
                 bestConfidence = data.forecast.confidence || 'Alta';
             }
-            
+
             let formattedName = bestModelName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
             k.value = `~${bestModelVal}`;
             sub = `${formattedName} | ${bestConfidence.replace(/\b\w/g, c => c.toUpperCase())}`;
         }
-        if (label === 'MASE') { 
-            label = 'Precisión del Modelo'; 
+        if (k.label === 'MASE') {
             let bestModelName = 'Random Forest';
             let bestMase = 0.2724;
             if (data.forecast_rf && data.forecast_rf.mase != null) {
@@ -737,17 +822,17 @@ function renderBOS(data) {
             }
             let formattedName = bestModelName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
             k.value = Number(bestMase).toFixed(2);
-            sub = formattedName; 
+            sub = applyIndustryInlineTerms(formattedName);
             k.color = 'white';
         }
-        if (label === 'CPL implicito') { label = 'Costo Promedio por Lead'; sub = 'Global'; k.color = 'blue'; }
-        if (label === 'Gasto total') { label = 'Inversión Publicitaria'; }
-        if (label === 'HHI') { label = 'Diversificación de Pauta'; }
-        if (label === 'Cambio regimen' || label === 'Cambio de Régimen') { k.color = 'blue'; }
+        if (k.label === 'CPL implicito') {
+            sub = sub || 'global';
+            k.color = 'blue';
+        }
+        if (k.label === 'Cambio regimen' || k.label === 'Cambio de Régimen') {
+            k.color = 'blue';
+        }
 
-        sub = cleanTechnicalTerms(sub);
-        label = cleanTechnicalTerms(label);
-        
         return { ...k, label, sub };
     });
 
@@ -916,19 +1001,19 @@ function renderBOS(data) {
 function renderFunnelDetails(data) {
     const leadKPI = data.kpis.find(k => k.label.includes('leads') || k.label.includes('Leads'));
     const totalLeads = leadKPI ? parseInt(leadKPI.value.replace(/,/g, '')) : 11113;
-    
+
     const consults = data.funnel.transitions
         .filter(t => t.to === 'Consult Booked' || t.to === 'absorption')
         .reduce((acc, curr) => acc + curr.cnt, 0) || 684;
 
     const conversionRate = ((consults / totalLeads) * 100).toFixed(2);
-    
+
     const funnelConvVal = document.getElementById('funnel-conv-pct');
     if (funnelConvVal) {
         funnelConvVal.setAttribute('data-value', `${conversionRate}%`);
         parseAndAnimate(funnelConvVal, `${conversionRate}%`);
     }
-    
+
     const targetLabel = document.getElementById('funnel-target-label');
     if (targetLabel) {
         targetLabel.textContent = `Objetivo: ${cleanTechnicalTerms(data.funnel.conversion_target)}`;
@@ -939,11 +1024,11 @@ function renderFunnelDetails(data) {
             const to = t.to.toLowerCase();
             return to.includes('not interested') || to.includes('no answer') || to.includes('hung up') || to.includes('wrong number') || to.includes('busy') || to.includes('lost');
         });
-        
+
     const totalLostLeads = leaks.reduce((acc, curr) => acc + curr.cnt, 0);
     const caseValue = 1200;
     const revenueAtRisk = totalLostLeads * caseValue;
-    
+
     const riskRevVal = document.getElementById('funnel-risk-revenue');
     if (riskRevVal) {
         riskRevVal.setAttribute('data-value', `$${revenueAtRisk}`);
@@ -952,7 +1037,7 @@ function renderFunnelDetails(data) {
 
     const feederAlerts = data.system.alerts.filter(a => a.title.includes('Feeder a conversion'));
     const feedersList = document.getElementById('funnel-feeders-list');
-    
+
     if (feedersList) {
         if (feederAlerts.length > 0) {
             feedersList.innerHTML = feederAlerts.map((f, idx) => {
@@ -961,7 +1046,7 @@ function renderFunnelDetails(data) {
                 const state = parts[0] || 'Origen';
                 const metricsStr = parts[1] || '0%';
                 const pct = metricsStr.split('%')[0] || '0';
-                
+
                 return `
                     <div class="card-animate" style="padding: 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; animation-delay: ${(idx * 0.025) + 0.12}s;">
                         <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; color: white;">
@@ -1325,7 +1410,7 @@ function onModelCompareChange() {
     const meta = document.getElementById('model-compare-meta');
     if (meta) {
         const m = buildComparableModels(dashboardData).find(x => x.name === selectedCompareModel);
-        meta.textContent = (m && typeof m.mase === 'number') ? `MASE comparado: ${m.mase.toFixed(3)}` : '';
+        meta.textContent = (m && typeof m.mase === 'number') ? `MASE (comparado): ${m.mase.toFixed(3)}` : '';
         meta.style.color = color;
     }
 
@@ -1366,7 +1451,7 @@ function renderAlertsCentre(alerts) {
             onclick="openKpiModal('Severidad Máxima', '${maxRpn}')">
             <div class="card-stat-label">Severidad Máxima</div>
             <div class="card-stat-value" id="alert-stat-max-rpn" data-value="${maxRpn}">0</div>
-            <div class="card-stat-sub">Puntaje RPN registrado</div>
+            <div class="card-stat-sub">RPN (prioridad de riesgo)</div>
         </div>
         <div class="card stat-card-green card-animate" style="animation-delay: 0.12s;"
             onclick="openKpiModal('Advertencias e Info', '${warningCount + infoCount}')">
@@ -1433,7 +1518,7 @@ function renderAlertsTableList(filteredList) {
         const rpnPct = Math.min(((a.rpn_score || 0) / maxRpn) * 100, 100);
         const rpnColor = a.severity === 'critical' ? 'var(--red)' : a.severity === 'warning' ? 'var(--amber)' : 'var(--gold)';
         const badgeLabel = a.severity === 'critical' ? 'Crítica' : a.severity === 'warning' ? 'Precaución' : 'Informativa';
-        
+
         return `
             <tr style="animation: fadeIn 0.3s ease-out;">
                 <td>
@@ -1563,13 +1648,13 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: { 
-                    display: true, 
-                    labels: { 
-                        color: isLight ? '#475569' : '#94a3b8', 
-                        font: { size: 11, family: 'Inter' }, 
-                        boxWidth: 12 
-                    } 
+                legend: {
+                    display: true,
+                    labels: {
+                        color: isLight ? '#475569' : '#94a3b8',
+                        font: { size: 11, family: 'Inter' },
+                        boxWidth: 12
+                    }
                 },
                 tooltip: {
                     backgroundColor: isLight ? '#ffffff' : '#05080f',
@@ -1585,13 +1670,13 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
                 }
             },
             scales: {
-                x: { 
-                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' }, 
-                    ticks: { color: isLight ? '#475569' : '#64748b', font: { size: 10 }, maxTicksLimit: 10 } 
+                x: {
+                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' },
+                    ticks: { color: isLight ? '#475569' : '#64748b', font: { size: 10 }, maxTicksLimit: 10 }
                 },
-                y: { 
-                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' }, 
-                    ticks: { color: isLight ? '#475569' : '#64748b', font: { size: 11, family: 'JetBrains Mono' } } 
+                y: {
+                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' },
+                    ticks: { color: isLight ? '#475569' : '#64748b', font: { size: 11, family: 'JetBrains Mono' } }
                 }
             }
         }
@@ -1675,7 +1760,7 @@ function renderSeasonalChart(indices, options = {}) {
                     return delay;
                 }
             },
-            responsive: true, 
+            responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
@@ -1692,11 +1777,11 @@ function renderSeasonalChart(indices, options = {}) {
             },
             scales: {
                 x: { grid: { display: false }, ticks: { color: isLight ? '#475569' : '#94a3b8', font: { size: 11, weight: '600' } } },
-                y: { 
-                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' }, 
-                    ticks: { color: isLight ? '#475569' : '#64748b' }, 
-                    min: 0.6, 
-                    max: 1.3 
+                y: {
+                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' },
+                    ticks: { color: isLight ? '#475569' : '#64748b' },
+                    min: 0.6,
+                    max: 1.3
                 }
             }
         }
@@ -1711,7 +1796,7 @@ function renderCampaignChart(campaigns) {
 
     const isLight = document.body.classList.contains('light-mode');
     const ctx = element.getContext('2d');
-    const colors = isLight 
+    const colors = isLight
         ? ['#0284c7', '#84cc16', '#7c3aed', '#ea580c', '#db2777', '#cca43b', '#e11d48']
         : ['#38bdf8', '#a3e635', '#8b5cf6', '#f97316', '#ec4899', '#fbbf24', '#f43f5e'];
 
@@ -1739,18 +1824,18 @@ function renderCampaignChart(campaigns) {
                     return delay;
                 }
             },
-            responsive: true, 
-            maintainAspectRatio: false, 
+            responsive: true,
+            maintainAspectRatio: false,
             cutout: '65%',
             plugins: {
-                legend: { 
-                    position: 'right', 
-                    labels: { 
-                        color: isLight ? '#475569' : '#94a3b8', 
-                        font: { size: 11 }, 
-                        boxWidth: 10, 
-                        padding: 8 
-                    } 
+                legend: {
+                    position: 'right',
+                    labels: {
+                        color: isLight ? '#475569' : '#94a3b8',
+                        font: { size: 11 },
+                        boxWidth: 10,
+                        padding: 8
+                    }
                 },
                 tooltip: {
                     backgroundColor: isLight ? '#ffffff' : '#090f20',
@@ -1816,7 +1901,7 @@ function renderHourlyChart(hourly) {
                     return delay;
                 }
             },
-            responsive: true, 
+            responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
@@ -1839,12 +1924,12 @@ function renderHourlyChart(hourly) {
             },
             scales: {
                 x: { grid: { display: false }, ticks: { color: isLight ? '#475569' : '#94a3b8', font: { size: 9 } } },
-                y: { 
-                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' }, 
-                    ticks: { 
+                y: {
+                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' },
+                    ticks: {
                         color: isLight ? '#475569' : '#64748b',
                         callback: (value) => `${value}%`
-                    } 
+                    }
                 }
             }
         }
@@ -1859,7 +1944,7 @@ function renderDailyVolumeChart(ops) {
 
     const isLight = document.body.classList.contains('light-mode');
     const ctx = element.getContext('2d');
-    
+
     // Calculate values
     const labels = ops.daily_volumes.map(d => {
         const parts = d.date.split('-');
@@ -1872,7 +1957,7 @@ function renderDailyVolumeChart(ops) {
     });
     const leads = ops.daily_volumes.map(d => d.leads);
     const avgVal = ops.avg_daily || 0;
-    
+
     const avgLine = Array(leads.length).fill(avgVal);
     const isBar = dailyVolumeType === 'bar';
 
@@ -1896,7 +1981,7 @@ function renderDailyVolumeChart(ops) {
                     label: 'Leads Recibidos',
                     data: leads,
                     type: isBar ? 'bar' : 'line',
-                    backgroundColor: isBar 
+                    backgroundColor: isBar
                         ? (isLight ? 'rgba(2, 132, 199, 0.75)' : 'rgba(56, 189, 248, 0.7)')
                         : (isLight ? 'rgba(2, 132, 199, 0.15)' : 'rgba(56, 189, 248, 0.15)'),
                     borderColor: isLight ? '#0284c7' : '#38bdf8',
@@ -1952,13 +2037,13 @@ function renderDailyVolumeChart(ops) {
                 }
             },
             scales: {
-                x: { 
-                    grid: { display: false }, 
-                    ticks: { 
-                        color: isLight ? '#475569' : '#94a3b8', 
-                        font: { size: 9 }, 
-                        maxTicksLimit: 7 
-                    } 
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        color: isLight ? '#475569' : '#94a3b8',
+                        font: { size: 9 },
+                        maxTicksLimit: 7
+                    }
                 },
                 y: {
                     grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' },
@@ -2012,15 +2097,15 @@ function renderOperationsTab(data) {
                 color: 'blue'
             },
             {
-                label: 'Intentos Avg',
+                label: 'Avg Dial Attempts (intentos promedio)',
                 value: attemptsAvg.toFixed(2),
                 sub: `rango: 1-${call.call_rank ? call.call_rank.max : 365}`,
                 color: attemptsAvg > 7 ? 'red' : 'blue'
             },
             {
-                label: 'Intervalo Avg',
+                label: 'Avg Callback Interval (min entre intentos)',
                 value: `${Math.round(intervalAvg).toLocaleString()} min`,
-                sub: `~${Math.round(intervalAvg / 60)}h entre intentos`,
+                sub: `~${Math.round(intervalAvg / 60)}h entre marcaciones`,
                 color: intervalAvg > 1440 ? 'red' : 'blue'
             }
         ];
@@ -2123,7 +2208,7 @@ function initSpotlight() {
     const flashlight = document.querySelector('.global-flashlight');
     const sidebar = document.querySelector('.sidebar');
     const topbar = document.querySelector('.topbar');
-    
+
     document.addEventListener('mousemove', e => {
         if (flashlight) {
             flashlight.style.setProperty('--global-mouse-x', `${e.clientX}px`);
@@ -2162,7 +2247,7 @@ function loadReportInViewer(url, title, event) {
     if (event) {
         event.preventDefault(); // Intercept and stop opening new tab
     }
-    
+
     const iframe = document.getElementById('viewer-iframe');
     const placeholder = document.getElementById('viewer-placeholder');
     const titleText = document.getElementById('viewer-report-title');
@@ -2171,20 +2256,20 @@ function loadReportInViewer(url, title, event) {
     const closeBtn = document.getElementById('viewer-close-btn');
     const printBtn = document.getElementById('viewer-print-btn');
     const card = document.getElementById('report-viewer-card');
-    
+
     if (!iframe || !placeholder) return;
-    
+
     // Set loading indicator
     titleText.textContent = "Cargando: " + title;
     statusDot.style.backgroundColor = "var(--gold)";
     statusDot.style.animation = "pulse 1.2s infinite";
     statusDot.style.boxShadow = "0 0 8px var(--gold-glow)";
-    
+
     // Switch view states
     placeholder.style.display = 'none';
     iframe.style.display = 'block';
     iframe.src = url + (url.includes('?') ? '&' : '?') + '_=' + Date.now();
-    
+
     // Show control buttons
     if (openLink) {
         openLink.href = url;
@@ -2196,12 +2281,12 @@ function loadReportInViewer(url, title, event) {
     if (printBtn) {
         printBtn.style.display = 'inline-flex';
     }
-    
+
     // Smooth scroll down to the embedded viewer card after a brief render delay
     setTimeout(() => {
         card.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
-    
+
     // Update loading state once iframe load completes
     iframe.onload = () => {
         titleText.textContent = title;
@@ -2219,20 +2304,20 @@ function closeReportViewer() {
     const openLink = document.getElementById('viewer-open-link');
     const closeBtn = document.getElementById('viewer-close-btn');
     const printBtn = document.getElementById('viewer-print-btn');
-    
+
     if (!iframe || !placeholder) return;
-    
+
     // Unload iframe and revert back to placeholder state
     iframe.src = '';
     iframe.style.display = 'none';
     placeholder.style.display = 'flex';
-    
+
     // Reset header
     titleText.textContent = "Visor de Informe Interactivo";
     statusDot.style.backgroundColor = "var(--gold)";
     statusDot.style.animation = "none";
     statusDot.style.boxShadow = "none";
-    
+
     if (openLink) openLink.style.display = 'none';
     if (closeBtn) closeBtn.style.display = 'none';
     if (printBtn) printBtn.style.display = 'none';
@@ -2264,7 +2349,7 @@ function printActiveReport() {
 function updateThemeIcon(isLight) {
     const btn = document.getElementById('theme-toggle');
     if (!btn) return;
-    
+
     if (isLight) {
         // Sun SVG Icon
         btn.innerHTML = `
@@ -2290,10 +2375,10 @@ function updateThemeIcon(isLight) {
     }
 }
 
-window.toggleTheme = function(event) {
+window.toggleTheme = function (event) {
     let x = window.innerWidth / 2;
     let y = window.innerHeight / 2;
-    
+
     if (event && event.clientX !== undefined && event.clientY !== undefined) {
         x = event.clientX;
         y = event.clientY;
@@ -2327,7 +2412,7 @@ window.toggleTheme = function(event) {
             document.body.classList.remove('light-mode');
             localStorage.setItem('theme', 'dark');
         }
-        
+
         updateThemeIcon(nextThemeIsLight);
 
         const reportIframe = document.getElementById('viewer-iframe');
@@ -2361,7 +2446,7 @@ window.toggleTheme = function(event) {
     }, 700);
 };
 
-window.triggerSync = async function(event) {
+window.triggerSync = async function (event) {
     const icon = document.getElementById('sync-icon-svg');
     const sbarText = document.getElementById('main-sbar-text');
     if (icon) {
@@ -2373,14 +2458,14 @@ window.triggerSync = async function(event) {
             icon.style.transition = 'transform 1s ease';
         }, 1000);
     }
-    
+
     if (sbarText) {
         sbarText.innerHTML = "Sincronizando datos con n8n al instante...";
     }
-    
+
     // Call loadBOS to fetch the latest dynamic data from the server
     await loadBOS();
-    
+
     // Reload report viewer iframe if it is currently open
     const iframe = document.getElementById('viewer-iframe');
     if (iframe && iframe.style.display !== 'none' && iframe.src) {
