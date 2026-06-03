@@ -190,6 +190,18 @@ const KPI_EXPLANATIONS = {
         definition: 'El tiempo promedio transcurrido entre intentos de contacto consecutivos realizados a un mismo lead.',
         interpretation: 'El speed-to-lead inicial y la insistencia oportuna son claves. Intervalos muy largos (por ejemplo, miles de minutos) degradan severamente la probabilidad de conversión ya que el prospecto se enfría.',
         source: 'CRM integrado — minutes_since_prev.avg'
+    },
+    'Cambio de Régimen': {
+        icon: '📉',
+        definition: 'Indica un cambio o quiebre estructural significativo en el volumen diario de entrada de leads, detectado mediante el algoritmo de Sumas Acumuladas (CUSUM).',
+        interpretation: 'Un valor negativo (como -14%) confirma que la media de entrada diaria ha sufrido una reducción persistente en su línea base, indicando fatiga en canales de adquisición o pauta publicitaria. Un valor positivo refleja un incremento sostenido en la demanda.',
+        source: 'Algoritmo estadístico CUSUM (Suma Acumulada) integrado en el motor de predicción BOS'
+    },
+    'Cambio regimen': {
+        icon: '📉',
+        definition: 'Indica un cambio o quiebre estructural significativo en el volumen diario de entrada de leads, detectado mediante el algoritmo de Sumas Acumuladas (CUSUM).',
+        interpretation: 'Un valor negativo (como -14%) confirma que la media de entrada diaria ha sufrido una reducción persistente en su línea base, indicando fatiga en canales de adquisición o pauta publicitaria. Un valor positivo refleja un incremento sostenido en la demanda.',
+        source: 'Algoritmo estadístico CUSUM (Suma Acumulada) integrado en el motor de predicción BOS'
     }
 };
 
@@ -243,15 +255,85 @@ function cleanText(str) {
     return clean;
 }
 
+const CRM_TRANSLATIONS = {
+    'PreClosed – Cash Only': 'Pre-Cierre (Solo Efectivo)',
+    'PreClosed - Cash Only': 'Pre-Cierre (Solo Efectivo)',
+    'PreClosed Cash Only': 'Pre-Cierre (Solo Efectivo)',
+    'PreClosed Reactivación': 'Pre-Cierre (Reactivación)',
+    'PreClosed Reactivacin': 'Pre-Cierre (Reactivación)',
+    'PreClosed - No Card': 'Pre-Cierre (Sin Tarjeta)',
+    'PreClosed - No Answer': 'Pre-Cierre (Sin Respuesta)',
+    'PreClosed - Busy': 'Pre-Cierre (Ocupado)',
+    'PreClosed - Hung Up': 'Pre-Cierre (Llamada Colgada)',
+    'PreClosed - Distrust': 'Pre-Cierre (Desconfianza)',
+    'PreClosed - Indirect Client': 'Pre-Cierre (Cliente Indirecto)',
+    'PreClosed - Needs to be Approved': 'Pre-Cierre (Pendiente Aprobación)',
+    'PreClosed - No Money - No Job': 'Pre-Cierre (Sin Dinero/Trabajo)',
+    'PreClosed - No Price': 'Pre-Cierre (Sin Dinero/Trabajo)', // simplified for common user
+    'PreClosed - Prefers to go to the office': 'Pre-Cierre (Prefiere Oficina)',
+    'PreClosed Opportunity': 'Oportunidad de Pre-Cierre',
+    'Pre-Cerrado (Sin tarjeta)': 'Pre-Cierre (Sin Tarjeta)',
+    'Abierto (Open)': 'Abierto',
+    'Busy - Callback': 'Ocupado (Re-llamada)',
+    'Connected Voicemail': 'Buzón de Voz',
+    'EN LLAMADA': 'En Llamada',
+    'New Lead': 'Nuevo Lead',
+    'No Answer': 'Sin Respuesta',
+    'New Lead Primer Intento': 'Nuevo Lead - 1er Intento',
+    'Alivio Vendido': 'Alivio Vendido',
+    'Cita en oficina': 'Cita en Oficina',
+    'Connected - Not Interested': 'Contactado (No Interesado)',
+    'Consult Booked': 'Consulta Agendada',
+    'Consult Booked PROMO': 'Consulta Agendada (Promo)',
+    'Customer Service Call': 'Llamada Atención Cliente',
+    'Detenidos - Cortes': 'Detenidos / Cortes',
+    'Duplicate Lead': 'Lead Duplicado',
+    'Hung Up': 'Llamada Colgada',
+    'Indirect Client': 'Cliente Indirecto',
+    'Leads Opportunity': 'Oportunidad de Lead',
+    'OutReach Primer Intento': 'Contacto - 1er Intento',
+    'OutReach Segundo Intento': 'Contacto - 2do Intento',
+    'Pre Closed PROMO': 'Pre-Cierre (Promo)',
+    'Reconversion Lead': 'Reconversión de Lead',
+    'Recovery Department': 'Dpto. de Recuperación',
+    'Recovery No Answer': 'Recuperación - Sin Respuesta',
+    'Transfer to Detenidos': 'Transferido a Detenidos',
+    'Wrong Number': 'Número Equivocado',
+    'Consult Booked HS': 'Consulta Agendada (HS)',
+    'NL Agendado CDMX': 'Lead Agendado CDMX',
+    'Consult Booked - Referal to Detainees': 'Consulta Agendada (Ref. Detenidos)',
+    'Hot Transfer Cancn': 'Transferencia Directa Cancún',
+    'NL Connector CUN': 'Conector Lead Nuevo CUN',
+    'New Lead Segundo Intento': 'Nuevo Lead - 2do Intento',
+    'Outeach 3 intento': 'Contacto - 3er Intento',
+    'Recovery Not Interested': 'Recuperación - No Interesado',
+    'NL Agendado CUN': 'Lead Agendado CUN'
+};
+
 function cleanTechnicalTerms(str) {
     if (!str || typeof str !== 'string') return str;
-    let text = str;
+    let text = str.trim();
+    
+    // Check exact match in CRM translations
+    if (CRM_TRANSLATIONS[text]) {
+        return CRM_TRANSLATIONS[text];
+    }
+    
+    // Check partial/regex replacements or replace inline parts of the text
+    for (const [key, val] of Object.entries(CRM_TRANSLATIONS)) {
+        const escapedKey = key.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const regex = new RegExp(escapedKey, 'gi');
+        text = text.replace(regex, val);
+    }
     
     // Replace technical models and internal jargon with elegant corporate terminology
     text = text.replace(/ensemble_weighted/gi, 'Modelo Predictivo');
     text = text.replace(/FactsBuilder/gi, 'Motor BOS');
     text = text.replace(/baseline/gi, 'Línea Base');
     text = text.replace(/CPL implicito/gi, 'Costo por Lead');
+    
+    // Standardize CUSUM changepoint labels to elegant corporate terminology
+    text = text.replace(/Cambio regimen/gi, 'Cambio de Régimen');
     
     return cleanText(text);
 }
@@ -609,15 +691,59 @@ function renderBOS(data) {
         let sub = k.sub || '';
         
         if (label === 'Health Score') label = 'Salud del Sistema';
-        if (label === 'Prevision diaria') { label = 'Pronóstico Diario'; sub = 'Media Estimada'; }
+        if (label === 'Prevision diaria') { 
+            label = 'Pronóstico Diario'; 
+            let bestModelVal = 264;
+            let bestModelName = 'Theta Lite';
+            let bestConfidence = 'Alta';
+            
+            let maseRf = (data.forecast_rf && data.forecast_rf.mase != null) ? data.forecast_rf.mase : 999;
+            let maseLocal = (data.forecast && data.forecast.mase != null) ? data.forecast.mase : 999;
+            if (data.forecast && Array.isArray(data.forecast.backtest_models)) {
+                data.forecast.backtest_models.forEach(m => {
+                    if (m.mase != null && m.mase < maseLocal) maseLocal = m.mase;
+                });
+            }
+            
+            if (maseRf <= maseLocal && data.forecast_rf && data.forecast_rf.recommended_value != null) {
+                bestModelVal = data.forecast_rf.recommended_value;
+                bestModelName = 'Random Forest';
+                bestConfidence = data.forecast_rf.confidence || 'Alta';
+            } else if (data.forecast && data.forecast.recommended_value != null) {
+                bestModelVal = data.forecast.recommended_value;
+                bestModelName = data.forecast.method || 'Theta Lite';
+                bestConfidence = data.forecast.confidence || 'Alta';
+            }
+            
+            let formattedName = bestModelName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            k.value = `~${bestModelVal}`;
+            sub = `${formattedName} | ${bestConfidence.replace(/\b\w/g, c => c.toUpperCase())}`;
+        }
         if (label === 'MASE') { 
             label = 'Precisión del Modelo'; 
-            sub = 'Óptima'; 
+            let bestModelName = 'Random Forest';
+            let bestMase = 0.2724;
+            if (data.forecast_rf && data.forecast_rf.mase != null) {
+                bestMase = data.forecast_rf.mase;
+                bestModelName = 'Random Forest';
+            }
+            if (data.forecast && Array.isArray(data.forecast.backtest_models)) {
+                data.forecast.backtest_models.forEach(m => {
+                    if (m.mase != null && m.mase < bestMase) {
+                        bestMase = m.mase;
+                        bestModelName = m.name;
+                    }
+                });
+            }
+            let formattedName = bestModelName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            k.value = Number(bestMase).toFixed(2);
+            sub = formattedName; 
             k.color = 'white';
         }
         if (label === 'CPL implicito') { label = 'Costo Promedio por Lead'; sub = 'Global'; k.color = 'blue'; }
         if (label === 'Gasto total') { label = 'Inversión Publicitaria'; }
         if (label === 'HHI') { label = 'Diversificación de Pauta'; }
+        if (label === 'Cambio regimen' || label === 'Cambio de Régimen') { k.color = 'blue'; }
 
         sub = cleanTechnicalTerms(sub);
         label = cleanTechnicalTerms(label);

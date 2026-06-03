@@ -715,12 +715,13 @@ body, body.light-mode {
 @media print {
     @page {
         size: A4 portrait;
-        margin: 2cm;
+        margin: 0 !important; /* Hides default browser header and footer (URL, title, date) */
     }
 
     body {
         background: #ffffff !important;
         color: #000000 !important;
+        margin: 1.6cm 2cm !important; /* Restores elegant document margins on every page */
     }
 
     .app {
