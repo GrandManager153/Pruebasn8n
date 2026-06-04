@@ -418,22 +418,10 @@ body.light-mode .card {
 }
 
 /* ── Card Gradient Variations (Aesthetic Enhancement) ── */
-.stat-card-blue {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(7, 10, 17, 0.9) 100%) !important;
-  border-color: rgba(56, 189, 248, 0.2) !important;
-}
-.stat-card-gold {
-  background: linear-gradient(135deg, rgba(224, 153, 42, 0.12) 0%, rgba(7, 10, 17, 0.9) 100%) !important;
-  border-color: rgba(224, 153, 42, 0.2) !important;
-}
-.stat-card-red {
-  background: linear-gradient(135deg, rgba(244, 63, 94, 0.12) 0%, rgba(7, 10, 17, 0.9) 100%) !important;
-  border-color: rgba(244, 63, 94, 0.2) !important;
-}
-.stat-card-green {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(7, 10, 17, 0.9) 100%) !important;
-  border-color: rgba(16, 185, 129, 0.2) !important;
-}
+.stat-card-blue,
+.stat-card-gold,
+.stat-card-red,
+.stat-card-green,
 .stat-card-white {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(7, 10, 17, 0.9) 100%) !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
@@ -461,22 +449,10 @@ body.light-mode .card-stat-sub {
   color: #64748b;
 }
 
-body.light-mode .stat-card-blue {
-  background: linear-gradient(135deg, rgba(2, 132, 199, 0.10) 0%, rgba(255, 255, 255, 0.95) 100%) !important;
-  border-color: rgba(2, 132, 199, 0.15) !important;
-}
-body.light-mode .stat-card-gold {
-  background: linear-gradient(135deg, rgba(178, 116, 21, 0.10) 0%, rgba(255, 255, 255, 0.95) 100%) !important;
-  border-color: rgba(178, 116, 21, 0.15) !important;
-}
-body.light-mode .stat-card-red {
-  background: linear-gradient(135deg, rgba(225, 29, 72, 0.10) 0%, rgba(255, 255, 255, 0.95) 100%) !important;
-  border-color: rgba(225, 29, 72, 0.15) !important;
-}
-body.light-mode .stat-card-green {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.10) 0%, rgba(255, 255, 255, 0.95) 100%) !important;
-  border-color: rgba(16, 185, 129, 0.15) !important;
-}
+body.light-mode .stat-card-blue,
+body.light-mode .stat-card-gold,
+body.light-mode .stat-card-red,
+body.light-mode .stat-card-green,
 body.light-mode .stat-card-white {
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.06) 0%, rgba(255, 255, 255, 0.95) 100%) !important;
   border-color: rgba(15, 23, 42, 0.1) !important;
