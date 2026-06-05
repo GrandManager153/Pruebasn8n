@@ -9,7 +9,13 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 
-from features import build_feature_matrix, build_next_features, series_to_dataframe
+from features import (
+    build_backtest_target_features,
+    build_backtest_train_matrix,
+    build_feature_matrix,
+    build_next_features,
+    series_to_dataframe,
+)
 
 
 def _seasonal_naive_mae(actual: np.ndarray, history: np.ndarray) -> float:
@@ -43,14 +49,32 @@ def run_forecast(
     values = df["value"].to_numpy()
     bt = min(backtest_days, n - 15)
     bt = max(bt, 0)
+    min_train_rows = 2
 
-    preds_bt: list[float] = []
-    acts_bt: list[float] = []
-    dates_bt: list[str] = []
-    for i in range(n - bt, n):
-        train_df = df.iloc[:i].copy()
-        X_train, y_train = build_feature_matrix(train_df)
-        if len(X_train) < 10:
+    backtest_rows: list[dict[str, Any]] = []
+    for i in range(n):
+        if i == 0:
+            backtest_rows.append(
+                {
+                    "date": str(df["date"].iloc[i]),
+                    "actual": round(float(values[i]), 2),
+                    "predicted": round(float(values[i]), 2),
+                }
+            )
+            continue
+        X_train, y_train = build_backtest_train_matrix(df, i)
+        if len(X_train) < min_train_rows:
+            fallback = float(values[i - 1]) if i > 0 else float(values[0])
+            backtest_rows.append(
+                {
+                    "date": str(df["date"].iloc[i]),
+                    "actual": round(float(values[i]), 2),
+                    "predicted": round(fallback, 2),
+                }
+            )
+            continue
+        X_next = build_backtest_target_features(df, i)
+        if X_next is None:
             continue
         model = RandomForestRegressor(
             n_estimators=80,
@@ -60,22 +84,24 @@ def run_forecast(
             n_jobs=-1,
         )
         model.fit(X_train, y_train)
-        row_df = df.iloc[: i + 1]
-        X_next = build_next_features(row_df)
-        if X_next is None:
-            continue
         p = float(model.predict(X_next)[0])
-        preds_bt.append(p)
-        acts_bt.append(float(values[i]))
-        dates_bt.append(str(df["date"].iloc[i]))
+        backtest_rows.append(
+            {
+                "date": str(df["date"].iloc[i]),
+                "actual": round(float(values[i]), 2),
+                "predicted": round(p, 2),
+            }
+        )
 
-    if not preds_bt:
+    if not backtest_rows:
         return {"error": "Backtest produced no predictions", "model_name": "random_forest"}
 
-    act_a = np.array(acts_bt)
-    pred_a = np.array(preds_bt)
+    mase_rows = backtest_rows[-bt:] if bt else backtest_rows
+    act_a = np.array([row["actual"] for row in mase_rows], dtype=float)
+    pred_a = np.array([row["predicted"] for row in mase_rows], dtype=float)
     m = _metrics(act_a, pred_a)
-    naive_mae = _seasonal_naive_mae(act_a, values[n - bt - 7 : n])
+    hist_start = max(0, len(values) - bt - 7)
+    naive_mae = _seasonal_naive_mae(act_a, values[hist_start : len(values)])
     mase = round(m["mae"] / naive_mae, 4) if naive_mae > 0 else 999.0
 
     X_full, y_full = build_feature_matrix(df)
@@ -100,17 +126,7 @@ def run_forecast(
     band_low = max(0, int(round(forecast - q80)))
     band_high = int(round(forecast + q80))
 
-    # Per-day backtest predictions (out-of-sample, one-step-ahead) so the
-    # dashboard can plot predicted-vs-actual. These reuse the exact same
-    # preds/acts already used for MASE, so the metric is unaffected.
-    backtest_series = [
-        {
-            "date": dates_bt[k],
-            "actual": round(float(acts_bt[k]), 2),
-            "predicted": round(float(preds_bt[k]), 2),
-        }
-        for k in range(len(preds_bt))
-    ]
+    backtest_series = backtest_rows
 
     last_date = pd.to_datetime(df["date"].iloc[-1])
     next_date = (last_date + pd.Timedelta(days=1)).strftime("%Y-%m-%d")

@@ -37,6 +37,40 @@ def build_feature_matrix(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
     return out[feature_cols], out["value"]
 
 
+def build_backtest_train_matrix(df: pd.DataFrame, end_idx: int) -> tuple[pd.DataFrame, pd.Series]:
+    """Rolling training rows using only lags available before end_idx (from day 1)."""
+    rows: list[dict[str, float]] = []
+    targets: list[float] = []
+    for t in range(1, end_idx):
+        lag7 = float(df["value"].iloc[t - 7]) if t >= 7 else float(df["value"].iloc[0])
+        rows.append(
+            {
+                "dow": float(df["dow"].iloc[t]),
+                "lag_1": float(df["value"].iloc[t - 1]),
+                "lag_7": lag7,
+                "rolling_mean_7": float(df["value"].iloc[max(0, t - 7) : t].mean()),
+            }
+        )
+        targets.append(float(df["value"].iloc[t]))
+    if not rows:
+        return pd.DataFrame(), pd.Series(dtype=float)
+    return pd.DataFrame(rows), pd.Series(targets, dtype=float)
+
+
+def build_backtest_target_features(df: pd.DataFrame, target_idx: int) -> pd.DataFrame | None:
+    """Features for one-step prediction at target_idx using history before it."""
+    if target_idx < 1:
+        return None
+    lag7 = float(df["value"].iloc[target_idx - 7]) if target_idx >= 7 else float(df["value"].iloc[0])
+    row = {
+        "dow": float(df["dow"].iloc[target_idx]),
+        "lag_1": float(df["value"].iloc[target_idx - 1]),
+        "lag_7": lag7,
+        "rolling_mean_7": float(df["value"].iloc[max(0, target_idx - 7) : target_idx].mean()),
+    }
+    return pd.DataFrame([row])
+
+
 def build_next_features(df: pd.DataFrame) -> pd.DataFrame | None:
     """Features for forecasting the day after the last observation."""
     if len(df) < 15:

@@ -1266,8 +1266,24 @@ function renderHorizonCards(horizons, options = {}) {
     }
 }
 
+function seriesHasChartPoints(series) {
+    return Array.isArray(series) && series.some((v) => v != null && isFinite(v));
+}
+
+function normalizeModelSeries(series, chartLen) {
+    if (!Array.isArray(series) || !chartLen) return series;
+    if (series.length === chartLen) return series;
+    if (series.length < chartLen) {
+        const out = Array(chartLen).fill(null);
+        const start = chartLen - series.length;
+        series.forEach((v, i) => { out[start + i] = v; });
+        return out;
+    }
+    return series.slice(series.length - chartLen);
+}
+
 function modelHasChartData(m) {
-    return (Array.isArray(m.series) && m.series.length) || getModelHorizons(m.name);
+    return seriesHasChartPoints(m.series) || !!getModelHorizons(m.name);
 }
 
 function getAllComparableModelNames(data) {
@@ -1404,13 +1420,18 @@ function renderModelDetailPanel() {
 function buildComparableModels(data) {
     const list = [];
     const f = (data && data.forecast) ? data.forecast : {};
+    const chartLen = Array.isArray(f.time_series) ? f.time_series.length : 0;
     (f.backtest_models || []).forEach(m => {
+        let series = m.series;
+        if (seriesHasChartPoints(series) && chartLen) {
+            series = normalizeModelSeries(series, chartLen);
+        }
         list.push({
             name: m.name,
             mase: m.mase,
             mae: m.mae,
             rmse: m.rmse,
-            series: m.series,
+            series: series,
             horizons: m.horizons,
             forecast_1d: m.forecast_1d,
         });
@@ -1426,6 +1447,9 @@ function buildComparableModels(data) {
                 if (e && Array.isArray(e.series)) series = e.series;
             }
             if (!series) series = buildRfAlignedSeries(data);
+            if (seriesHasChartPoints(series) && chartLen) {
+                series = normalizeModelSeries(series, chartLen);
+            }
             list.push({
                 name: rfName,
                 mase: rf.mase,
@@ -1477,7 +1501,7 @@ function getActiveOverlays() {
     if (!visible.length) return [];
     const models = sortModelsByMase(
         buildComparableModels(dashboardData)
-            .filter(m => visible.includes(m.name) && Array.isArray(m.series) && m.series.length)
+            .filter(m => visible.includes(m.name) && seriesHasChartPoints(m.series))
     );
     return models.map(overlayForModel);
 }
@@ -1774,7 +1798,7 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
         ? options.overlays
         : (options.overlay ? [options.overlay] : []);
     overlays.forEach(ov => {
-        if (!ov || !Array.isArray(ov.series) || !ov.series.length) return;
+        if (!ov || !seriesHasChartPoints(ov.series)) return;
         datasets.push({
             type: 'line',
             label: ov.label || 'Modelo comparado',
@@ -1786,6 +1810,7 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
             pointRadius: 0,
             pointHoverRadius: 6,
             fill: false,
+            spanGaps: false,
             _modelName: ov.modelName || null,
         });
     });

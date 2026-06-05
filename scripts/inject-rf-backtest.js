@@ -18,7 +18,8 @@ const PAYLOAD = path.join(__dirname, '..', 'data', 'dashboard_payload.json');
 function postPredict(series) {
   return new Promise((resolve, reject) => {
     const url = new URL(`${API_BASE.replace(/\/$/, '')}/predict`);
-    const body = JSON.stringify({ series, backtest_days: 14, model: 'random_forest' });
+    const backtestDays = Math.max(14, series.length - 15);
+    const body = JSON.stringify({ series, backtest_days: backtestDays, model: 'random_forest' });
     const req = http.request(
       url,
       {

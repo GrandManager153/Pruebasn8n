@@ -24,7 +24,7 @@ class SeriesPoint(BaseModel):
 
 class PredictRequest(BaseModel):
     series: list[SeriesPoint]
-    backtest_days: int = Field(default=14, ge=1, le=30)
+    backtest_days: int = Field(default=14, ge=1, le=365)
     model: str = "random_forest"
 
 

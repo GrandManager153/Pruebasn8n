@@ -7,6 +7,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const { enrichPayloadComplete } = require('./scripts/ml-enrich-payload');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -276,11 +277,13 @@ app.get('/api/reports', (req, res) => {
 });
 
 // Endpoint: Datos del Dashboard (JSON desde n8n)
-app.get('/api/dashboard', (req, res) => {
+app.get('/api/dashboard', async (req, res) => {
   const payloadPath = path.join(DATA_DIR, 'dashboard_payload.json');
   try {
     if (fs.existsSync(payloadPath)) {
-      const data = JSON.parse(fs.readFileSync(payloadPath, 'utf-8'));
+      let data = JSON.parse(fs.readFileSync(payloadPath, 'utf-8'));
+      data = await enrichPayloadComplete(data);
+      fs.writeFileSync(payloadPath, JSON.stringify(data, null, 2), 'utf-8');
       res.json({ success: true, data });
     } else {
       res.status(404).json({ success: false, message: 'No hay datos de dashboard disponibles aún. Ejecuta el workflow de n8n.' });
@@ -294,7 +297,7 @@ app.get('/api/dashboard', (req, res) => {
 //  WEBHOOK ENDPOINT (recibe datos de n8n)
 // =====================================================================
 
-app.post('/api/webhook', (req, res) => {
+app.post('/api/webhook', async (req, res) => {
   // Autenticación opcional
   if (API_SECRET) {
     const token = req.headers['x-api-key'] || req.query.token;
@@ -315,37 +318,38 @@ app.post('/api/webhook', (req, res) => {
 
   // Extraer y guardar reportes HTML de las narrativas en memoria + disco
   if (receivedData && Array.isArray(receivedData.tree)) {
-    receivedData.tree.forEach(file => {
-      if (file.path && file.content) {
-        // Guardar dashboard_payload.json
-        if (file.path.includes('dashboard_payload.json')) {
-          try {
-            const payloadPath = path.join(DATA_DIR, 'dashboard_payload.json');
-            fs.writeFileSync(payloadPath, file.content, 'utf-8');
-            console.log(`  📊 Dashboard payload guardado en disco (${file.content.length} bytes)`);
-          } catch (err) {
-            console.error('Error guardando dashboard payload:', err.message);
-          }
-        }
+    for (const file of receivedData.tree) {
+      if (!file.path || file.content == null) continue;
 
-        // Guardar reportes HTML
-        const reportMappings = {
-          'reporte_executive.html': 'executive',
-          'reporte_manager.html': 'manager',
-          'reporte_analyst.html': 'analyst',
-          'reporte_operations.html': 'operations'
-        };
-
-        for (const [filename, audience] of Object.entries(reportMappings)) {
-          if (file.path.includes(filename)) {
-            activeReports[audience] = file.content;
-            persistReport(audience, file.content);
-            stats.reportsStored = Object.values(activeReports).filter(r => r !== null).length;
-            console.log(`  📊 Reporte "${audience}" guardado (memoria + disco)`);
-          }
+      if (file.path.includes('dashboard_payload.json')) {
+        try {
+          const payloadPath = path.join(DATA_DIR, 'dashboard_payload.json');
+          let payload = typeof file.content === 'string' ? JSON.parse(file.content) : file.content;
+          payload = await enrichPayloadComplete(payload);
+          const serialized = JSON.stringify(payload, null, 2);
+          fs.writeFileSync(payloadPath, serialized, 'utf-8');
+          console.log(`  📊 Dashboard payload guardado en disco (${serialized.length} bytes)`);
+        } catch (err) {
+          console.error('Error guardando dashboard payload:', err.message);
         }
       }
-    });
+
+      const reportMappings = {
+        'reporte_executive.html': 'executive',
+        'reporte_manager.html': 'manager',
+        'reporte_analyst.html': 'analyst',
+        'reporte_operations.html': 'operations'
+      };
+
+      for (const [filename, audience] of Object.entries(reportMappings)) {
+        if (file.path.includes(filename)) {
+          activeReports[audience] = file.content;
+          persistReport(audience, file.content);
+          stats.reportsStored = Object.values(activeReports).filter(r => r !== null).length;
+          console.log(`  📊 Reporte "${audience}" guardado (memoria + disco)`);
+        }
+      }
+    }
   }
 
   // Respuesta estructurada
