@@ -834,18 +834,8 @@ body.light-mode .custom-table tr:hover td {
   font-weight: 500;
 }
 
-/* ── Action Cards & KPI Cards (Compact Squares) ── */
-.kpi-card {
-  aspect-ratio: 1 / 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  padding: 12px !important;
-  max-width: 130px;
-  width: 100%;
-}
+/* ── Action Cards & KPI Cards ── */
+.kpi-card,
 .action-card {
   aspect-ratio: 1 / 1;
   display: flex;
@@ -853,50 +843,19 @@ body.light-mode .custom-table tr:hover td {
   justify-content: center;
   align-items: center;
   text-align: center;
-  padding: 14px !important;
-  max-width: 170px;
-  width: 100%;
+}
+.action-card {
+  padding: 20px;
   border-radius: var(--radius-md);
   border-left: 4px solid var(--chartreuse);
 }
 .action-title {
-  font-size: 11.5px; font-weight: 700;
-  margin-bottom: 4px;
+  font-size: 13px; font-weight: 700;
+  margin-bottom: 6px;
 }
 .action-text {
-  font-size: 10.5px; color: var(--text-muted);
-  line-height: 1.4;
-}
-
-/* Enforce compact grid columns on desktop to keep cards touching and small */
-.grid-4:has(.kpi-card) {
-  grid-template-columns: repeat(4, 130px);
-}
-.grid-3:has(.kpi-card) {
-  grid-template-columns: repeat(3, 130px);
-}
-.grid-2:has(.kpi-card) {
-  grid-template-columns: repeat(2, 130px);
-}
-.grid-3:has(.action-card) {
-  grid-template-columns: repeat(3, 170px);
-}
-.grid-2:has(.health-hero) {
-  grid-template-columns: repeat(2, 260px);
-}
-
-@media (max-width: 768px) {
-  .grid-4:has(.kpi-card),
-  .grid-3:has(.kpi-card),
-  .grid-2:has(.kpi-card) {
-    grid-template-columns: repeat(2, 1fr) !important;
-  }
-  .grid-3:has(.action-card) {
-    grid-template-columns: 1fr !important;
-  }
-  .grid-2:has(.health-hero) {
-    grid-template-columns: 1fr !important;
-  }
+  font-size: 12px; color: var(--text-muted);
+  line-height: 1.5;
 }
 
 /* ── Circular Reveal ── */
