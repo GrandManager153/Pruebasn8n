@@ -75,7 +75,7 @@ function buildComparableModels(data) {
         if (e && Array.isArray(e.series)) series = e.series;
       }
       if (!series) series = buildRfAlignedSeries(data);
-      list.push({ name: rfName, mase: rf.mase, series: series });
+      list.push({ name: rfName, mase: rf.mase, mae: rf.mae, rmse: rf.rmse, series: series });
     }
   }
   return list;
@@ -89,7 +89,6 @@ export default function ForecastPage() {
 
   const forecast = data?.forecast || {};
   const timeSeries = forecast.time_series || [];
-  const models = forecast.model_leaderboard || forecast.models || [];
   const horizons = forecast.horizons || {};
   const changepoint = forecast.changepoint || {};
 
@@ -102,6 +101,12 @@ export default function ForecastPage() {
     if (!data) return [];
     return buildComparableModels(data).filter(m => m.name !== baseName);
   }, [data, baseName]);
+
+  const leaderboardModels = useMemo(() => {
+    if (!data) return [];
+    const list = buildComparableModels(data);
+    return list.sort((a, b) => (a.mase != null ? a.mase : Infinity) - (b.mase != null ? b.mase : Infinity));
+  }, [data]);
 
   const activeOverlays = useMemo(() => {
     if (!data) return [];
@@ -158,22 +163,27 @@ export default function ForecastPage() {
       {/* Regime Shift / Changepoint Banner */}
       {changepoint.detected ? (
         <motion.div
-          className="card"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           style={{
-            background: `linear-gradient(135deg, var(--bg-card), ${changepoint.direction === 'upward' ? '#25200b' : '#300f0d'})`,
-            borderLeft: `4px solid ${changepoint.direction === 'upward' ? 'var(--amber)' : 'var(--red)'}`,
-            padding: '24px',
             marginBottom: 'var(--gap-bento)',
           }}
         >
+          <div
+            className="card card-no-hover"
+            style={{
+              background: `linear-gradient(135deg, var(--bg-card), ${changepoint.direction === 'upward' ? '#25200b' : '#300f0d'})`,
+              borderLeft: `4px solid ${changepoint.direction === 'upward' ? 'var(--amber)' : 'var(--red)'}`,
+              padding: '24px',
+            }}
+          >
           <h2 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 8px 0', color: 'white' }}>
             Cambio Estructural de Demanda Detectado
           </h2>
           <p style={{ fontSize: 13.5, color: 'var(--text-muted)', margin: 0, lineHeight: 1.6 }}>
             Identificado a partir del {changepoint.change_date}. El volumen medio de leads diarios transitó de {changepoint.pre_mean} a {changepoint.post_mean} contactos diarios, representando una variación del {changepoint.shift_pct}%.
           </p>
+          </div>
         </motion.div>
       ) : (
         <div
@@ -226,11 +236,11 @@ export default function ForecastPage() {
       {/* Time Series Chart */}
       <div className="grid-2-1" style={{ marginTop: 'var(--gap-bento)' }}>
         <motion.div
-          className="card"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
         >
+          <div className="card">
           <div className="chart-title">
             <span className="dot" style={{ background: '#3b82f6' }} />
             Histórico de Leads y Predicción Temporal
@@ -434,15 +444,16 @@ export default function ForecastPage() {
               </div>
             )}
           </div>
+          </div>
         </motion.div>
 
         {/* Seasonal Chart */}
         <motion.div
-          className="card"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
+          <div className="card">
           <div className="chart-title">
             <span className="dot" style={{ background: 'var(--gold)' }} />
             Comportamiento Estacional Semanal
@@ -469,18 +480,19 @@ export default function ForecastPage() {
               </div>
             )}
           </div>
+          </div>
         </motion.div>
       </div>
 
       {/* Model Leaderboard */}
-      {models.length > 0 && (
+      {leaderboardModels.length > 0 && (
         <motion.div
-          className="card"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
           style={{ marginTop: 'var(--gap-bento)' }}
         >
+          <div className="card">
           <div className="chart-title">
             <span className="dot" style={{ background: 'var(--gold)' }} />
             Clasificación de Modelos Predictivos
@@ -490,30 +502,41 @@ export default function ForecastPage() {
               <thead>
                 <tr>
                   <th>Modelo de Proyección</th>
-                  <th style={{ textAlign: 'right' }}>MASE</th>
-                  <th style={{ textAlign: 'right' }}>MAE</th>
-                  <th style={{ textAlign: 'right' }}>RMSE</th>
+                  <th style={{ textAlign: 'right' }}>MASE (error medio absoluto escalado)</th>
+                  <th style={{ textAlign: 'right' }}>MAE (error absoluto medio)</th>
+                  <th style={{ textAlign: 'right' }}>RMSE (error cuadrático medio)</th>
                   <th>Estado de Ajuste</th>
                 </tr>
               </thead>
               <tbody>
-                {models.map((m, i) => (
-                  <tr key={i}>
-                    <td style={{ fontWeight: 600 }}>{m.model || m.name || '—'}</td>
-                    <td style={{ textAlign: 'right', color: parseFloat(m.mase) < 1 ? 'var(--green)' : 'var(--red)' }}>
-                      {m.mase || '—'}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>{m.mae || '—'}</td>
-                    <td style={{ textAlign: 'right' }}>{m.rmse || '—'}</td>
-                    <td>
-                      <span className={`badge ${parseFloat(m.mase) < 1 ? 'badge-success' : 'badge-warning'}`}>
-                        {parseFloat(m.mase) < 1 ? 'Supera baseline' : 'No supera'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {leaderboardModels.map((m, i) => {
+                  const maseVal = parseFloat(m.mase);
+                  const maseColor = maseVal < 0.85 ? 'var(--green)' : maseVal < 1.0 ? 'var(--amber)' : 'var(--red)';
+                  const stateLabel = maseVal < 1.0 ? 'Aceptable' : 'Subóptimo';
+                  const badgeClass = maseVal < 0.85 ? 'badge-success' : maseVal < 1.0 ? 'badge-warning' : 'badge-danger';
+                  return (
+                    <tr key={i}>
+                      <td style={{ fontWeight: 600, color: 'white' }}>{cleanTechnicalTerms(m.name)}</td>
+                      <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', color: maseColor, fontWeight: 'bold' }}>
+                        {m.mase != null ? m.mase.toFixed(3) : '—'}
+                      </td>
+                      <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', color: 'var(--text-muted)' }}>
+                        {m.mae != null ? m.mae.toFixed(2) : '—'}
+                      </td>
+                      <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', color: 'var(--text-dim)' }}>
+                        {m.rmse != null ? m.rmse.toFixed(2) : '—'}
+                      </td>
+                      <td>
+                        <span className={`badge ${badgeClass}`}>
+                          {stateLabel}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+          </div>
           </div>
         </motion.div>
       )}
