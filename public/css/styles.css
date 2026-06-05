@@ -1622,6 +1622,154 @@ body.light-mode .chart-title {
     color: var(--text-muted);
 }
 
+.model-detail-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 360px;
+}
+
+.model-detail-panel {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 420px;
+}
+
+.model-detail-panel .custom-table-container {
+    margin-top: 0;
+}
+
+.model-detail-table th,
+.model-detail-table td {
+    font-size: 12px;
+    padding: 10px 8px;
+}
+
+.model-detail-table tbody tr {
+    animation: modelRowIn 0.35s ease-out;
+}
+
+@keyframes modelRowIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.model-detail-empty {
+    padding: 24px 12px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.model-visibility-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.model-visibility-chips:empty {
+    display: none;
+}
+
+.model-vis-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.03);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s, border-color 0.15s;
+}
+
+.model-vis-chip.hidden-model {
+    opacity: 0.45;
+    text-decoration: line-through;
+}
+
+.model-vis-chip .chip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.model-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.model-detail-table th,
+.model-detail-table td {
+    padding: 8px 6px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+}
+
+.model-detail-table th {
+    color: var(--text-dim);
+    font-weight: 600;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.model-detail-table td {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-main);
+}
+
+.model-detail-name {
+    font-weight: 700;
+    font-family: Inter, sans-serif;
+}
+
+.model-detail-block {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.model-detail-block:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.model-detail-badge {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: Inter, sans-serif;
+}
+
+.model-detail-badge.best {
+    background: rgba(163, 230, 53, 0.12);
+    color: var(--green);
+    border: 1px solid rgba(163, 230, 53, 0.25);
+}
+
+.model-detail-badge.worse {
+    background: rgba(244, 63, 94, 0.08);
+    color: var(--red);
+    border: 1px solid rgba(244, 63, 94, 0.2);
+}
+
 .card-stat-compare {
     margin-top: 8px;
     padding-top: 8px;

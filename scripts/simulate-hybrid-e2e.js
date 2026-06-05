@@ -72,22 +72,45 @@ function buildLocalEngineStub(series) {
       : 1;
   const mae = Math.abs(vals[n - 1] - mean7);
   const mase = naiveMae > 0 ? mae / naiveMae : 1;
+  const fc1d = Math.round(mean7);
+  const horizons = {
+    next_1d: { forecast: fc1d, band_low: 0, band_high: Math.round(mean7 * 1.2) },
+    next_7d: { forecast: Math.round(mean7 * 7), band_low: 0, band_high: Math.round(mean7 * 7 * 1.2) },
+    next_14d: { forecast: Math.round(mean7 * 14), band_low: 0, band_high: Math.round(mean7 * 14 * 1.2) },
+  };
+  const fourierFc = Math.round(mean7 * 1.05);
   return {
     mode: mase < 1 ? 'weak_model' : 'observed_fallback',
     model_name: 'mean_7d',
-    recommended_value: Math.round(mean7),
+    recommended_value: fc1d,
     mase: Math.round(mase * 1000) / 1000,
     confidence: 'media',
     label: 'Local stub mean_7d',
-    forecast_horizons: {
-      next_1d: { forecast: Math.round(mean7), band_low: 0, band_high: Math.round(mean7 * 1.2) },
-      next_7d: { forecast: Math.round(mean7 * 7), band_low: 0, band_high: Math.round(mean7 * 7 * 1.2) },
-      next_14d: { forecast: Math.round(mean7 * 14), band_low: 0, band_high: Math.round(mean7 * 14 * 1.2) },
-    },
+    forecast_horizons: horizons,
     backtest: {
       models: [
-        { name: 'mean_7d', mae: Math.round(mae * 100) / 100, mase: Math.round(mase * 1000) / 1000, rmse: mae },
-        { name: 'fourier_regression', mae: mae * 1.1, mase: mase * 1.05, rmse: mae * 1.2 },
+        {
+          name: 'mean_7d',
+          mae: Math.round(mae * 100) / 100,
+          mase: Math.round(mase * 1000) / 1000,
+          rmse: mae,
+          series: vals.slice(-14).map((v) => Math.round(v * 0.98)),
+          forecast_1d: fc1d,
+          horizons,
+        },
+        {
+          name: 'fourier_regression',
+          mae: Math.round(mae * 1.1 * 100) / 100,
+          mase: Math.round(mase * 1.05 * 1000) / 1000,
+          rmse: mae * 1.2,
+          series: vals.slice(-14).map((v) => Math.round(v * 1.02)),
+          forecast_1d: fourierFc,
+          horizons: {
+            next_1d: { forecast: fourierFc, band_low: 0, band_high: Math.round(fourierFc * 1.2) },
+            next_7d: { forecast: fourierFc * 7, band_low: 0, band_high: Math.round(fourierFc * 7 * 1.2) },
+            next_14d: { forecast: fourierFc * 14, band_low: 0, band_high: Math.round(fourierFc * 14 * 1.2) },
+          },
+        },
       ],
     },
     diagnostics: { best_model: 'mean_7d', best_mase: Math.round(mase * 1000) / 1000 },

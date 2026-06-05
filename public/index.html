@@ -285,10 +285,15 @@
                                 <canvas id="chart-timeseries"></canvas>
                             </div>
                         </div>
-                        <div class="card card-animate" style="animation-delay: 0.10s;">
+                        <div class="card card-animate model-detail-card" style="animation-delay: 0.10s;">
                             <div class="chart-title"><span class="dot" style="background: var(--gold)"></span>
-                                Comportamiento Estacional Semanal</div>
-                            <div class="chart-wrapper"><canvas id="chart-seasonal"></canvas></div>
+                                Detalle del Modelo Seleccionado</div>
+                            <p class="text-muted v-mb-3" style="font-size: 11.5px;" id="model-detail-sub">
+                                Selecciona un modelo o pulsa «Mostrar todas». Clic en la leyenda para ocultar o mostrar filas.
+                            </p>
+                            <div id="model-detail-panel" class="model-detail-panel">
+                                <div class="model-detail-empty">Selecciona un modelo en el desplegable o usa «Mostrar todas».</div>
+                            </div>
                         </div>
                     </div>
 
@@ -370,20 +375,27 @@
                         <!-- Will be populated dynamically from JS -->
                     </div>
 
-                    <!-- Volume Chart row -->
-                    <div class="card v-mb-4 card-animate" style="animation-delay: 0.04s;">
-                        <div class="v-flex-between v-mb-3">
-                            <div class="chart-title" style="margin-bottom: 0;"><span class="dot" style="background: #3b82f6"></span> Volumen Diario</div>
-                            <div class="chart-toolbar" style="margin-left: auto;">
-                                <button class="chart-tool-btn active" id="btn-vol-bar"
-                                    onclick="setDailyVolumeType('bar', event)" title="Vista de barras">▮</button>
-                                <button class="chart-tool-btn" id="btn-vol-line"
-                                    onclick="setDailyVolumeType('line', event)" title="Vista de línea">∿</button>
+                    <!-- Volume + Seasonal row -->
+                    <div class="v-grid-2-1 v-mb-4">
+                        <div class="card card-animate" style="animation-delay: 0.04s;">
+                            <div class="v-flex-between v-mb-3">
+                                <div class="chart-title" style="margin-bottom: 0;"><span class="dot" style="background: #3b82f6"></span> Volumen Diario</div>
+                                <div class="chart-toolbar" style="margin-left: auto;">
+                                    <button class="chart-tool-btn active" id="btn-vol-bar"
+                                        onclick="setDailyVolumeType('bar', event)" title="Vista de barras">▮</button>
+                                    <button class="chart-tool-btn" id="btn-vol-line"
+                                        onclick="setDailyVolumeType('line', event)" title="Vista de línea">∿</button>
+                                </div>
+                            </div>
+                            <p class="text-muted v-mb-3" style="font-size: 11.5px;" id="volume-chart-sub">42 días | Promedio: 0 leads/día</p>
+                            <div class="chart-wrapper">
+                                <canvas id="chart-daily-volume"></canvas>
                             </div>
                         </div>
-                        <p class="text-muted v-mb-3" style="font-size: 11.5px;" id="volume-chart-sub">42 días | Promedio: 0 leads/día</p>
-                        <div class="chart-wrapper">
-                            <canvas id="chart-daily-volume"></canvas>
+                        <div class="card card-animate" style="animation-delay: 0.06s;">
+                            <div class="chart-title"><span class="dot" style="background: var(--gold)"></span>
+                                Comportamiento Estacional Semanal</div>
+                            <div class="chart-wrapper"><canvas id="chart-seasonal"></canvas></div>
                         </div>
                     </div>
 

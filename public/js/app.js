@@ -11,6 +11,7 @@ let timeSeriesType = 'line';
 let dailyVolumeType = 'bar';
 let selectedCompareModel = '';
 let showAllModels = false;
+let visibleModelNames = new Set();
 
 // =====================================================================
 //  📘 INDUSTRY TERMS — English term + Spanish gloss in parentheses
@@ -433,18 +434,18 @@ function switchTab(tabId) {
             }, 100);
         } else if (tabId === 'forecast') {
             if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.forecast) {
+                const line = getChartForecastLine();
                 renderTimeSeriesChart(dashboardData.forecast, {
                     canvasId: 'chart-timeseries',
                     chartKey: 'timeseries',
-                    lineLabel: 'Pronóstico Recomendado',
+                    lineLabel: line.label,
+                    lineColor: line.color,
+                    forecastValue: line.value,
                     overlays: getActiveOverlays()
                 });
-                if (dashboardData.forecast.seasonal_indices) {
-                    renderSeasonalChart(dashboardData.forecast.seasonal_indices);
-                }
+                renderModelDetailPanel();
             } else {
                 if (charts.timeseries) { charts.timeseries.reset(); charts.timeseries.update(); }
-                if (charts.seasonal) { charts.seasonal.reset(); charts.seasonal.update(); }
             }
         } else if (tabId === 'investment') {
             if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.investment && dashboardData.investment.campaigns) {
@@ -846,21 +847,25 @@ function renderBOS(data) {
         prefix: '',
         show14d: true,
         showChangepoint: true,
+        horizons: getBestModelHorizons(data),
+        bestModelName: getBestForecastRecord(data)?.modelName || data.forecast?.method,
     });
     populateModelCompareDropdown(data);
-    updateHorizonComparison();
+    renderModelDetailPanel();
 
     // 8. Render Interactive Alerts Centre Tab
     renderAlertsCentre(data.system.alerts);
 
     // 9. Initialize and render high-impact Charts
+    const tsLine = getChartForecastLine();
     renderTimeSeriesChart(data.forecast || {}, {
         canvasId: 'chart-timeseries',
         chartKey: 'timeseries',
-        lineLabel: 'Pronóstico Recomendado',
+        lineLabel: tsLine.label,
+        lineColor: tsLine.color,
+        forecastValue: tsLine.value,
         overlays: getActiveOverlays()
     });
-    renderSeasonalChart(data.forecast ? data.forecast.seasonal_indices : []);
     renderCampaignChart(data.investment.campaigns);
     renderHourlyChart(data.operations.hourly_distribution);
 
@@ -1018,46 +1023,10 @@ function renderForecastDetails(forecast, options = {}) {
     }
 
     const horizonsGrid = document.getElementById(`${prefix}forecast-horizons-grid`);
-    if (horizonsGrid && forecast.horizons) {
-        const horizons = forecast.horizons;
-        const h1d = horizons.next_1d || {};
-        const h7d = horizons.next_7d || {};
-        const h14d = horizons.next_14d || {};
-
-        let cardsHtml = `
-            <div class="card stat-card-blue card-animate" style="animation-delay: 0.03s;"
-                onclick="openKpiModal('Pronóstico Mañana', '${h1d.forecast ?? 0}')">
-                <div class="card-stat-label">Pronóstico Mañana</div>
-                <div class="card-stat-value" id="${prefix}forecast-1d-val" data-value="${h1d.forecast ?? 0}">0</div>
-                <div class="card-stat-sub">Rango: ${h1d.band_low ?? 0} a ${h1d.band_high ?? 0} leads</div>
-                <div class="card-stat-compare" id="${prefix}forecast-1d-compare"></div>
-            </div>
-            <div class="card stat-card-gold card-animate" style="animation-delay: 0.06s;"
-                onclick="openKpiModal('Pronóstico 7 Días', '${h7d.forecast ?? 0}')">
-                <div class="card-stat-label">Pronóstico 7 Días</div>
-                <div class="card-stat-value" id="${prefix}forecast-7d-val" data-value="${h7d.forecast ?? 0}">0</div>
-                <div class="card-stat-sub">Rango: ${h7d.band_low ?? 0} a ${h7d.band_high ?? 0} leads</div>
-                <div class="card-stat-compare" id="${prefix}forecast-7d-compare"></div>
-            </div>`;
-
-        if (show14d && horizons.next_14d) {
-            cardsHtml += `
-            <div class="card stat-card-green card-animate" style="animation-delay: 0.09s;"
-                onclick="openKpiModal('Pronóstico 14 Días', '${h14d.forecast ?? 0}')">
-                <div class="card-stat-label">Pronóstico 14 Días</div>
-                <div class="card-stat-value" id="${prefix}forecast-14d-val" data-value="${h14d.forecast ?? 0}">0</div>
-                <div class="card-stat-sub">Rango: ${h14d.band_low ?? 0} a ${h14d.band_high ?? 0} leads</div>
-                <div class="card-stat-compare" id="${prefix}forecast-14d-compare"></div>
-            </div>`;
-        }
-
-        horizonsGrid.innerHTML = cardsHtml;
-
-        parseAndAnimate(document.getElementById(`${prefix}forecast-1d-val`), h1d.forecast ?? 0);
-        parseAndAnimate(document.getElementById(`${prefix}forecast-7d-val`), h7d.forecast ?? 0);
-        if (show14d && horizons.next_14d) {
-            parseAndAnimate(document.getElementById(`${prefix}forecast-14d-val`), h14d.forecast ?? 0);
-        }
+    const cardHorizons = options.horizons || forecast.horizons;
+    const bestLabel = options.bestModelName || forecast.method;
+    if (horizonsGrid && cardHorizons) {
+        renderHorizonCards(cardHorizons, { prefix, show14d, bestModelName: bestLabel });
     }
 
     const modelsBody = document.getElementById(`${prefix}forecast-models-body`);
@@ -1098,24 +1067,43 @@ function renderForecastDetails(forecast, options = {}) {
 //  COMPARADOR DE MODELOS (lista desplegable + overlay)
 // =====================================================================
 
-// Color consistente por modelo (mapa fijo para los conocidos + hash determinístico).
+// Paleta fija: todos distintos entre sí y distintos del azul de leads (#38bdf8).
 const MODEL_COLORS = {
-    theta_lite: '#38bdf8',
-    holt_winters: '#f472b6',
-    trend_season: '#f59e0b',
-    seasonal_naive: '#a78bfa',
-    fourier_regression: '#34d399',
-    mean_7d: '#fb7185',
-    ewma: '#facc15',
     random_forest: '#10b981',
+    theta_lite: '#d946ef',
+    holt_winters: '#f43f5e',
+    trend_season: '#f59e0b',
+    seasonal_naive: '#818cf8',
+    fourier_regression: '#22d3ee',
+    mean_7d: '#fb923c',
+    ewma: '#eab308',
 };
 
 function getModelColor(name) {
     if (!name) return '#f472b6';
-    if (MODEL_COLORS[name]) return MODEL_COLORS[name];
+    const key = normModelName(name);
+    const entry = Object.entries(MODEL_COLORS).find(([k]) => normModelName(k) === key);
+    if (entry) return entry[1];
     let h = 0;
     for (const c of String(name)) h = (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0;
-    return `hsl(${h % 360}, 70%, 62%)`;
+    return `hsl(${h % 360}, 72%, 58%)`;
+}
+
+function sortModelsByMase(models) {
+    return [...models].sort((a, b) => {
+        const ma = a.mase != null && isFinite(a.mase) ? a.mase : Infinity;
+        const mb = b.mase != null && isFinite(b.mase) ? b.mase : Infinity;
+        return ma - mb;
+    });
+}
+
+function sortModelNamesByMase(data, names) {
+    const byName = new Map(buildComparableModels(data).map(m => [m.name, m]));
+    return [...names].sort((a, b) => {
+        const ma = byName.get(a)?.mase ?? Infinity;
+        const mb = byName.get(b)?.mase ?? Infinity;
+        return ma - mb;
+    });
 }
 
 function normModelName(name) {
@@ -1137,9 +1125,16 @@ function resolveDailyForecastForModel(data, modelName) {
         if (v != null && isFinite(v)) return { value: v, confidence: f.confidence };
     }
     const entry = (f.backtest_models || []).find(m => normModelName(m.name) === key);
+    if (entry?.horizons?.next_1d?.forecast != null) {
+        return { value: entry.horizons.next_1d.forecast, confidence: f.confidence };
+    }
+    if (entry?.forecast_1d != null && isFinite(entry.forecast_1d)) {
+        return { value: entry.forecast_1d, confidence: f.confidence };
+    }
     if (entry && Array.isArray(entry.series) && entry.series.length) {
         const last = entry.series[entry.series.length - 1];
         if (typeof last === 'number' && isFinite(last)) {
+            console.warn(`[forecast] ${modelName}: usando último backtest como fallback; falta forecast_1d/horizons`);
             return { value: last, confidence: f.confidence };
         }
     }
@@ -1208,13 +1203,217 @@ function applyBestForecastToKpis(kpis, data) {
     });
 }
 
+/** Horizontes del mejor modelo global (menor MASE). */
+function getBestModelHorizons(data) {
+    if (!data) return null;
+    const best = getBestForecastRecord(data);
+    if (best) {
+        const h = getModelHorizons(best.modelName);
+        if (h) return h;
+    }
+    const rf = data.forecast_rf;
+    if (rf && rf.available !== false && rf.horizons) return rf.horizons;
+    return data.forecast?.horizons || null;
+}
+
+function formatModelLabel(name) {
+    return cleanTechnicalTerms(String(name || '').replace(/_/g, ' ').toUpperCase());
+}
+
+function renderHorizonCards(horizons, options = {}) {
+    const prefix = options.prefix || '';
+    const show14d = options.show14d !== false;
+    const bestName = options.bestModelName;
+    const grid = document.getElementById(`${prefix}forecast-horizons-grid`);
+    if (!grid || !horizons) return;
+
+    const h1d = horizons.next_1d || {};
+    const h7d = horizons.next_7d || {};
+    const h14d = horizons.next_14d || {};
+    const modelSub = bestName
+        ? `Mejor modelo: ${formatModelLabel(bestName)}`
+        : 'Mejor modelo por MASE';
+
+    let cardsHtml = `
+        <div class="card stat-card-blue card-animate" style="animation-delay: 0.03s;"
+            onclick="openKpiModal('Pronóstico Mañana', '${h1d.forecast ?? 0}')">
+            <div class="card-stat-label">Pronóstico Mañana</div>
+            <div class="card-stat-value" id="${prefix}forecast-1d-val" data-value="${h1d.forecast ?? 0}">0</div>
+            <div class="card-stat-sub">Rango: ${h1d.band_low ?? 0} a ${h1d.band_high ?? 0} leads · ${modelSub}</div>
+        </div>
+        <div class="card stat-card-gold card-animate" style="animation-delay: 0.06s;"
+            onclick="openKpiModal('Pronóstico 7 Días', '${h7d.forecast ?? 0}')">
+            <div class="card-stat-label">Pronóstico 7 Días</div>
+            <div class="card-stat-value" id="${prefix}forecast-7d-val" data-value="${h7d.forecast ?? 0}">0</div>
+            <div class="card-stat-sub">Rango: ${h7d.band_low ?? 0} a ${h7d.band_high ?? 0} leads · ${modelSub}</div>
+        </div>`;
+
+    if (show14d && horizons.next_14d) {
+        cardsHtml += `
+        <div class="card stat-card-green card-animate" style="animation-delay: 0.09s;"
+            onclick="openKpiModal('Pronóstico 14 Días', '${h14d.forecast ?? 0}')">
+            <div class="card-stat-label">Pronóstico 14 Días</div>
+            <div class="card-stat-value" id="${prefix}forecast-14d-val" data-value="${h14d.forecast ?? 0}">0</div>
+            <div class="card-stat-sub">Rango: ${h14d.band_low ?? 0} a ${h14d.band_high ?? 0} leads · ${modelSub}</div>
+        </div>`;
+    }
+
+    grid.innerHTML = cardsHtml;
+    parseAndAnimate(document.getElementById(`${prefix}forecast-1d-val`), h1d.forecast ?? 0);
+    parseAndAnimate(document.getElementById(`${prefix}forecast-7d-val`), h7d.forecast ?? 0);
+    if (show14d && horizons.next_14d) {
+        parseAndAnimate(document.getElementById(`${prefix}forecast-14d-val`), h14d.forecast ?? 0);
+    }
+}
+
+function modelHasChartData(m) {
+    return (Array.isArray(m.series) && m.series.length) || getModelHorizons(m.name);
+}
+
+function getAllComparableModelNames(data) {
+    return buildComparableModels(data).filter(modelHasChartData).map(m => m.name);
+}
+
+function getVisibleModelNames() {
+    if (showAllModels) return [...visibleModelNames];
+    if (selectedCompareModel) return [selectedCompareModel];
+    return [];
+}
+
+function getModelRecord(data, modelName) {
+    if (!data || !modelName) return null;
+    const key = normModelName(modelName);
+    const rf = data.forecast_rf;
+    if (rf && rf.available !== false && normModelName(rf.model_name || 'random_forest') === key) {
+        return {
+            name: rf.model_name || 'random_forest',
+            mase: rf.mase,
+            mae: (rf.backtest_models || []).find(x => x.name === (rf.model_name || 'random_forest'))?.mae,
+            rmse: (rf.backtest_models || []).find(x => x.name === (rf.model_name || 'random_forest'))?.rmse,
+            series: buildRfAlignedSeries(data),
+            horizons: rf.horizons,
+            forecast_1d: rf.recommended_value ?? rf.horizons?.next_1d?.forecast,
+        };
+    }
+    const entry = (data.forecast?.backtest_models || []).find(m => normModelName(m.name) === key);
+    if (entry) return entry;
+    return buildComparableModels(data).find(m => normModelName(m.name) === key) || null;
+}
+
+function getChartForecastLine() {
+    const f = dashboardData?.forecast || {};
+    const visible = getVisibleModelNames();
+    if (visible.length === 1) {
+        const name = visible[0];
+        const daily = resolveDailyForecastForModel(dashboardData, name);
+        return {
+            value: daily?.value ?? f.recommended_value,
+            label: `Pronóstico ${formatModelLabel(name)}`,
+            color: getModelColor(name),
+        };
+    }
+    const method = f.method || 'recomendado';
+    return {
+        value: f.recommended_value,
+        label: `Pronóstico ${formatModelLabel(method)}`,
+        color: getModelColor(method),
+    };
+}
+
+function getChartVisibleModelNames() {
+    const chart = charts.timeseries;
+    if (chart && chart.data && Array.isArray(chart.data.datasets)) {
+        const names = [];
+        chart.data.datasets.forEach((ds, idx) => {
+            if (ds._modelName && chart.isDatasetVisible(idx)) {
+                names.push(ds._modelName);
+            }
+        });
+        if (showAllModels || selectedCompareModel || names.length) {
+            return dashboardData ? sortModelNamesByMase(dashboardData, names) : names;
+        }
+    }
+    const fallback = getVisibleModelNames();
+    return dashboardData ? sortModelNamesByMase(dashboardData, fallback) : fallback;
+}
+
+function syncModelCompareUI() {
+    renderForecastBaseChart();
+    renderModelDetailPanel();
+}
+
+function renderModelDetailPanel() {
+    const panel = document.getElementById('model-detail-panel');
+    const sub = document.getElementById('model-detail-sub');
+    if (!panel) return;
+
+    const visible = getChartVisibleModelNames();
+
+    if (!visible.length || !dashboardData) {
+        panel.innerHTML = '<div class="model-detail-empty">Selecciona un modelo en el desplegable o usa «Mostrar todas».</div>';
+        if (sub) sub.textContent = 'Selecciona un modelo o pulsa «Mostrar todas». Clic en la leyenda para ocultar o mostrar filas.';
+        return;
+    }
+
+    if (sub) {
+        sub.textContent = visible.length === 1
+            ? `1 modelo visible · pronóstico diario (1d)`
+            : `${visible.length} modelos visibles · clic en la leyenda para ocultar o mostrar`;
+    }
+
+    const rows = visible.map(name => {
+        const rec = getModelRecord(dashboardData, name);
+        const daily = resolveDailyForecastForModel(dashboardData, name);
+        const pron = daily?.value != null ? Math.round(daily.value) : '—';
+        const color = getModelColor(name);
+        const mase = rec?.mase;
+        const maseColor = typeof mase === 'number'
+            ? (mase < 0.85 ? 'var(--green)' : mase < 1.0 ? 'var(--amber)' : 'var(--red)')
+            : 'var(--text-muted)';
+        return `
+            <tr>
+                <td style="font-weight: 600; color: ${color};">${formatModelLabel(name)}</td>
+                <td style="text-align: right; font-family: var(--mono); font-weight: 600;">${pron}</td>
+                <td style="text-align: right; font-family: var(--mono); color: ${maseColor}; font-weight: bold;">${typeof mase === 'number' ? mase.toFixed(3) : '—'}</td>
+                <td style="text-align: right; font-family: var(--mono); color: var(--text-muted);">${rec?.mae != null ? Number(rec.mae).toFixed(2) : '—'}</td>
+                <td style="text-align: right; font-family: var(--mono); color: var(--text-dim);">${rec?.rmse != null ? Number(rec.rmse).toFixed(2) : '—'}</td>
+            </tr>
+        `;
+    }).join('');
+
+    panel.innerHTML = `
+        <div class="custom-table-container">
+            <table class="custom-table model-detail-table">
+                <thead>
+                    <tr>
+                        <th>Modelo</th>
+                        <th style="text-align: right;">Pronóstico</th>
+                        <th style="text-align: right;">MASE</th>
+                        <th style="text-align: right;">MAE</th>
+                        <th style="text-align: right;">RMSE</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+}
+
 // Construye la lista de modelos comparables: los del backtest estadistico
 // mas el Random Forest (desde forecast_rf), cada uno con su serie diaria si existe.
 function buildComparableModels(data) {
     const list = [];
     const f = (data && data.forecast) ? data.forecast : {};
     (f.backtest_models || []).forEach(m => {
-        list.push({ name: m.name, mase: m.mase, mae: m.mae, rmse: m.rmse, series: m.series });
+        list.push({
+            name: m.name,
+            mase: m.mase,
+            mae: m.mae,
+            rmse: m.rmse,
+            series: m.series,
+            horizons: m.horizons,
+            forecast_1d: m.forecast_1d,
+        });
     });
 
     const rf = data ? data.forecast_rf : null;
@@ -1226,10 +1425,16 @@ function buildComparableModels(data) {
                 const e = rf.backtest_models.find(x => x.name === rfName);
                 if (e && Array.isArray(e.series)) series = e.series;
             }
-            // Serie real de predicciones del backtest (predicho por día), alineada
-            // por fecha a la serie histórica que define el eje X de la gráfica.
             if (!series) series = buildRfAlignedSeries(data);
-            list.push({ name: rfName, mase: rf.mase, series: series });
+            list.push({
+                name: rfName,
+                mase: rf.mase,
+                mae: (rf.backtest_models || []).find(x => x.name === rfName)?.mae,
+                rmse: (rf.backtest_models || []).find(x => x.name === rfName)?.rmse,
+                series: series,
+                horizons: rf.horizons,
+                forecast_1d: rf.recommended_value ?? rf.horizons?.next_1d?.forecast,
+            });
         }
     }
     return list;
@@ -1259,114 +1464,107 @@ function buildRfAlignedSeries(data) {
 // La leyenda muestra solo el nombre del modelo; el MASE vive únicamente en la tabla de abajo.
 function overlayForModel(m) {
     return {
-        label: cleanTechnicalTerms(m.name.replace(/_/g, ' ').toUpperCase()),
+        label: formatModelLabel(m.name),
         series: m.series,
-        color: getModelColor(m.name)
+        color: getModelColor(m.name),
+        modelName: m.name,
     };
 }
 
-// Devuelve los overlays activos: todos los modelos, uno solo, o ninguno.
 function getActiveOverlays() {
     if (!dashboardData) return [];
-    const baseName = (dashboardData.forecast && dashboardData.forecast.method) ? dashboardData.forecast.method : null;
-    const models = buildComparableModels(dashboardData)
-        .filter(m => m.name !== baseName && Array.isArray(m.series) && m.series.length);
-
-    if (showAllModels) return models.map(overlayForModel);
-    if (selectedCompareModel) {
-        const m = models.find(x => x.name === selectedCompareModel);
-        if (m) return [overlayForModel(m)];
-    }
-    return [];
+    const visible = getVisibleModelNames();
+    if (!visible.length) return [];
+    const models = sortModelsByMase(
+        buildComparableModels(dashboardData)
+            .filter(m => visible.includes(m.name) && Array.isArray(m.series) && m.series.length)
+    );
+    return models.map(overlayForModel);
 }
 
-// Vuelve a dibujar la gráfica base del tab forecast con los overlays activos.
 function renderForecastBaseChart() {
     if (!dashboardData || !dashboardData.forecast) return;
+    const line = getChartForecastLine();
     renderTimeSeriesChart(dashboardData.forecast, {
         canvasId: 'chart-timeseries',
         chartKey: 'timeseries',
-        lineLabel: 'Pronóstico Recomendado',
-        overlays: getActiveOverlays()
+        lineLabel: line.label,
+        lineColor: line.color,
+        forecastValue: line.value,
+        overlays: getActiveOverlays(),
     });
 }
 
-// Botón "Mostrar todas": sobrepone todas las curvas de modelos a la vez.
 function showAllModelOverlays() {
     showAllModels = true;
     selectedCompareModel = '';
+    visibleModelNames = new Set(getAllComparableModelNames(dashboardData));
     const sel = document.getElementById('model-compare-select');
     if (sel) { sel.value = ''; sel.style.borderColor = ''; sel.style.color = ''; }
     const meta = document.getElementById('model-compare-meta');
     if (meta) { meta.textContent = 'Mostrando todos los modelos'; meta.style.color = ''; }
-    renderForecastBaseChart();
-    updateHorizonComparison();
+    syncModelCompareUI();
 }
 
-// Botón "Limpiar": regresa a la gráfica original (solo modelo base).
 function clearModelOverlays() {
     showAllModels = false;
     selectedCompareModel = '';
+    visibleModelNames = new Set();
     const sel = document.getElementById('model-compare-select');
     if (sel) { sel.value = ''; sel.style.borderColor = ''; sel.style.color = ''; }
     const meta = document.getElementById('model-compare-meta');
     if (meta) { meta.textContent = ''; meta.style.color = ''; }
-    renderForecastBaseChart();
-    updateHorizonComparison();
+    syncModelCompareUI();
 }
 
-// Llena el desplegable con los modelos comparables, excluyendo el modelo base/actual.
 function populateModelCompareDropdown(data) {
     const sel = document.getElementById('model-compare-select');
     if (!sel) return;
-    const baseName = (data && data.forecast && data.forecast.method) ? data.forecast.method : null;
-    const models = buildComparableModels(data).filter(m => m.name !== baseName);
+    const models = sortModelsByMase(buildComparableModels(data));
 
-    let html = '<option value="">Ninguno (solo modelo actual)</option>';
+    let html = '<option value="">Ninguno (modelo recomendado)</option>';
     models.forEach(m => {
-        const hasSeries = Array.isArray(m.series) && m.series.length;
-        const label = cleanTechnicalTerms(m.name.replace(/_/g, ' ').toUpperCase());
+        const hasData = modelHasChartData(m);
+        const label = formatModelLabel(m.name);
         const color = getModelColor(m.name);
-        html += `<option value="${m.name}" style="color:${color}"${hasSeries ? '' : ' disabled'}>${label}${hasSeries ? '' : ' (sin serie)'}</option>`;
+        html += `<option value="${m.name}" style="color:${color}"${hasData ? '' : ' disabled'}>${label}${hasData ? '' : ' (sin datos)'}</option>`;
     });
     sel.innerHTML = html;
     selectedCompareModel = '';
+    showAllModels = false;
+    visibleModelNames = new Set();
     sel.style.borderColor = '';
     sel.style.color = '';
     const meta = document.getElementById('model-compare-meta');
     if (meta) { meta.textContent = ''; meta.style.color = ''; }
 }
 
-// Devuelve los horizontes (next_1d/7d/14d) del modelo indicado, si existen.
 function getModelHorizons(name) {
     if (!name || !dashboardData) return null;
     const rf = dashboardData.forecast_rf;
     const rfName = rf ? (rf.model_name || 'random_forest') : null;
-    if (rf && rf.available !== false && name === rfName && rf.horizons) return rf.horizons;
+    if (rf && rf.available !== false && normModelName(name) === normModelName(rfName) && rf.horizons) {
+        return rf.horizons;
+    }
     const f = dashboardData.forecast || {};
-    const m = (f.backtest_models || []).find(x => x.name === name);
+    if (normModelName(f.method) === normModelName(name) && f.horizons) return f.horizons;
+    const m = (f.backtest_models || []).find(x => normModelName(x.name) === normModelName(name));
     if (m && m.horizons) return m.horizons;
+    const daily = resolveDailyForecastForModel(dashboardData, name);
+    if (daily?.value != null) {
+        return {
+            next_1d: { forecast: daily.value, band_low: null, band_high: null, method: name },
+        };
+    }
     return null;
 }
 
-// Actualiza las tarjetas de "Pronóstico de Demanda a Mediano Plazo" con los datos
-// del modelo seleccionado para comparar (valor + variación vs modelo base).
-function updateHorizonComparison() {
-    // Las tarjetas de pronóstico muestran únicamente el modelo base/original.
-    // La comparación por tarjeta (p. ej. "RANDOM FOREST: 80 ▼ 69.7%") quedó
-    // deshabilitada a pedido; la comparación de modelos sigue disponible en la gráfica.
-    ['forecast-1d-compare', 'forecast-7d-compare', 'forecast-14d-compare'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = '';
-    });
-}
-
-// Handler del cambio en el desplegable: sobrepone (o quita) la curva del modelo elegido.
 function onModelCompareChange() {
     const sel = document.getElementById('model-compare-select');
     if (!sel) return;
     selectedCompareModel = sel.value || '';
     showAllModels = false;
+    visibleModelNames = selectedCompareModel ? new Set([selectedCompareModel]) : new Set();
 
     const color = selectedCompareModel ? getModelColor(selectedCompareModel) : '';
     sel.style.borderColor = color;
@@ -1379,8 +1577,7 @@ function onModelCompareChange() {
         meta.style.color = color;
     }
 
-    renderForecastBaseChart();
-    updateHorizonComparison();
+    syncModelCompareUI();
 }
 
 // =====================================================================
@@ -1540,6 +1737,7 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
     const defaultLineColor = isLight ? 'rgba(132, 204, 22, 0.9)' : 'rgba(163, 230, 53, 0.8)';
     const lineLabel = options.lineLabel || 'Pronóstico Recomendado';
     const lineColor = options.lineColor || defaultLineColor;
+    const forecastVal = options.forecastValue != null ? options.forecastValue : forecast.recommended_value;
 
     const datasets = [
         {
@@ -1562,7 +1760,7 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
         {
             type: 'line',
             label: lineLabel,
-            data: new Array(values.length).fill(forecast.recommended_value),
+            data: new Array(values.length).fill(forecastVal),
             borderColor: lineColor,
             borderDash: [6, 4],
             borderWidth: 2,
@@ -1587,7 +1785,8 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
             tension: 0.35,
             pointRadius: 0,
             pointHoverRadius: 6,
-            fill: false
+            fill: false,
+            _modelName: ov.modelName || null,
         });
     });
 
@@ -1609,13 +1808,37 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
                     return delay;
                 }
             },
+            transitions: {
+                hide: {
+                    animations: {
+                        opacity: { duration: 380, easing: 'easeInOutQuad', to: 0 },
+                    },
+                },
+                show: {
+                    animations: {
+                        opacity: { duration: 480, easing: 'easeOutQuart', from: 0, to: 1 },
+                    },
+                },
+            },
             responsive: true,
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: { 
-                    display: true, 
-                    labels: { 
+                legend: {
+                    display: true,
+                    onClick: (evt, legendItem, legend) => {
+                        const chart = legend.chart;
+                        const index = legendItem.datasetIndex;
+                        if (chart.isDatasetVisible(index)) {
+                            chart.hide(index);
+                        } else {
+                            chart.show(index);
+                        }
+                        if (chart.data.datasets[index]._modelName) {
+                            renderModelDetailPanel();
+                        }
+                    },
+                    labels: {
                         color: isLight ? '#475569' : '#94a3b8', 
                         font: { size: 11, family: 'Inter' }, 
                         boxWidth: 12 
@@ -1655,10 +1878,13 @@ function setTimeSeriesType(type, ev) {
         btn.classList.toggle('active', btn.dataset.tsType === type);
     });
     if (dashboardData && dashboardData.forecast) {
+        const line = getChartForecastLine();
         renderTimeSeriesChart(dashboardData.forecast, {
             canvasId: 'chart-timeseries',
             chartKey: 'timeseries',
-            lineLabel: 'Pronóstico Recomendado',
+            lineLabel: line.label,
+            lineColor: line.color,
+            forecastValue: line.value,
             overlays: getActiveOverlays()
         });
     }
@@ -2101,6 +2327,10 @@ function renderOperationsTab(data) {
     }
     renderDailyVolumeChart(ops);
 
+    if (dashboardData?.forecast?.seasonal_indices) {
+        renderSeasonalChart(dashboardData.forecast.seasonal_indices);
+    }
+
     // 3. Populate Contact Distribution Bars
     const totalCalls = call.total_records || 1;
     const contactTotalEl = document.getElementById('contact-total-calls');
@@ -2387,15 +2617,15 @@ window.toggleTheme = function(event) {
 
         // Dynamically redraw all loaded active charts with new gridlines, tooltips, and tick colors
         if (dashboardData) {
+            const line = getChartForecastLine();
             renderTimeSeriesChart(dashboardData.forecast, {
                 canvasId: 'chart-timeseries',
                 chartKey: 'timeseries',
-                lineLabel: 'Pronóstico Recomendado',
+                lineLabel: line.label,
+                lineColor: line.color,
+                forecastValue: line.value,
                 overlays: getActiveOverlays()
             });
-            if (dashboardData.forecast && dashboardData.forecast.seasonal_indices) {
-                renderSeasonalChart(dashboardData.forecast.seasonal_indices);
-            }
             if (dashboardData.investment && dashboardData.investment.campaigns) {
                 renderCampaignChart(dashboardData.investment.campaigns);
             }
