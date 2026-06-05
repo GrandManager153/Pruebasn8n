@@ -54,7 +54,8 @@ export default function InvestmentPage() {
 
       <div className="grid-2-1">
         {/* Interactive Donut Chart */}
-        <motion.div className="card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="card">
           <div className="chart-title">
             <span className="dot" style={{ background: 'var(--green)' }} />
             Distribución del Gasto por Campaña
@@ -240,6 +241,7 @@ export default function InvestmentPage() {
               Sin datos de campañas
             </div>
           )}
+        </div>
         </motion.div>
 
         {/* KPI Cards */}
@@ -265,12 +267,12 @@ export default function InvestmentPage() {
       {/* Campaign Table */}
       {campaigns.length > 0 && (
         <motion.div
-          className="card"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
           style={{ marginTop: 'var(--gap-bento)' }}
         >
+          <div className="card">
           <div className="section-header" style={{ marginBottom: 12 }}>
             <div className="section-title">
               <span className="bar" />
@@ -299,6 +301,7 @@ export default function InvestmentPage() {
               </tbody>
             </table>
           </div>
+        </div>
         </motion.div>
       )}
     </>

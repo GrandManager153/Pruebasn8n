@@ -93,15 +93,19 @@ export default function FunnelPage() {
     <>
       {/* Conversion Banner */}
       <motion.div
-        className="card"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         style={{
-          background: 'linear-gradient(135deg, var(--bg-card), #0a2015)',
-          borderLeft: '4px solid var(--green)',
           marginBottom: 'var(--gap-bento)',
         }}
       >
+        <div
+          className="card"
+          style={{
+            background: 'linear-gradient(135deg, var(--bg-card), #0a2015)',
+            borderLeft: '4px solid var(--green)',
+          }}
+        >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>
             Desempeño y Absorción de Leads
@@ -115,11 +119,13 @@ export default function FunnelPage() {
           <KpiCard label="Global CVR (tasa de conversión)" value={convPct} color="green" animateValue={false} />
           <KpiCard label="Revenue at Risk (ingreso en riesgo)" value={riskRevenue} color="red" animateValue={false} />
         </div>
+        </div>
       </motion.div>
 
       {/* Feeders & Leaks */}
       <div className="grid-2">
-        <motion.div className="card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <div className="card">
           <div className="chart-title">
             <span className="dot" style={{ background: 'var(--green)' }} />
             Feeders (rutas que convierten)
@@ -148,9 +154,11 @@ export default function FunnelPage() {
               <p style={{ fontSize: 12, color: 'var(--text-dim)' }}>Sin datos de feeders disponibles</p>
             )}
           </div>
+          </div>
         </motion.div>
 
-        <motion.div className="card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <div className="card">
           <div className="chart-title">
             <span className="dot" style={{ background: 'var(--red)' }} />
             Leaks (fugas del embudo)
@@ -180,6 +188,7 @@ export default function FunnelPage() {
               <p style={{ fontSize: 12, color: 'var(--text-dim)' }}>Sin datos de leaks disponibles</p>
             )}
           </div>
+          </div>
         </motion.div>
       </div>
 
@@ -191,7 +200,8 @@ export default function FunnelPage() {
             Probabilidades de Conversión y Pasos Operativos Esperados
           </div>
         </div>
-        <motion.div className="card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <div className="card">
           <div className="custom-table-container">
             <table className="custom-table">
               <thead>
@@ -223,6 +233,7 @@ export default function FunnelPage() {
                 ))}
               </tbody>
             </table>
+          </div>
           </div>
         </motion.div>
       </div>

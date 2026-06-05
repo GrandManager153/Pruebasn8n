@@ -6,10 +6,10 @@
 
 /* ── CSS Custom Properties (Design Tokens) ── */
 :root {
-  --bg-main: #080c14;
-  --bg-sidebar: #05080f;
-  --bg-card: linear-gradient(135deg, rgba(13, 20, 35, 0.8), rgba(7, 10, 17, 0.9));
-  --border: rgba(255, 255, 255, 0.05);
+  --bg-main: #0c0c0e;
+  --bg-sidebar: var(--bg-main);
+  --bg-card: linear-gradient(135deg, rgba(20, 20, 22, 0.85), rgba(12, 12, 14, 0.95));
+  --border: rgba(255, 255, 255, 0.06);
   --border-hover: rgba(224, 153, 42, 0.35);
   --chartreuse: #e0992a;
   --chartreuse-glow: rgba(224, 153, 42, 0.15);
@@ -30,10 +30,10 @@
   --metric-value: #ffffff;
   --metric-value-glow: rgba(255, 255, 255, 0.45);
 
-  --radius-lg: 24px;
-  --radius-md: 16px;
-  --radius-sm: 12px;
-  --gap-bento: 22px;
+  --radius-lg: 0px;
+  --radius-md: 0px;
+  --radius-sm: 0px;
+  --gap-bento: 0px;
   --shell-pad: 16px;
   --soft-shadow: 0 14px 40px rgba(0, 0, 0, 0.38), inset 0 1px 1px rgba(255, 255, 255, 0.04);
 }
@@ -41,7 +41,7 @@
 /* ── Light Theme ── */
 body.light-mode {
   --bg-main: #f8fafc;
-  --bg-sidebar: rgba(241, 245, 249, 0.85);
+  --bg-sidebar: var(--bg-main);
   --bg-card: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(241, 245, 249, 0.95));
   --border: rgba(15, 23, 42, 0.08);
   --border-hover: rgba(178, 116, 21, 0.45);
@@ -75,7 +75,7 @@ body {
 
 /* ── Scrollbars ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: rgba(7, 13, 25, 0.5); }
+::-webkit-scrollbar-track { background: rgba(12, 12, 14, 0.5); }
 ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
 
@@ -123,11 +123,9 @@ body.light-mode .global-flashlight {
     rgba(249,115,22,0.05) 0%, rgba(255,255,255,0.35) 50%, transparent 100%);
 }
 
-/* ── Ocean Waves ── */
+/* ── Ocean Waves (disabled) ── */
 .wave-bg-container {
-  position: fixed; top: 0; left: 0;
-  width: 100%; height: 100%;
-  pointer-events: none; z-index: 0; overflow: hidden;
+  display: none;
 }
 .wave-layer { position: absolute; bottom: 0; left: 0; width: 200%; height: 100%; }
 .wave-layer svg { position: absolute; bottom: 0; left: 0; width: 100%; height: 40%; min-height: 200px; }
@@ -161,7 +159,7 @@ body.light-mode .wave-4 svg path { fill: rgba(255, 255, 255, 0.06); }
   width: 260px;
   min-width: 260px;
   background: var(--bg-sidebar);
-  border-right: 1px solid var(--border);
+  border-right: none;
   backdrop-filter: blur(24px);
   display: flex;
   flex-direction: column;
@@ -173,7 +171,7 @@ body.light-mode .wave-4 svg path { fill: rgba(255, 255, 255, 0.06); }
 }
 .sidebar-brand {
   padding: 28px 24px 20px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
 }
 .sidebar-brand h1 {
   font-size: 22px;
@@ -203,7 +201,7 @@ body.light-mode .wave-4 svg path { fill: rgba(255, 255, 255, 0.06); }
 }
 .sidebar-footer {
   padding: 16px 20px;
-  border-top: 1px solid var(--border);
+  border-top: none;
   text-align: center;
 }
 .sidebar-footer p {
@@ -321,14 +319,19 @@ body.light-mode .nav-item.active { color: #080c14 !important; }
 
 /* ── Status Bar ── */
 .sbar {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 18px;
-  background: rgba(16, 185, 129, 0.06);
-  border: 1px solid rgba(16, 185, 129, 0.15);
-  border-radius: var(--radius-sm);
-  font-size: 12px; font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  aspect-ratio: 1 / 1;
+  background: transparent;
+  border: none;
+  border-radius: 0px;
+  font-size: 13px; font-weight: 600;
   color: var(--green);
-  margin-bottom: 20px;
+  margin-bottom: 0px;
+  padding: 24px;
 }
 .sdot {
   width: 6px; height: 6px;
@@ -367,14 +370,19 @@ body.light-mode .nav-item.active { color: #080c14 !important; }
 
 /* ── Cards ── */
 .card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  background: var(--bg-main) !important;
+  border: none !important;
   border-radius: var(--radius-lg);
   padding: 24px;
-  box-shadow: var(--soft-shadow);
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: none !important;
   position: relative;
   overflow: hidden;
+  transform-origin: center bottom;
+  transform: perspective(800px) rotateX(0deg) translateY(0) scale(1);
+  transition:
+    transform 0.45s cubic-bezier(0.23, 1, 0.32, 1),
+    box-shadow 0.45s cubic-bezier(0.23, 1, 0.32, 1),
+    background 0.35s ease;
 }
 .card::before {
   content: '';
@@ -382,20 +390,57 @@ body.light-mode .nav-item.active { color: #080c14 !important; }
   inset: 0;
   border-radius: var(--radius-lg);
   padding: 1px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.06), transparent 60%);
+  background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent 50%, rgba(255,255,255,0.05));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
 }
 .card:hover {
-  border-color: var(--border-hover);
-  transform: translateY(-3px);
-  box-shadow: var(--soft-shadow), 0 0 25px var(--chartreuse-glow);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%) !important;
+  transform: perspective(800px) rotateX(3deg) translateY(-28px) scale(1.02) !important;
+  box-shadow:
+    0 30px 60px rgba(0, 0, 0, 0.65),
+    0 15px 25px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 0 30px rgba(255, 255, 255, 0.04) !important;
+}
+.card:hover::before {
+  opacity: 1;
 }
 body.light-mode .card {
-  box-shadow: 0 8px 32px rgba(15,23,42,0.06), inset 0 1px 1px rgba(255,255,255,0.8) !important;
+  background: var(--bg-main) !important;
+  border: none !important;
+  box-shadow: none !important;
+  transform-origin: center bottom;
+  transform: perspective(800px) rotateX(0deg) translateY(0) scale(1);
+}
+body.light-mode .card:hover {
+  background: rgba(15, 23, 42, 0.02) !important;
+  transform: perspective(800px) rotateX(3deg) translateY(-28px) scale(1.02);
+  box-shadow:
+    0 30px 60px rgba(15, 23, 42, 0.1),
+    0 15px 25px rgba(15, 23, 42, 0.06),
+    0 0 0 1px rgba(15, 23, 42, 0.05) !important;
+}
+
+/* Static Card Override */
+.card.card-no-hover {
+  transform: none !important;
+  box-shadow: none !important;
+  cursor: default !important;
+}
+.card.card-no-hover:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  background: var(--bg-main) !important;
+}
+.card.card-no-hover::before,
+.card.card-no-hover:hover::before {
+  opacity: 0 !important;
 }
 
 /* ── Card Stats ── */
@@ -417,26 +462,6 @@ body.light-mode .card {
   font-weight: 500;
 }
 
-/* ── Card Gradient Variations (Aesthetic Enhancement) ── */
-.stat-card-blue,
-.stat-card-gold,
-.stat-card-red,
-.stat-card-green,
-.stat-card-white {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(7, 10, 17, 0.9) 100%) !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-}
-
-/* White Glow Hover State for all cards in Dark Mode */
-.stat-card-blue:hover,
-.stat-card-gold:hover,
-.stat-card-red:hover,
-.stat-card-green:hover,
-.stat-card-white:hover {
-  border-color: rgba(255, 255, 255, 0.4) !important;
-  box-shadow: var(--soft-shadow), 0 0 25px rgba(255, 255, 255, 0.18) !important;
-}
-
 /* Light Theme Card Overrides (LEGIBILITY) */
 body.light-mode .card-stat-label {
   color: #475569;
@@ -447,24 +472,6 @@ body.light-mode .card-stat-value {
 }
 body.light-mode .card-stat-sub {
   color: #64748b;
-}
-
-body.light-mode .stat-card-blue,
-body.light-mode .stat-card-gold,
-body.light-mode .stat-card-red,
-body.light-mode .stat-card-green,
-body.light-mode .stat-card-white {
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.06) 0%, rgba(255, 255, 255, 0.95) 100%) !important;
-  border-color: rgba(15, 23, 42, 0.1) !important;
-}
-
-body.light-mode .stat-card-blue:hover,
-body.light-mode .stat-card-gold:hover,
-body.light-mode .stat-card-red:hover,
-body.light-mode .stat-card-green:hover,
-body.light-mode .stat-card-white:hover {
-  border-color: rgba(15, 23, 42, 0.25) !important;
-  box-shadow: 0 8px 32px rgba(15,23,42,0.06), 0 0 15px rgba(15, 23, 42, 0.08) !important;
 }
 
 /* ── Grid Layouts ── */
@@ -592,7 +599,7 @@ body.light-mode .custom-table tr:hover td {
   pointer-events: auto;
 }
 .kpi-modal {
-  background: linear-gradient(145deg, rgba(13,20,38,0.97), rgba(5,8,15,0.99));
+  background: linear-gradient(145deg, rgba(14,14,16,0.97), rgba(10,10,12,0.99));
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 36px;
@@ -647,15 +654,19 @@ body.light-mode .custom-table tr:hover td {
 
 /* ── Health Hero ── */
 .health-hero {
-  background: linear-gradient(135deg, rgba(13,20,35,0.8), rgba(7,10,17,0.9));
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 32px;
-  margin-bottom: 24px;
+  background: var(--bg-main) !important;
+  border: none;
+  border-radius: 0px;
+  padding: 24px;
+  margin-bottom: 0px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 32px;
-  box-shadow: var(--soft-shadow);
+  justify-content: center;
+  text-align: center;
+  aspect-ratio: 1 / 1;
+  box-shadow: none;
+  gap: 20px;
 }
 .health-ring-container {
   position: relative;
@@ -767,7 +778,7 @@ body.light-mode .custom-table tr:hover td {
 .chart-toolbar { display: flex; gap: 4px; }
 .chart-tool-btn {
   width: 28px; height: 28px;
-  border-radius: 6px;
+  border-radius: 0px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-dim);
@@ -794,7 +805,7 @@ body.light-mode .custom-table tr:hover td {
 }
 .model-compare-select {
   padding: 5px 10px;
-  border-radius: 6px;
+  border-radius: 0px;
   border: 1px solid var(--border);
   background: rgba(255,255,255,0.03);
   color: var(--text-main);
@@ -803,7 +814,7 @@ body.light-mode .custom-table tr:hover td {
 }
 .model-compare-btn {
   padding: 5px 12px;
-  border-radius: 6px;
+  border-radius: 0px;
   border: 1px solid var(--chartreuse);
   background: var(--chartreuse);
   color: #080c14;
@@ -823,7 +834,16 @@ body.light-mode .custom-table tr:hover td {
   font-weight: 500;
 }
 
-/* ── Action Cards ── */
+/* ── Action Cards & KPI Cards ── */
+.kpi-card,
+.action-card {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
 .action-card {
   padding: 20px;
   border-radius: var(--radius-md);
