@@ -63,23 +63,8 @@ function AppLayout() {
     return () => clearInterval(interval);
   }, [fetchDashboard]);
 
-  // Mouse flashlight effect
-  useEffect(() => {
-    const handleMouse = (e) => {
-      document.documentElement.style.setProperty('--mouse-x', e.clientX + 'px');
-      document.documentElement.style.setProperty('--mouse-y', e.clientY + 'px');
-    };
-    window.addEventListener('mousemove', handleMouse);
-    return () => window.removeEventListener('mousemove', handleMouse);
-  }, []);
-
   return (
     <>
-      {/* Ambient background */}
-      <div className="ambient-nebula nebula-gold" />
-      <div className="ambient-nebula nebula-crimson" />
-      <div className="global-flashlight" />
-
       {/* Wave background */}
       <div className="wave-bg-container">
         <div className="wave-layer wave-1">
