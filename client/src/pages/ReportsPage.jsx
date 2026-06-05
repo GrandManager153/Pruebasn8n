@@ -113,13 +113,14 @@ export default function ReportsPage() {
         ))}
       </div>
 
+      {/* Report Viewer */}
       <motion.div
+        className="card"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        style={{ marginTop: 'var(--gap-bento)' }}
+        style={{ marginTop: 32, padding: 0, overflow: 'hidden' }}
       >
-        <div className="card card-no-hover" style={{ padding: 0, overflow: 'hidden' }}>
         {/* Header */}
         <div
           style={{
@@ -238,7 +239,6 @@ export default function ReportsPage() {
             </p>
           </div>
         )}
-        </div>
       </motion.div>
     </>
   );

@@ -23,12 +23,14 @@ export default function StatusBar() {
     <div
       className="sbar"
       style={{
+        background: `rgba(${error ? '244,63,94' : '16,185,129'}, 0.06)`,
+        borderColor: `rgba(${error ? '244,63,94' : '16,185,129'}, 0.15)`,
         color,
       }}
     >
       <span
         className="sdot"
-        style={{ background: color, boxShadow: `0 0 8px ${color}`, marginBottom: 12 }}
+        style={{ background: color, boxShadow: `0 0 8px ${color}` }}
       />
       <span>{message}</span>
     </div>

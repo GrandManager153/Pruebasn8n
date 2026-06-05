@@ -94,7 +94,8 @@ export default function OperationsPage() {
 
   return (
     <>
-      <div className="grid-4" style={{ marginTop: 'var(--gap-bento)' }}>
+      {/* KPI Cards */}
+      <div className="grid-4" style={{ marginTop: 16 }}>
         <KpiCard
           label="Registros"
           value={totalRecords}
@@ -129,12 +130,12 @@ export default function OperationsPage() {
 
       {/* Daily Volume Chart */}
       <motion.div
+        className="card"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
         style={{ marginTop: 'var(--gap-bento)' }}
       >
-        <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div className="chart-title" style={{ marginBottom: 0 }}>
             <span className="dot" style={{ background: '#3b82f6' }} />
@@ -222,13 +223,11 @@ export default function OperationsPage() {
             </div>
           )}
         </div>
-        </div>
       </motion.div>
 
       {/* Hourly + Contact Distribution */}
       <div className="grid-2" style={{ marginTop: 'var(--gap-bento)' }}>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <div className="card">
+        <motion.div className="card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <div className="chart-title" style={{ marginBottom: 4 }}>
             <span className="dot" style={{ background: '#ef4444' }} />
             Distribución Horaria
@@ -262,11 +261,9 @@ export default function OperationsPage() {
               </div>
             )}
           </div>
-        </div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <div className="card">
+        <motion.div className="card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <div className="chart-title">
             <span className="dot" style={{ background: 'var(--gold)' }} />
             Distribución de Contacto
@@ -326,7 +323,6 @@ export default function OperationsPage() {
               <span>{contactDist.overcontact_pct}% de llamadas exceden el sweet spot de intentos</span>
             </div>
           )}
-        </div>
         </motion.div>
       </div>
     </>
