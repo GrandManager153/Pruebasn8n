@@ -31,35 +31,32 @@ export default function KpiCard({
 
   return (
     <motion.div
+      className={`card stat-card-${color}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay, ease: [0.16, 1, 0.3, 1] }}
-      style={{ display: 'contents' }}
+      onClick={onClick}
+      style={{ cursor: onClick ? 'pointer' : 'default' }}
+      whileHover={{ y: -3, transition: { duration: 0.25 } }}
     >
-      <div
-        className={`card stat-card-${color} kpi-card`}
-        onClick={onClick}
-        style={{ cursor: onClick ? 'pointer' : 'default' }}
-      >
-        <div className="card-stat-label">{label}</div>
-        <div className="card-stat-value">
-          {isNumeric ? (
-            <AnimatedNumber
-              value={numericValue}
-              prefix={prefix}
-              suffix={suffix}
-              decimals={decimals || 0}
-            />
-          ) : (
-            <>
-              {prefix}
-              {value}
-              {suffix}
-            </>
-          )}
-        </div>
-        {sub && <div className="card-stat-sub">{sub}</div>}
+      <div className="card-stat-label">{label}</div>
+      <div className="card-stat-value">
+        {isNumeric ? (
+          <AnimatedNumber
+            value={numericValue}
+            prefix={prefix}
+            suffix={suffix}
+            decimals={decimals || 0}
+          />
+        ) : (
+          <>
+            {prefix}
+            {value}
+            {suffix}
+          </>
+        )}
       </div>
+      {sub && <div className="card-stat-sub">{sub}</div>}
     </motion.div>
   );
 }

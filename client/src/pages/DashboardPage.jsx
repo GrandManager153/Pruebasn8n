@@ -4,7 +4,6 @@ import useDashboardStore from '../stores/useDashboardStore';
 import KpiCard from '../components/shared/KpiCard';
 import KpiModal from '../components/shared/KpiModal';
 import HealthHero from '../components/shared/HealthHero';
-import StatusBar from '../components/layout/StatusBar';
 
 export default function DashboardPage() {
   const { data, loading } = useDashboardStore();
@@ -204,14 +203,11 @@ export default function DashboardPage() {
 
   return (
     <>
-      {/* Health section */}
-      <div className="grid-2" style={{ marginBottom: 'var(--gap-bento)' }}>
-        <HealthHero
-          score={sys.health_score || 0}
-          reasons={sys.health_reason || sys.health_reasons || ''}
-        />
-        <StatusBar />
-      </div>
+      {/* Health Hero */}
+      <HealthHero
+        score={sys.health_score || 0}
+        reasons={sys.health_reason || sys.health_reasons || ''}
+      />
 
       {/* KPIs */}
       <div className="section-header">
@@ -249,8 +245,9 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {/* Actions */}
       {actions.length > 0 && (
-        <div style={{ marginTop: 'var(--gap-bento)' }}>
+        <div style={{ marginTop: 32 }}>
           <div className="section-header">
             <div className="section-title">
               <span className="bar" />
@@ -276,24 +273,21 @@ export default function DashboardPage() {
               return (
                 <motion.div
                   key={i}
+                  className="card action-card"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 + i * 0.06 }}
+                  style={{ borderLeftColor: borderColor }}
                 >
-                  <div
-                    className="card action-card"
-                    style={{ borderLeftColor: borderColor }}
-                  >
-                    <div className="action-title">{titleText}</div>
-                    {descriptionText && (
-                      <div className="action-text">{descriptionText}</div>
-                    )}
-                    {metaText && (
-                      <div className="action-meta" style={{ marginTop: 12, fontSize: 10.5, color: 'var(--text-dim)', fontWeight: 500 }}>
-                        {metaText}
-                      </div>
-                    )}
-                  </div>
+                  <div className="action-title">{titleText}</div>
+                  {descriptionText && (
+                    <div className="action-text">{descriptionText}</div>
+                  )}
+                  {metaText && (
+                    <div className="action-meta" style={{ marginTop: 12, fontSize: 10.5, color: 'var(--text-dim)', fontWeight: 500 }}>
+                      {metaText}
+                    </div>
+                  )}
                 </motion.div>
               );
             })}
