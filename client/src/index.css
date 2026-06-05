@@ -41,7 +41,7 @@
 /* ── Light Theme ── */
 body.light-mode {
   --bg-main: #f8fafc;
-  --bg-sidebar: rgba(241, 245, 249, 0.85);
+  --bg-sidebar: var(--bg-main);
   --bg-card: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(241, 245, 249, 0.95));
   --border: rgba(15, 23, 42, 0.08);
   --border-hover: rgba(178, 116, 21, 0.45);
