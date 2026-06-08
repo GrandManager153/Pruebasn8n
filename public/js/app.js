@@ -1160,13 +1160,38 @@ function renderFunnelDetails(data) {
         }).join('');
     }
 
-    const statesData = [
-        { state: "Abierto", conversion: 2.14, loss: 97.86, steps: 14.2, stddev: 4.5 },
-        { state: "Conectado - Interesado", conversion: 35.24, loss: 64.76, steps: 5.4, stddev: 1.8 },
-        { state: "Reactivación", conversion: 20.00, loss: 80.00, steps: 7.2, stddev: 2.1 },
-        { state: "En Llamada", conversion: 14.15, loss: 85.85, steps: 8.9, stddev: 3.2 },
-        { state: "Pre-Cerrado (Sin tarjeta)", conversion: 13.01, loss: 86.99, steps: 11.5, stddev: 3.9 }
-    ];
+    let statesData = [];
+    if (data.funnel && Array.isArray(data.funnel.absorption_probabilities) && data.funnel.absorption_probabilities.length > 0) {
+        statesData = data.funnel.absorption_probabilities
+            .filter(ap => (ap.prob_conversion || 0) > 0.0001) // Filter out practically 0% conversion states to keep the table clean
+            .map(ap => ({
+                state: cleanTechnicalTerms(ap.state),
+                conversion: (ap.prob_conversion || 0) * 100,
+                loss: (ap.prob_loss || 0) * 100,
+                steps: ap.expected_steps || 0,
+                stddev: ap.step_stddev || 0
+            }));
+        if (statesData.length === 0) {
+            statesData = data.funnel.absorption_probabilities
+                .map(ap => ({
+                    state: cleanTechnicalTerms(ap.state),
+                    conversion: (ap.prob_conversion || 0) * 100,
+                    loss: (ap.prob_loss || 0) * 100,
+                    steps: ap.expected_steps || 0,
+                    stddev: ap.step_stddev || 0
+                }))
+                .sort((a, b) => b.conversion - a.conversion)
+                .slice(0, 5);
+        }
+    } else {
+        statesData = [
+            { state: "Abierto", conversion: 2.14, loss: 97.86, steps: 14.2, stddev: 4.5 },
+            { state: "Conectado - Interesado", conversion: 35.24, loss: 64.76, steps: 5.4, stddev: 1.8 },
+            { state: "Reactivación", conversion: 20.00, loss: 80.00, steps: 7.2, stddev: 2.1 },
+            { state: "En Llamada", conversion: 14.15, loss: 85.85, steps: 8.9, stddev: 3.2 },
+            { state: "Pre-Cerrado (Sin tarjeta)", conversion: 13.01, loss: 86.99, steps: 11.5, stddev: 3.9 }
+        ];
+    }
 
     const probBody = document.getElementById('funnel-probabilities-body');
     if (probBody) {
@@ -1175,8 +1200,8 @@ function renderFunnelDetails(data) {
                 <td style="font-weight: 600; color: white;">${s.state}</td>
                 <td style="text-align: right; color: var(--green); font-weight: bold;">${s.conversion.toFixed(2)}%</td>
                 <td style="text-align: right; color: var(--text-muted);">${s.loss.toFixed(2)}%</td>
-                <td style="text-align: right; font-family: var(--mono); color: white;">${s.steps}</td>
-                <td style="text-align: right; font-family: var(--mono); color: var(--text-dim);">${s.stddev}</td>
+                <td style="text-align: right; font-family: var(--mono); color: white;">${s.steps.toFixed(1)}</td>
+                <td style="text-align: right; font-family: var(--mono); color: var(--text-dim);">${s.stddev.toFixed(1)}</td>
             </tr>
         `).join('');
     }
