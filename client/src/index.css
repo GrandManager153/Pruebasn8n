@@ -6,11 +6,11 @@
 
 /* ── CSS Custom Properties (Design Tokens) ── */
 :root {
-  --bg-main: #080c14;
-  --bg-sidebar: #05080f;
-  --bg-card: linear-gradient(135deg, rgba(13, 20, 35, 0.8), rgba(7, 10, 17, 0.9));
-  --border: rgba(255, 255, 255, 0.05);
-  --border-hover: rgba(224, 153, 42, 0.35);
+  --bg-main: #0c0c0e;
+  --bg-sidebar: var(--bg-main);
+  --bg-card: var(--bg-main);
+  --border: transparent;
+  --border-hover: transparent;
   --chartreuse: #e0992a;
   --chartreuse-glow: rgba(224, 153, 42, 0.15);
   --blue: #38bdf8;
@@ -35,16 +35,16 @@
   --radius-sm: 0px;
   --gap-bento: 0px;
   --shell-pad: 16px;
-  --soft-shadow: 0 14px 40px rgba(0, 0, 0, 0.38), inset 0 1px 1px rgba(255, 255, 255, 0.04);
+  --soft-shadow: none;
 }
 
 /* ── Light Theme ── */
 body.light-mode {
   --bg-main: #f8fafc;
   --bg-sidebar: var(--bg-main);
-  --bg-card: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(241, 245, 249, 0.95));
-  --border: rgba(15, 23, 42, 0.08);
-  --border-hover: rgba(178, 116, 21, 0.45);
+  --bg-card: var(--bg-main);
+  --border: transparent;
+  --border-hover: transparent;
   --chartreuse: #b27415;
   --chartreuse-glow: rgba(178, 116, 21, 0.10);
   --blue: #0284c7;
@@ -372,35 +372,36 @@ body.light-mode .nav-item.active { color: #080c14 !important; }
 
 /* ── Cards ── */
 .card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  background: var(--bg-card) !important;
+  border: 1px solid transparent !important;
   border-radius: var(--radius-lg);
   padding: 24px;
-  box-shadow: var(--soft-shadow);
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: none !important;
+  transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1), background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease !important;
   position: relative;
   overflow: hidden;
+  transform-origin: center bottom;
 }
 .card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: var(--radius-lg);
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.06), transparent 60%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
+  display: none !important;
+}
+.card::after {
+  display: none !important;
 }
 .card:hover {
-  border-color: var(--border-hover);
-  transform: translateY(-3px);
-  box-shadow: var(--soft-shadow), 0 0 25px var(--chartreuse-glow);
+  transform: translateY(-24px) scale(1.03) perspective(1000px) rotateX(4deg) !important;
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 255, 255, 0.06) !important;
+  z-index: 10;
 }
 body.light-mode .card {
-  box-shadow: 0 8px 32px rgba(15,23,42,0.06), inset 0 1px 1px rgba(255,255,255,0.8) !important;
+  box-shadow: none !important;
+}
+body.light-mode .card:hover {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.15), 0 0 30px rgba(15, 23, 42, 0.05) !important;
 }
 
 /* ── Card Stats ── */
@@ -428,18 +429,46 @@ body.light-mode .card {
 .stat-card-red,
 .stat-card-green,
 .stat-card-white {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(7, 10, 17, 0.9) 100%) !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: var(--bg-main) !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
 }
 
 /* White Glow Hover State for all cards in Dark Mode */
-.stat-card-blue:hover,
-.stat-card-gold:hover,
-.stat-card-red:hover,
-.stat-card-green:hover,
+.stat-card-blue:hover {
+  transform: translateY(-24px) scale(1.03) perspective(1000px) rotateX(4deg) !important;
+  background-color: rgba(56, 189, 248, 0.04) !important;
+  border-color: rgba(56, 189, 248, 0.35) !important;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8), 0 0 30px rgba(56, 189, 248, 0.15) !important;
+  z-index: 10;
+}
+.stat-card-gold:hover {
+  transform: translateY(-24px) scale(1.03) perspective(1000px) rotateX(4deg) !important;
+  background-color: rgba(224, 153, 42, 0.04) !important;
+  border-color: rgba(224, 153, 42, 0.35) !important;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8), 0 0 30px rgba(224, 153, 42, 0.15) !important;
+  z-index: 10;
+}
+.stat-card-red:hover {
+  transform: translateY(-24px) scale(1.03) perspective(1000px) rotateX(4deg) !important;
+  background-color: rgba(244, 63, 94, 0.04) !important;
+  border-color: rgba(244, 63, 94, 0.35) !important;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8), 0 0 30px rgba(244, 63, 94, 0.15) !important;
+  z-index: 10;
+}
+.stat-card-green:hover {
+  transform: translateY(-24px) scale(1.03) perspective(1000px) rotateX(4deg) !important;
+  background-color: rgba(16, 185, 129, 0.04) !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8), 0 0 30px rgba(16, 185, 129, 0.15) !important;
+  z-index: 10;
+}
 .stat-card-white:hover {
-  border-color: rgba(255, 255, 255, 0.4) !important;
-  box-shadow: var(--soft-shadow), 0 0 25px rgba(255, 255, 255, 0.18) !important;
+  transform: translateY(-24px) scale(1.03) perspective(1000px) rotateX(4deg) !important;
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 255, 255, 0.15) !important;
+  z-index: 10;
 }
 
 /* Light Theme Card Overrides (LEGIBILITY) */
@@ -459,17 +488,45 @@ body.light-mode .stat-card-gold,
 body.light-mode .stat-card-red,
 body.light-mode .stat-card-green,
 body.light-mode .stat-card-white {
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.06) 0%, rgba(255, 255, 255, 0.95) 100%) !important;
-  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: var(--bg-main) !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
 }
 
-body.light-mode .stat-card-blue:hover,
-body.light-mode .stat-card-gold:hover,
-body.light-mode .stat-card-red:hover,
-body.light-mode .stat-card-green:hover,
+body.light-mode .stat-card-blue:hover {
+  transform: translateY(-24px) scale(1.03) perspective(1000px) rotateX(4deg) !important;
+  background-color: rgba(2, 132, 199, 0.02) !important;
+  border-color: rgba(2, 132, 199, 0.3) !important;
+  box-shadow: 0 20px 45px rgba(2, 132, 199, 0.12), 0 0 30px rgba(2, 132, 199, 0.04) !important;
+  z-index: 10;
+}
+body.light-mode .stat-card-gold:hover {
+  transform: translateY(-24px) scale(1.03) perspective(1000px) rotateX(4deg) !important;
+  background-color: rgba(178, 116, 21, 0.02) !important;
+  border-color: rgba(178, 116, 21, 0.3) !important;
+  box-shadow: 0 20px 45px rgba(178, 116, 21, 0.12), 0 0 30px rgba(178, 116, 21, 0.04) !important;
+  z-index: 10;
+}
+body.light-mode .stat-card-red:hover {
+  transform: translateY(-24px) scale(1.03) perspective(1000px) rotateX(4deg) !important;
+  background-color: rgba(225, 29, 72, 0.02) !important;
+  border-color: rgba(225, 29, 72, 0.3) !important;
+  box-shadow: 0 20px 45px rgba(225, 29, 72, 0.12), 0 0 30px rgba(225, 29, 72, 0.04) !important;
+  z-index: 10;
+}
+body.light-mode .stat-card-green:hover {
+  transform: translateY(-24px) scale(1.03) perspective(1000px) rotateX(4deg) !important;
+  background-color: rgba(16, 185, 129, 0.02) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  box-shadow: 0 20px 45px rgba(16, 185, 129, 0.12), 0 0 30px rgba(16, 185, 129, 0.04) !important;
+  z-index: 10;
+}
 body.light-mode .stat-card-white:hover {
+  transform: translateY(-24px) scale(1.03) perspective(1000px) rotateX(4deg) !important;
+  background-color: rgba(15, 23, 42, 0.02) !important;
   border-color: rgba(15, 23, 42, 0.25) !important;
-  box-shadow: 0 8px 32px rgba(15,23,42,0.06), 0 0 15px rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12), 0 0 30px rgba(15, 23, 42, 0.04) !important;
+  z-index: 10;
 }
 
 /* ── Grid Layouts ── */

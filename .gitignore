@@ -55,3 +55,6 @@ desktop.ini
 *.ntvs*
 *.njsproj
 *.sln
+
+# Proyecto de apuestas de futbol (punto y aparte)
+soccer-predictions/
