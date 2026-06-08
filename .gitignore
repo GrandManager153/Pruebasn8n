@@ -55,3 +55,6 @@ desktop.ini
 *.ntvs*
 *.njsproj
 *.sln
+
+# Archivos de datos / Datasets
+*.csv
