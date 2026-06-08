@@ -174,6 +174,32 @@ app.post('/api/clear-logs', (req, res) => {
   res.json({ success: true, message: 'Logs limpiados con éxito.' });
 });
 
+// Proxy a la API de Python para predicciones (evita usar múltiples túneles ngrok)
+app.post('/api/predict', async (req, res) => {
+  try {
+    const mlResponse = await fetch("http://127.0.0.1:8000/predict", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": req.headers["x-api-key"] || "mkt-bi-ia-dev-key"
+      },
+      body: JSON.stringify(req.body)
+    });
+
+    if (!mlResponse.ok) {
+      const errText = await mlResponse.text();
+      return res.status(mlResponse.status).send(errText);
+    }
+
+    const resData = await mlResponse.json();
+    res.json(resData);
+  } catch (err) {
+    console.error("Error en proxy /api/predict:", err.message);
+    res.status(500).json({ error: "No se pudo conectar con la API de Python", details: err.message });
+  }
+});
+
+
 // Inyecta el design system BOS en reportes HTML generados por n8n
 function injectTheme(htmlContent) {
   if (!htmlContent || typeof htmlContent !== 'string') return htmlContent;

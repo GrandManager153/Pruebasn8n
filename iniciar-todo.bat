@@ -18,12 +18,17 @@ if %ERRORLEVEL% neq 0 (
 echo [+] Dependencias listas.
 echo.
 
-echo [*] [2/3] Iniciando el servidor API en una nueva ventana...
+echo [*] [2/4] Iniciando el servidor API en una nueva ventana...
 start "SleekAPI - Servidor Local" cmd /k "node server.js"
 echo [+] Servidor API iniciado en http://localhost:3000
 echo.
 
-echo [*] [3/3] Iniciando túnel seguro de ngrok con dominio estático en el puerto 3000...
+echo [*] [3/4] Iniciando la API de Machine Learning (Python)...
+start "SleekAPI - ML API Python" powershell -NoProfile -ExecutionPolicy Bypass -File "scripts/start-ml-api.ps1"
+echo [+] Servidor ML API iniciado en http://127.0.0.1:8000
+echo.
+
+echo [*] [4/4] Iniciando túnel seguro de ngrok con dominio estático en el puerto 3000...
 echo.
 echo [!] NOTA: Si es tu primera vez usando ngrok, asegúrate de haber guardado
 echo     tu token ejecutando primero: ngrok config add-authtoken TU_TOKEN
