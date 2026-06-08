@@ -2,19 +2,31 @@
   "apiPred": {
     "model_name": "random_forest",
     "recommended_value": 80,
-    "mase": 0.2724,
+    "mase": 0.3897,
     "confidence": "alta",
     "mode": "model",
-    "label": "Forecast RF favorable (MASE: 0.2724)",
+    "label": "Forecast random forest favorable (MASE: 0.3897)",
     "backtest": {
       "window_days": 14,
       "naive_mae": 10.57,
       "models": [
         {
           "name": "random_forest",
-          "mae": 2.88,
-          "mase": 0.2724,
-          "rmse": 4.03
+          "mae": 4.12,
+          "mase": 0.3897,
+          "rmse": 5.17
+        },
+        {
+          "name": "lightgbm",
+          "mae": 10.5,
+          "mase": 0.9932,
+          "rmse": 11.79
+        },
+        {
+          "name": "autoets",
+          "mae": 0.84,
+          "mase": 0.0795,
+          "rmse": 1.12
         },
         {
           "name": "seasonal_naive",
@@ -28,33 +40,267 @@
     "forecast_horizons": {
       "next_1d": {
         "forecast": 80,
-        "band_low": 75,
-        "band_high": 86,
+        "band_low": 72,
+        "band_high": 88,
         "method": "random_forest"
       },
       "next_7d": {
         "forecast": 560,
-        "band_low": 522,
-        "band_high": 601,
+        "band_low": 506,
+        "band_high": 616,
         "method": "random_forest+scale"
       }
     },
     "intervals": {
       "band_50": {
-        "low": 79,
-        "high": 82
+        "low": 77,
+        "high": 83
       },
       "band_80": {
-        "low": 75,
-        "high": 86
+        "low": 72,
+        "high": 88
       },
       "residual_points": 14
+    },
+    "backtest_series": [
+      {
+        "date": "2026-04-27",
+        "actual": 107,
+        "predicted": 107
+      },
+      {
+        "date": "2026-04-28",
+        "actual": 108,
+        "predicted": 107
+      },
+      {
+        "date": "2026-04-29",
+        "actual": 108,
+        "predicted": 108
+      },
+      {
+        "date": "2026-04-30",
+        "actual": 107,
+        "predicted": 108
+      },
+      {
+        "date": "2026-05-01",
+        "actual": 105,
+        "predicted": 107
+      },
+      {
+        "date": "2026-05-02",
+        "actual": 104,
+        "predicted": 105
+      },
+      {
+        "date": "2026-05-03",
+        "actual": 101,
+        "predicted": 104
+      },
+      {
+        "date": "2026-05-04",
+        "actual": 98,
+        "predicted": 101
+      },
+      {
+        "date": "2026-05-05",
+        "actual": 96,
+        "predicted": 98
+      },
+      {
+        "date": "2026-05-06",
+        "actual": 92,
+        "predicted": 96
+      },
+      {
+        "date": "2026-05-07",
+        "actual": 89,
+        "predicted": 92
+      },
+      {
+        "date": "2026-05-08",
+        "actual": 86,
+        "predicted": 89
+      },
+      {
+        "date": "2026-05-09",
+        "actual": 82,
+        "predicted": 86
+      },
+      {
+        "date": "2026-05-10",
+        "actual": 80,
+        "predicted": 82
+      },
+      {
+        "date": "2026-05-11",
+        "actual": 77,
+        "predicted": 80
+      },
+      {
+        "date": "2026-05-12",
+        "actual": 75,
+        "predicted": 77
+      },
+      {
+        "date": "2026-05-13",
+        "actual": 74,
+        "predicted": 75
+      },
+      {
+        "date": "2026-05-14",
+        "actual": 73,
+        "predicted": 74
+      },
+      {
+        "date": "2026-05-15",
+        "actual": 72,
+        "predicted": 73
+      },
+      {
+        "date": "2026-05-16",
+        "actual": 73,
+        "predicted": 72
+      },
+      {
+        "date": "2026-05-17",
+        "actual": 74,
+        "predicted": 73
+      },
+      {
+        "date": "2026-05-18",
+        "actual": 75,
+        "predicted": 74
+      },
+      {
+        "date": "2026-05-19",
+        "actual": 77,
+        "predicted": 75
+      },
+      {
+        "date": "2026-05-20",
+        "actual": 79,
+        "predicted": 77
+      },
+      {
+        "date": "2026-05-21",
+        "actual": 81,
+        "predicted": 76.65
+      },
+      {
+        "date": "2026-05-22",
+        "actual": 84,
+        "predicted": 78.29
+      },
+      {
+        "date": "2026-05-23",
+        "actual": 87,
+        "predicted": 80.56
+      },
+      {
+        "date": "2026-05-24",
+        "actual": 89,
+        "predicted": 82.6
+      },
+      {
+        "date": "2026-05-25",
+        "actual": 92,
+        "predicted": 84.08
+      },
+      {
+        "date": "2026-05-26",
+        "actual": 94,
+        "predicted": 87.2
+      },
+      {
+        "date": "2026-05-27",
+        "actual": 95,
+        "predicted": 87.13
+      },
+      {
+        "date": "2026-05-28",
+        "actual": 97,
+        "predicted": 88.14
+      },
+      {
+        "date": "2026-05-29",
+        "actual": 98,
+        "predicted": 89.08
+      },
+      {
+        "date": "2026-05-30",
+        "actual": 97,
+        "predicted": 93.43
+      },
+      {
+        "date": "2026-05-31",
+        "actual": 97,
+        "predicted": 94.75
+      },
+      {
+        "date": "2026-06-01",
+        "actual": 96,
+        "predicted": 94.68
+      },
+      {
+        "date": "2026-06-02",
+        "actual": 94,
+        "predicted": 94.29
+      },
+      {
+        "date": "2026-06-03",
+        "actual": 92,
+        "predicted": 94.11
+      },
+      {
+        "date": "2026-06-04",
+        "actual": 89,
+        "predicted": 92.87
+      },
+      {
+        "date": "2026-06-05",
+        "actual": 86,
+        "predicted": 87.81
+      },
+      {
+        "date": "2026-06-06",
+        "actual": 83,
+        "predicted": 83.27
+      },
+      {
+        "date": "2026-06-07",
+        "actual": 80,
+        "predicted": 81.86
+      }
+    ],
+    "next_point": {
+      "date": "2026-06-08",
+      "forecast": 80,
+      "band_low": 72,
+      "band_high": 88
     },
     "diagnostics": {
       "total_history_days": 42,
       "backtest_days": 14,
       "best_model": "random_forest",
-      "best_mase": 0.2724
+      "best_mase": 0.3897,
+      "features_used": [
+        "lags",
+        "spend",
+        "changepoint_recent"
+      ],
+      "compared_models": [
+        "random_forest",
+        "lightgbm",
+        "autoets"
+      ],
+      "all_mase": {
+        "random_forest": 0.3897,
+        "lightgbm": 0.9932,
+        "autoets": 0.0795
+      },
+      "benchmark_autoets_mase": 0.0795
     }
   },
   "localEngine": {
@@ -87,13 +333,81 @@
           "name": "mean_7d",
           "mae": 8.57,
           "mase": 1,
-          "rmse": 8.57142857142857
+          "rmse": 8.57142857142857,
+          "series": [
+            90,
+            92,
+            93,
+            95,
+            96,
+            95,
+            95,
+            94,
+            92,
+            90,
+            87,
+            84,
+            81,
+            78
+          ],
+          "forecast_1d": 89,
+          "horizons": {
+            "next_1d": {
+              "forecast": 89,
+              "band_low": 0,
+              "band_high": 106
+            },
+            "next_7d": {
+              "forecast": 620,
+              "band_low": 0,
+              "band_high": 744
+            },
+            "next_14d": {
+              "forecast": 1240,
+              "band_low": 0,
+              "band_high": 1488
+            }
+          }
         },
         {
           "name": "fourier_regression",
-          "mae": 9.428571428571427,
+          "mae": 9.43,
           "mase": 1.05,
-          "rmse": 10.285714285714283
+          "rmse": 10.285714285714283,
+          "series": [
+            94,
+            96,
+            97,
+            99,
+            100,
+            99,
+            99,
+            98,
+            96,
+            94,
+            91,
+            88,
+            85,
+            82
+          ],
+          "forecast_1d": 93,
+          "horizons": {
+            "next_1d": {
+              "forecast": 93,
+              "band_low": 0,
+              "band_high": 112
+            },
+            "next_7d": {
+              "forecast": 651,
+              "band_low": 0,
+              "band_high": 781
+            },
+            "next_14d": {
+              "forecast": 1302,
+              "band_low": 0,
+              "band_high": 1562
+            }
+          }
         }
       ]
     },
@@ -112,7 +426,8 @@
     ],
     "changepoint": {
       "detected": false
-    }
+    },
+    "regime": "stable"
   },
   "dashboard": {
     "forecast": {
@@ -141,13 +456,81 @@
           "name": "mean_7d",
           "mae": 8.57,
           "mase": 1,
-          "rmse": 8.57142857142857
+          "rmse": 8.57142857142857,
+          "series": [
+            90,
+            92,
+            93,
+            95,
+            96,
+            95,
+            95,
+            94,
+            92,
+            90,
+            87,
+            84,
+            81,
+            78
+          ],
+          "forecast_1d": 89,
+          "horizons": {
+            "next_1d": {
+              "forecast": 89,
+              "band_low": 0,
+              "band_high": 106
+            },
+            "next_7d": {
+              "forecast": 620,
+              "band_low": 0,
+              "band_high": 744
+            },
+            "next_14d": {
+              "forecast": 1240,
+              "band_low": 0,
+              "band_high": 1488
+            }
+          }
         },
         {
           "name": "fourier_regression",
-          "mae": 9.428571428571427,
+          "mae": 9.43,
           "mase": 1.05,
-          "rmse": 10.285714285714283
+          "rmse": 10.285714285714283,
+          "series": [
+            94,
+            96,
+            97,
+            99,
+            100,
+            99,
+            99,
+            98,
+            96,
+            94,
+            91,
+            88,
+            85,
+            82
+          ],
+          "forecast_1d": 93,
+          "horizons": {
+            "next_1d": {
+              "forecast": 93,
+              "band_low": 0,
+              "band_high": 112
+            },
+            "next_7d": {
+              "forecast": 651,
+              "band_low": 0,
+              "band_high": 781
+            },
+            "next_14d": {
+              "forecast": 1302,
+              "band_low": 0,
+              "band_high": 1562
+            }
+          }
         }
       ],
       "seasonal_indices": [
@@ -162,174 +545,217 @@
       "changepoint": {
         "detected": false
       },
+      "regime": "stable",
       "time_series": [
         {
-          "date": "2026-04-16",
-          "value": 107
-        },
-        {
-          "date": "2026-04-17",
-          "value": 108
-        },
-        {
-          "date": "2026-04-18",
-          "value": 108
-        },
-        {
-          "date": "2026-04-19",
-          "value": 107
-        },
-        {
-          "date": "2026-04-20",
-          "value": 105
-        },
-        {
-          "date": "2026-04-21",
-          "value": 104
-        },
-        {
-          "date": "2026-04-22",
-          "value": 101
-        },
-        {
-          "date": "2026-04-23",
-          "value": 98
-        },
-        {
-          "date": "2026-04-24",
-          "value": 96
-        },
-        {
-          "date": "2026-04-25",
-          "value": 92
-        },
-        {
-          "date": "2026-04-26",
-          "value": 89
-        },
-        {
           "date": "2026-04-27",
-          "value": 86
+          "value": 107,
+          "spend": 1078
         },
         {
           "date": "2026-04-28",
-          "value": 82
+          "value": 108,
+          "spend": 1039
         },
         {
           "date": "2026-04-29",
-          "value": 80
+          "value": 108,
+          "spend": 984
         },
         {
           "date": "2026-04-30",
-          "value": 77
+          "value": 107,
+          "spend": 920
         },
         {
           "date": "2026-05-01",
-          "value": 75
+          "value": 105,
+          "spend": 854
         },
         {
           "date": "2026-05-02",
-          "value": 74
+          "value": 104,
+          "spend": 793
         },
         {
           "date": "2026-05-03",
-          "value": 73
+          "value": 101,
+          "spend": 743
         },
         {
           "date": "2026-05-04",
-          "value": 72
+          "value": 98,
+          "spend": 711
         },
         {
           "date": "2026-05-05",
-          "value": 73
+          "value": 96,
+          "spend": 700
         },
         {
           "date": "2026-05-06",
-          "value": 74
+          "value": 92,
+          "spend": 711
         },
         {
           "date": "2026-05-07",
-          "value": 75
+          "value": 89,
+          "spend": 742
         },
         {
           "date": "2026-05-08",
-          "value": 77
+          "value": 86,
+          "spend": 791
         },
         {
           "date": "2026-05-09",
-          "value": 79
+          "value": 82,
+          "spend": 852
         },
         {
           "date": "2026-05-10",
-          "value": 81
+          "value": 80,
+          "spend": 918
         },
         {
           "date": "2026-05-11",
-          "value": 84
+          "value": 77,
+          "spend": 982
         },
         {
           "date": "2026-05-12",
-          "value": 87
+          "value": 75,
+          "spend": 1038
         },
         {
           "date": "2026-05-13",
-          "value": 89
+          "value": 74,
+          "spend": 1077
         },
         {
           "date": "2026-05-14",
-          "value": 92
+          "value": 73,
+          "spend": 1098
         },
         {
           "date": "2026-05-15",
-          "value": 94
+          "value": 72,
+          "spend": 1097
         },
         {
           "date": "2026-05-16",
-          "value": 95
+          "value": 73,
+          "spend": 1073
         },
         {
           "date": "2026-05-17",
-          "value": 97
+          "value": 74,
+          "spend": 1031
         },
         {
           "date": "2026-05-18",
-          "value": 98
+          "value": 75,
+          "spend": 975
         },
         {
           "date": "2026-05-19",
-          "value": 97
+          "value": 77,
+          "spend": 910
         },
         {
           "date": "2026-05-20",
-          "value": 97
+          "value": 79,
+          "spend": 844
         },
         {
           "date": "2026-05-21",
-          "value": 96
+          "value": 81,
+          "spend": 784
         },
         {
           "date": "2026-05-22",
-          "value": 94
+          "value": 84,
+          "spend": 737
         },
         {
           "date": "2026-05-23",
-          "value": 92
+          "value": 87,
+          "spend": 708
         },
         {
           "date": "2026-05-24",
-          "value": 89
+          "value": 89,
+          "spend": 700
         },
         {
           "date": "2026-05-25",
-          "value": 86
+          "value": 92,
+          "spend": 714
         },
         {
           "date": "2026-05-26",
-          "value": 83
+          "value": 94,
+          "spend": 749
         },
         {
           "date": "2026-05-27",
-          "value": 80
+          "value": 95,
+          "spend": 800
+        },
+        {
+          "date": "2026-05-28",
+          "value": 97,
+          "spend": 862
+        },
+        {
+          "date": "2026-05-29",
+          "value": 98,
+          "spend": 928
+        },
+        {
+          "date": "2026-05-30",
+          "value": 97,
+          "spend": 991
+        },
+        {
+          "date": "2026-05-31",
+          "value": 97,
+          "spend": 1045
+        },
+        {
+          "date": "2026-06-01",
+          "value": 96,
+          "spend": 1082
+        },
+        {
+          "date": "2026-06-02",
+          "value": 94,
+          "spend": 1099
+        },
+        {
+          "date": "2026-06-03",
+          "value": 92,
+          "spend": 1094
+        },
+        {
+          "date": "2026-06-04",
+          "value": 89,
+          "spend": 1068
+        },
+        {
+          "date": "2026-06-05",
+          "value": 86,
+          "spend": 1024
+        },
+        {
+          "date": "2026-06-06",
+          "value": 83,
+          "spend": 965
+        },
+        {
+          "date": "2026-06-07",
+          "value": 80,
+          "spend": 900
         }
       ]
     },
@@ -337,27 +763,39 @@
       "available": true,
       "model_name": "random_forest",
       "recommended_value": 80,
-      "mase": 0.2724,
+      "mase": 0.3897,
       "horizons": {
         "next_1d": {
           "forecast": 80,
-          "band_low": 75,
-          "band_high": 86,
+          "band_low": 72,
+          "band_high": 88,
           "method": "random_forest"
         },
         "next_7d": {
           "forecast": 560,
-          "band_low": 522,
-          "band_high": 601,
+          "band_low": 506,
+          "band_high": 616,
           "method": "random_forest+scale"
         }
       },
       "backtest_models": [
         {
           "name": "random_forest",
-          "mae": 2.88,
-          "mase": 0.2724,
-          "rmse": 4.03
+          "mae": 4.12,
+          "mase": 0.3897,
+          "rmse": 5.17
+        },
+        {
+          "name": "lightgbm",
+          "mae": 10.5,
+          "mase": 0.9932,
+          "rmse": 11.79
+        },
+        {
+          "name": "autoets",
+          "mae": 0.84,
+          "mase": 0.0795,
+          "rmse": 1.12
         },
         {
           "name": "seasonal_naive",
@@ -366,177 +804,440 @@
           "rmse": 12.69
         }
       ],
-      "time_series": [
-        {
-          "date": "2026-04-16",
-          "value": 107
-        },
-        {
-          "date": "2026-04-17",
-          "value": 108
-        },
-        {
-          "date": "2026-04-18",
-          "value": 108
-        },
-        {
-          "date": "2026-04-19",
-          "value": 107
-        },
-        {
-          "date": "2026-04-20",
-          "value": 105
-        },
-        {
-          "date": "2026-04-21",
-          "value": 104
-        },
-        {
-          "date": "2026-04-22",
-          "value": 101
-        },
-        {
-          "date": "2026-04-23",
-          "value": 98
-        },
-        {
-          "date": "2026-04-24",
-          "value": 96
-        },
-        {
-          "date": "2026-04-25",
-          "value": 92
-        },
-        {
-          "date": "2026-04-26",
-          "value": 89
-        },
+      "backtest_series": [
         {
           "date": "2026-04-27",
-          "value": 86
+          "actual": 107,
+          "predicted": 107
         },
         {
           "date": "2026-04-28",
-          "value": 82
+          "actual": 108,
+          "predicted": 107
         },
         {
           "date": "2026-04-29",
-          "value": 80
+          "actual": 108,
+          "predicted": 108
         },
         {
           "date": "2026-04-30",
-          "value": 77
+          "actual": 107,
+          "predicted": 108
         },
         {
           "date": "2026-05-01",
-          "value": 75
+          "actual": 105,
+          "predicted": 107
         },
         {
           "date": "2026-05-02",
-          "value": 74
+          "actual": 104,
+          "predicted": 105
         },
         {
           "date": "2026-05-03",
-          "value": 73
+          "actual": 101,
+          "predicted": 104
         },
         {
           "date": "2026-05-04",
-          "value": 72
+          "actual": 98,
+          "predicted": 101
         },
         {
           "date": "2026-05-05",
-          "value": 73
+          "actual": 96,
+          "predicted": 98
         },
         {
           "date": "2026-05-06",
-          "value": 74
+          "actual": 92,
+          "predicted": 96
         },
         {
           "date": "2026-05-07",
-          "value": 75
+          "actual": 89,
+          "predicted": 92
         },
         {
           "date": "2026-05-08",
-          "value": 77
+          "actual": 86,
+          "predicted": 89
         },
         {
           "date": "2026-05-09",
-          "value": 79
+          "actual": 82,
+          "predicted": 86
         },
         {
           "date": "2026-05-10",
-          "value": 81
+          "actual": 80,
+          "predicted": 82
         },
         {
           "date": "2026-05-11",
-          "value": 84
+          "actual": 77,
+          "predicted": 80
         },
         {
           "date": "2026-05-12",
-          "value": 87
+          "actual": 75,
+          "predicted": 77
         },
         {
           "date": "2026-05-13",
-          "value": 89
+          "actual": 74,
+          "predicted": 75
         },
         {
           "date": "2026-05-14",
-          "value": 92
+          "actual": 73,
+          "predicted": 74
         },
         {
           "date": "2026-05-15",
-          "value": 94
+          "actual": 72,
+          "predicted": 73
         },
         {
           "date": "2026-05-16",
-          "value": 95
+          "actual": 73,
+          "predicted": 72
         },
         {
           "date": "2026-05-17",
-          "value": 97
+          "actual": 74,
+          "predicted": 73
         },
         {
           "date": "2026-05-18",
-          "value": 98
+          "actual": 75,
+          "predicted": 74
         },
         {
           "date": "2026-05-19",
-          "value": 97
+          "actual": 77,
+          "predicted": 75
         },
         {
           "date": "2026-05-20",
-          "value": 97
+          "actual": 79,
+          "predicted": 77
         },
         {
           "date": "2026-05-21",
-          "value": 96
+          "actual": 81,
+          "predicted": 76.65
         },
         {
           "date": "2026-05-22",
-          "value": 94
+          "actual": 84,
+          "predicted": 78.29
         },
         {
           "date": "2026-05-23",
-          "value": 92
+          "actual": 87,
+          "predicted": 80.56
         },
         {
           "date": "2026-05-24",
-          "value": 89
+          "actual": 89,
+          "predicted": 82.6
         },
         {
           "date": "2026-05-25",
-          "value": 86
+          "actual": 92,
+          "predicted": 84.08
         },
         {
           "date": "2026-05-26",
-          "value": 83
+          "actual": 94,
+          "predicted": 87.2
         },
         {
           "date": "2026-05-27",
-          "value": 80
+          "actual": 95,
+          "predicted": 87.13
+        },
+        {
+          "date": "2026-05-28",
+          "actual": 97,
+          "predicted": 88.14
+        },
+        {
+          "date": "2026-05-29",
+          "actual": 98,
+          "predicted": 89.08
+        },
+        {
+          "date": "2026-05-30",
+          "actual": 97,
+          "predicted": 93.43
+        },
+        {
+          "date": "2026-05-31",
+          "actual": 97,
+          "predicted": 94.75
+        },
+        {
+          "date": "2026-06-01",
+          "actual": 96,
+          "predicted": 94.68
+        },
+        {
+          "date": "2026-06-02",
+          "actual": 94,
+          "predicted": 94.29
+        },
+        {
+          "date": "2026-06-03",
+          "actual": 92,
+          "predicted": 94.11
+        },
+        {
+          "date": "2026-06-04",
+          "actual": 89,
+          "predicted": 92.87
+        },
+        {
+          "date": "2026-06-05",
+          "actual": 86,
+          "predicted": 87.81
+        },
+        {
+          "date": "2026-06-06",
+          "actual": 83,
+          "predicted": 83.27
+        },
+        {
+          "date": "2026-06-07",
+          "actual": 80,
+          "predicted": 81.86
+        }
+      ],
+      "next_point": {
+        "date": "2026-06-08",
+        "forecast": 80,
+        "band_low": 72,
+        "band_high": 88
+      },
+      "confidence": "alta",
+      "mode": "model",
+      "label": "Forecast random forest favorable (MASE: 0.3897)",
+      "time_series": [
+        {
+          "date": "2026-04-27",
+          "value": 107,
+          "spend": 1078
+        },
+        {
+          "date": "2026-04-28",
+          "value": 108,
+          "spend": 1039
+        },
+        {
+          "date": "2026-04-29",
+          "value": 108,
+          "spend": 984
+        },
+        {
+          "date": "2026-04-30",
+          "value": 107,
+          "spend": 920
+        },
+        {
+          "date": "2026-05-01",
+          "value": 105,
+          "spend": 854
+        },
+        {
+          "date": "2026-05-02",
+          "value": 104,
+          "spend": 793
+        },
+        {
+          "date": "2026-05-03",
+          "value": 101,
+          "spend": 743
+        },
+        {
+          "date": "2026-05-04",
+          "value": 98,
+          "spend": 711
+        },
+        {
+          "date": "2026-05-05",
+          "value": 96,
+          "spend": 700
+        },
+        {
+          "date": "2026-05-06",
+          "value": 92,
+          "spend": 711
+        },
+        {
+          "date": "2026-05-07",
+          "value": 89,
+          "spend": 742
+        },
+        {
+          "date": "2026-05-08",
+          "value": 86,
+          "spend": 791
+        },
+        {
+          "date": "2026-05-09",
+          "value": 82,
+          "spend": 852
+        },
+        {
+          "date": "2026-05-10",
+          "value": 80,
+          "spend": 918
+        },
+        {
+          "date": "2026-05-11",
+          "value": 77,
+          "spend": 982
+        },
+        {
+          "date": "2026-05-12",
+          "value": 75,
+          "spend": 1038
+        },
+        {
+          "date": "2026-05-13",
+          "value": 74,
+          "spend": 1077
+        },
+        {
+          "date": "2026-05-14",
+          "value": 73,
+          "spend": 1098
+        },
+        {
+          "date": "2026-05-15",
+          "value": 72,
+          "spend": 1097
+        },
+        {
+          "date": "2026-05-16",
+          "value": 73,
+          "spend": 1073
+        },
+        {
+          "date": "2026-05-17",
+          "value": 74,
+          "spend": 1031
+        },
+        {
+          "date": "2026-05-18",
+          "value": 75,
+          "spend": 975
+        },
+        {
+          "date": "2026-05-19",
+          "value": 77,
+          "spend": 910
+        },
+        {
+          "date": "2026-05-20",
+          "value": 79,
+          "spend": 844
+        },
+        {
+          "date": "2026-05-21",
+          "value": 81,
+          "spend": 784
+        },
+        {
+          "date": "2026-05-22",
+          "value": 84,
+          "spend": 737
+        },
+        {
+          "date": "2026-05-23",
+          "value": 87,
+          "spend": 708
+        },
+        {
+          "date": "2026-05-24",
+          "value": 89,
+          "spend": 700
+        },
+        {
+          "date": "2026-05-25",
+          "value": 92,
+          "spend": 714
+        },
+        {
+          "date": "2026-05-26",
+          "value": 94,
+          "spend": 749
+        },
+        {
+          "date": "2026-05-27",
+          "value": 95,
+          "spend": 800
+        },
+        {
+          "date": "2026-05-28",
+          "value": 97,
+          "spend": 862
+        },
+        {
+          "date": "2026-05-29",
+          "value": 98,
+          "spend": 928
+        },
+        {
+          "date": "2026-05-30",
+          "value": 97,
+          "spend": 991
+        },
+        {
+          "date": "2026-05-31",
+          "value": 97,
+          "spend": 1045
+        },
+        {
+          "date": "2026-06-01",
+          "value": 96,
+          "spend": 1082
+        },
+        {
+          "date": "2026-06-02",
+          "value": 94,
+          "spend": 1099
+        },
+        {
+          "date": "2026-06-03",
+          "value": 92,
+          "spend": 1094
+        },
+        {
+          "date": "2026-06-04",
+          "value": 89,
+          "spend": 1068
+        },
+        {
+          "date": "2026-06-05",
+          "value": 86,
+          "spend": 1024
+        },
+        {
+          "date": "2026-06-06",
+          "value": 83,
+          "spend": 965
+        },
+        {
+          "date": "2026-06-07",
+          "value": 80,
+          "spend": 900
         }
       ]
     }
   },
-  "generated_at": "2026-05-28T17:06:47.796Z"
+  "generated_at": "2026-06-08T16:56:25.707Z"
 }

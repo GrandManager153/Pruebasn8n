@@ -17,6 +17,7 @@ function buildMockSeries(days = 42) {
     series.push({
       date: d.toISOString().split('T')[0],
       value: 80 + Math.round(Math.sin(i / 5) * 15) + Math.floor(i / 3),
+      spend: 900 + Math.round(Math.sin(i / 3) * 200),
     });
   }
   return series;
@@ -116,6 +117,7 @@ function buildLocalEngineStub(series) {
     diagnostics: { best_model: 'mean_7d', best_mase: Math.round(mase * 1000) / 1000 },
     seasonal_indices: [1, 1, 1, 1, 1, 0.8, 0.7],
     changepoint: { detected: false },
+    regime: 'stable',
   };
 }
 
@@ -129,6 +131,7 @@ function buildDashboardPayload(localEngine, apiPred, timeSeries) {
     backtest_models: linear.backtest?.models || [],
     seasonal_indices: linear.seasonal_indices || [],
     changepoint: linear.changepoint || { detected: false },
+    regime: linear.regime || 'stable',
     time_series: timeSeries,
   };
   let forecast_rf;
@@ -144,6 +147,9 @@ function buildDashboardPayload(localEngine, apiPred, timeSeries) {
       backtest_models: apiPred.backtest?.models || [],
       backtest_series: apiPred.backtest_series || [],
       next_point: apiPred.next_point || null,
+      confidence: apiPred.confidence || null,
+      mode: apiPred.mode || null,
+      label: apiPred.label || null,
       time_series: timeSeries,
     };
   }
@@ -152,7 +158,7 @@ function buildDashboardPayload(localEngine, apiPred, timeSeries) {
 
 async function main() {
   const series = buildMockSeries(42);
-  const payload = { series, backtest_days: 14, model: 'random_forest' };
+  const payload = { series, backtest_days: 14, model: 'compare', changepoint: { detected: false } };
 
   const healthRes = await fetch(`${API_BASE.replace(/\/$/, '')}/health`).catch(() => null);
   if (!healthRes?.ok) throw new Error(`API not reachable at ${API_BASE}`);
@@ -184,6 +190,8 @@ async function main() {
   );
 
   console.log('PASS — forecast_rf.available:', dashboard.forecast_rf.available);
+  console.log('Winner model:', apiPred.model_name, 'MASE:', apiPred.mase);
+  if (apiPred.diagnostics?.all_mase) console.log('All MASE:', apiPred.diagnostics.all_mase);
   console.log('Saved data/dashboard_payload.json for UI smoke test');
 }
 

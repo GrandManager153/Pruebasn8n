@@ -1070,6 +1070,8 @@ function renderForecastDetails(forecast, options = {}) {
 // Paleta fija: todos distintos entre sí y distintos del azul de leads (#38bdf8).
 const MODEL_COLORS = {
     random_forest: '#10b981',
+    lightgbm: '#06b6d4',
+    autoets: '#a78bfa',
     theta_lite: '#d946ef',
     holt_winters: '#f43f5e',
     trend_season: '#f59e0b',
@@ -1119,6 +1121,10 @@ function resolveDailyForecastForModel(data, modelName) {
     if (rf && rf.available !== false && normModelName(rf.model_name || 'random_forest') === key) {
         const v = rf.recommended_value ?? rf.horizons?.next_1d?.forecast;
         if (v != null && isFinite(v)) return { value: v, confidence: rf.confidence };
+    }
+    const mlEntry = (rf?.backtest_models || []).find(m => normModelName(m.name) === key);
+    if (mlEntry?.forecast_1d != null && isFinite(mlEntry.forecast_1d)) {
+        return { value: mlEntry.forecast_1d, confidence: rf.confidence };
     }
     if (normModelName(f.method) === key) {
         const v = f.recommended_value ?? f.horizons?.next_1d?.forecast;
@@ -1440,7 +1446,7 @@ function buildComparableModels(data) {
     const rf = data ? data.forecast_rf : null;
     if (rf && rf.available !== false) {
         const rfName = rf.model_name || 'random_forest';
-        if (!list.some(m => m.name === rfName)) {
+        if (!list.some(m => normModelName(m.name) === normModelName(rfName))) {
             let series = Array.isArray(rf.series) ? rf.series : null;
             if (!series && Array.isArray(rf.backtest_models)) {
                 const e = rf.backtest_models.find(x => x.name === rfName);
@@ -1460,6 +1466,20 @@ function buildComparableModels(data) {
                 forecast_1d: rf.recommended_value ?? rf.horizons?.next_1d?.forecast,
             });
         }
+        (rf.backtest_models || []).forEach(m => {
+            const key = normModelName(m.name);
+            if (['random_forest', 'lightgbm', 'autoets'].indexOf(key) < 0) return;
+            if (list.some(x => normModelName(x.name) === key)) return;
+            list.push({
+                name: m.name,
+                mase: m.mase,
+                mae: m.mae,
+                rmse: m.rmse,
+                series: null,
+                horizons: null,
+                forecast_1d: null,
+            });
+        });
     }
     return list;
 }
@@ -2229,8 +2249,8 @@ function renderDailyVolumeChart(ops) {
             responsive: true,
             maintainAspectRatio: false,
             interaction: {
-                mode: 'nearest',
-                intersect: true
+                mode: 'index',
+                intersect: false
             },
             plugins: {
                 legend: {
