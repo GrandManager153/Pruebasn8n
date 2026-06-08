@@ -58,3 +58,9 @@ desktop.ini
 
 # Archivos de datos / Datasets
 *.csv
+
+# Proyecto de apuestas de futbol (punto y aparte)
+soccer-predictions/
+
+# Carpeta de React (Cliente)
+client/

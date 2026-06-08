@@ -706,9 +706,19 @@ body, body.light-mode {
     height: 160px;
 }
 
-/* === back bar / navigation hides on LaTeX === */
+/* === back bar / navigation hides on LaTeX / embedded === */
 .report-back-bar {
-    display: none !important; /* Hide parent control bar inside PDF view */
+    display: block;
+}
+
+body.embedded .report-back-bar {
+    display: none !important;
+}
+
+@media print {
+    .report-back-bar {
+        display: none !important;
+    }
 }
 
 /* === 🖨️ Strictly Optimized Print Settings (PDF Generation) === */
