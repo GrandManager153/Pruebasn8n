@@ -294,6 +294,24 @@ const KPI_EXPLANATIONS = {
         definition: 'Indica un cambio o quiebre estructural significativo en el volumen diario de entrada de leads, detectado mediante el algoritmo de Sumas Acumuladas (CUSUM).',
         interpretation: 'Un valor negativo (como -14%) confirma que la media de entrada diaria ha sufrido una reducción persistente en su línea base, indicando fatiga en canales de adquisición o pauta publicitaria. Un valor positivo refleja un incremento sostenido en la demanda.',
         source: 'Algoritmo estadístico CUSUM (Suma Acumulada) integrado en el motor de predicción BOS'
+    },
+    'Pre-Cierre (Solo Efectivo)': {
+        icon: '💵',
+        definition: 'Prospectos en la etapa final de pre-cierre que han indicado que realizarán el pago únicamente en efectivo (sin tarjetas de crédito o débito).',
+        interpretation: 'Representa leads con muy alta intención de compra, pero cuya conversión final puede requerir mayor seguimiento logístico para coordinar el depósito o pago físico.',
+        source: 'Mapeo de transiciones del CRM de ventas vía n8n'
+    },
+    'Pre-Cierre (Reactivación)': {
+        icon: '🔄',
+        definition: 'Prospectos previamente inactivos o estancados en el embudo de ventas que fueron contactados de nuevo y reactivados exitosamente en la etapa de pre-cierre.',
+        interpretation: 'Muestra la efectividad de las estrategias de seguimiento y la persistencia de los agentes para recuperar leads antiguos.',
+        source: 'Mapeo de transiciones del CRM de ventas vía n8n'
+    },
+    'Pre-Cierre (Sin Tarjeta)': {
+        icon: '💳',
+        definition: 'Prospectos listos para el cierre comercial que no cuentan con tarjetas de crédito/débito o prefieren no ingresarlas en el sistema.',
+        interpretation: 'Requieren que los agentes ofrezcan alternativas de pago especiales como transferencias bancarias o depósitos para consolidar el caso sin perder el interés comercial.',
+        source: 'Mapeo de transiciones del CRM de ventas vía n8n'
     }
 };
 
@@ -307,6 +325,40 @@ function openKpiModal(label, value) {
     document.getElementById('kpi-modal-definition').textContent = explain.definition;
     document.getElementById('kpi-modal-interpretation').textContent = explain.interpretation;
     document.getElementById('kpi-modal-source-text').textContent = explain.source;
+
+    document.getElementById('kpi-modal-overlay').classList.add('open');
+}
+
+function openFeederModal(state, pct) {
+    const cleanState = cleanTechnicalTerms(state);
+    const explainKey = resolveKpiExplanationKey(cleanState);
+    const explain = explainKey ? KPI_EXPLANATIONS[explainKey] : null;
+
+    document.getElementById('kpi-modal-title').textContent = cleanState;
+    document.getElementById('kpi-modal-value').textContent = pct;
+
+    if (explain) {
+        document.getElementById('kpi-modal-definition').textContent = explain.definition;
+        document.getElementById('kpi-modal-interpretation').textContent = explain.interpretation;
+        document.getElementById('kpi-modal-source-text').textContent = explain.source;
+    } else {
+        document.getElementById('kpi-modal-definition').textContent = `Canal de atribución o ruta de conversión ("feeder") que aporta leads calificados al estado de conversión final.`;
+        document.getElementById('kpi-modal-interpretation').textContent = `Este canal representa el ${pct} de todos los leads que logran convertirse en el periodo. Un porcentaje alto indica que es un canal muy eficiente que vale la pena potenciar.`;
+        document.getElementById('kpi-modal-source-text').textContent = `Mapeo de transiciones del CRM de ventas vía n8n`;
+    }
+
+    document.getElementById('kpi-modal-overlay').classList.add('open');
+}
+
+function openLeakModal(from, to, value) {
+    const cleanFrom = cleanTechnicalTerms(from);
+    const cleanTo = cleanTechnicalTerms(to);
+
+    document.getElementById('kpi-modal-title').textContent = `Fuga: de ${cleanFrom} a ${cleanTo}`;
+    document.getElementById('kpi-modal-value').textContent = value;
+    document.getElementById('kpi-modal-definition').textContent = `Fuga de prospectos detectada durante la transición de la etapa "${cleanFrom}" a "${cleanTo}". Representa leads que abandonan el embudo en este punto.`;
+    document.getElementById('kpi-modal-interpretation').textContent = `Un valor de ${value} indica una pérdida de prospectos en esta transición. Se aconseja evaluar los tiempos de respuesta o la calidad del contacto del equipo de ventas.`;
+    document.getElementById('kpi-modal-source-text').textContent = `Análisis de transición de estados del CRM`;
 
     document.getElementById('kpi-modal-overlay').classList.add('open');
 }
@@ -1065,7 +1117,7 @@ function renderFunnelDetails(data) {
                 const pct = metricsStr.split('%')[0] || '0';
 
                 return `
-                    <div class="card-animate" style="padding: 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; animation-delay: ${(idx * 0.025) + 0.12}s;">
+                    <div class="card-animate" onclick="openFeederModal('${state.replace(/'/g, "\\'")}', '${pct}%')" style="cursor: pointer; padding: 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; animation-delay: ${(idx * 0.025) + 0.12}s;">
                         <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; color: white;">
                             <span>${state}</span>
                             <span style="color: var(--green);" class="progress-bar-val" data-value="${pct}%">${pct}%</span>
@@ -1091,7 +1143,7 @@ function renderFunnelDetails(data) {
         leaksList.innerHTML = sortedLeaks.map((l, idx) => {
             const leakPct = l.pct.toFixed(2);
             return `
-                <div class="card-animate" style="padding: 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; animation-delay: ${(idx * 0.025) + 0.12}s;">
+                <div class="card-animate" onclick="openLeakModal('${l.from.replace(/'/g, "\\'")}', '${l.to.replace(/'/g, "\\'")}', '${leakPct}%')" style="cursor: pointer; padding: 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; animation-delay: ${(idx * 0.025) + 0.12}s;">
                     <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; color: white;">
                         <span>De ${cleanTechnicalTerms(l.from)} a ${cleanTechnicalTerms(l.to)}</span>
                         <span style="color: var(--red);" class="progress-bar-val" data-value="${leakPct}%">${leakPct}%</span>
