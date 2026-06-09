@@ -56,5 +56,15 @@ desktop.ini
 *.njsproj
 *.sln
 
+# Archivos de datos / Datasets
+*.csv
+
 # Proyecto de apuestas de futbol (punto y aparte)
 soccer-predictions/
+
+# Carpeta de React (Cliente)
+client/
+<<<<<<< HEAD
+=======
+
+>>>>>>> b2ee7f4eadb49f2634f558d8d624b24e6ed7deb7
