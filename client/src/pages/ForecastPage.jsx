@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import useDashboardStore from '../stores/useDashboardStore';
 import KpiCard from '../components/shared/KpiCard';
+import KpiModal from '../components/shared/KpiModal';
 
 const MODEL_COLORS = {
   theta_lite: '#38bdf8',
@@ -86,6 +87,7 @@ export default function ForecastPage() {
   const [selectedCompareModel, setSelectedCompareModel] = useState('');
   const [showAllModels, setShowAllModels] = useState(false);
   const [chartType, setChartType] = useState('line');
+  const [modal, setModal] = useState({ open: false, label: '', value: '' });
 
   const forecast = data?.forecast || {};
   const timeSeries = forecast.time_series || [];
@@ -196,30 +198,33 @@ export default function ForecastPage() {
       <div className="section-header">
         <div className="section-title">
           <span className="bar" />
-          Pronóstico de Demanda a Mediano Plazo
+          Mid-Term Forecast (Pronóstico de Demanda a Mediano Plazo)
         </div>
       </div>
       <div className="grid-3">
         <KpiCard
-          label="Pronóstico Mañana"
+          label="Daily Forecast (Pronóstico Mañana)"
           value={h1d.forecast ?? forecast.recommended_value ?? 0}
           sub={h1d.band_low !== undefined ? `Rango: ${h1d.band_low} a ${h1d.band_high} leads` : 'Leads esperados mañana'}
           color="blue"
           delay={0}
+          onClick={() => setModal({ open: true, label: 'Daily Forecast (Pronóstico Mañana)', value: (h1d.forecast ?? forecast.recommended_value ?? 0).toLocaleString() })}
         />
         <KpiCard
-          label="Pronóstico 7 Días"
+          label="7-Day Forecast (Pronóstico 7 Días)"
           value={h7d.forecast ?? 0}
           sub={h7d.band_low !== undefined ? `Rango: ${h7d.band_low} a ${h7d.band_high} leads` : 'Acumulado semanal'}
           color="green"
           delay={0.05}
+          onClick={() => setModal({ open: true, label: '7-Day Forecast (Pronóstico 7 Días)', value: (h7d.forecast ?? 0).toLocaleString() })}
         />
         <KpiCard
-          label="Pronóstico 14 Días"
+          label="14-Day Forecast (Pronóstico 14 Días)"
           value={h14d.forecast ?? 0}
           sub={h14d.band_low !== undefined ? `Rango: ${h14d.band_low} a ${h14d.band_high} leads` : 'Acumulado quincenal'}
           color="gold"
           delay={0.1}
+          onClick={() => setModal({ open: true, label: '14-Day Forecast (Pronóstico 14 Días)', value: (h14d.forecast ?? 0).toLocaleString() })}
         />
       </div>
 
@@ -233,7 +238,7 @@ export default function ForecastPage() {
         >
           <div className="chart-title">
             <span className="dot" style={{ background: '#3b82f6' }} />
-            Histórico de Leads y Predicción Temporal
+            Historical & Projection (Histórico de Leads y Predicción Temporal)
           </div>
 
           {/* Model Comparison Controls Row */}
@@ -445,7 +450,7 @@ export default function ForecastPage() {
         >
           <div className="chart-title">
             <span className="dot" style={{ background: 'var(--gold)' }} />
-            Comportamiento Estacional Semanal
+            Weekly Seasonality (Comportamiento Estacional Semanal)
           </div>
           <div className="chart-wrapper" style={{ height: 320 }}>
             {forecast.seasonal ? (
@@ -483,7 +488,7 @@ export default function ForecastPage() {
         >
           <div className="chart-title">
             <span className="dot" style={{ background: 'var(--gold)' }} />
-            Clasificación de Modelos Predictivos
+            Model Leaderboard (Clasificación de Modelos Predictivos)
           </div>
           <div className="custom-table-container" style={{ marginTop: 12 }}>
             <table className="custom-table">
@@ -517,6 +522,14 @@ export default function ForecastPage() {
           </div>
         </motion.div>
       )}
+
+      {/* Explanation Modal */}
+      <KpiModal
+        isOpen={modal.open}
+        label={modal.label}
+        value={modal.value}
+        onClose={() => setModal({ open: false, label: '', value: '' })}
+      />
     </>
   );
 }

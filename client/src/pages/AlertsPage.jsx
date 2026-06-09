@@ -2,10 +2,12 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import useDashboardStore from '../stores/useDashboardStore';
 import KpiCard from '../components/shared/KpiCard';
+import KpiModal from '../components/shared/KpiModal';
 
 export default function AlertsPage() {
   const { data, loading } = useDashboardStore();
   const [filter, setFilter] = useState('all');
+  const [modal, setModal] = useState({ open: false, label: '', value: '' });
 
   if (loading || !data) {
     return (
@@ -41,10 +43,35 @@ export default function AlertsPage() {
     <>
       {/* Stats Cards */}
       <div className="grid-4">
-        <KpiCard label="Alertas Totales" value={alerts.length} color="gold" delay={0} />
-        <KpiCard label="Alertas Críticas" value={criticals} color="red" delay={0.04} />
-        <KpiCard label="Severidad Máxima" value={maxRPN} sub="RPN Score" color="red" delay={0.08} />
-        <KpiCard label="Advertencias e Info" value={warnings + infos} color="blue" delay={0.12} />
+        <KpiCard
+          label="Total Alerts (Alertas Totales)"
+          value={alerts.length}
+          color="gold"
+          delay={0}
+          onClick={() => setModal({ open: true, label: 'Total Alerts (Alertas Totales)', value: String(alerts.length) })}
+        />
+        <KpiCard
+          label="Critical Alerts (Alertas Críticas)"
+          value={criticals}
+          color="red"
+          delay={0.04}
+          onClick={() => setModal({ open: true, label: 'Critical Alerts (Alertas Críticas)', value: String(criticals) })}
+        />
+        <KpiCard
+          label="Max Severity (Severidad Máxima)"
+          value={maxRPN}
+          sub="RPN Score"
+          color="red"
+          delay={0.08}
+          onClick={() => setModal({ open: true, label: 'Max Severity (Severidad Máxima)', value: String(maxRPN) })}
+        />
+        <KpiCard
+          label="Warnings & Info (Advertencias e Info)"
+          value={warnings + infos}
+          color="blue"
+          delay={0.12}
+          onClick={() => setModal({ open: true, label: 'Warnings & Info (Advertencias e Info)', value: String(warnings + infos) })}
+        />
       </div>
 
       {/* Alerts Table */}
@@ -58,7 +85,7 @@ export default function AlertsPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
           <div className="section-title">
             <span className="bar" />
-            Registro Detallado de Alertas del Sistema
+            Incident Box (Buzón de Incidentes y Anomalías)
           </div>
           <div className="filter-pills">
             {['all', 'critical', 'warning', 'info'].map((f) => (
@@ -122,6 +149,14 @@ export default function AlertsPage() {
           </table>
         </div>
       </motion.div>
+
+      {/* Explanation Modal */}
+      <KpiModal
+        isOpen={modal.open}
+        label={modal.label}
+        value={modal.value}
+        onClose={() => setModal({ open: false, label: '', value: '' })}
+      />
     </>
   );
 }

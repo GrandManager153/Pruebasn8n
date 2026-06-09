@@ -83,7 +83,7 @@ export default function ReportsPage() {
       <div className="section-header">
         <div className="section-title">
           <span className="bar" />
-          Informes Analíticos de Dirección
+          Executive Reports (Informes Analíticos de Dirección)
         </div>
         <div className="section-meta">Actualizados al momento de la auditoría</div>
       </div>
@@ -141,7 +141,7 @@ export default function ReportsPage() {
               }}
             />
             <h4 style={{ fontSize: 13.5, fontWeight: 800, color: 'white', margin: 0, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              {activeReport ? activeReport.title : 'Visor de Informe Interactivo'}
+              {activeReport ? activeReport.title : 'Interactive Viewer (Visor de Informe Interactivo)'}
             </h4>
           </div>
           {activeReport && (

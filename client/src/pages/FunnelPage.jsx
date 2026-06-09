@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import useDashboardStore from '../stores/useDashboardStore';
 import KpiCard from '../components/shared/KpiCard';
+import KpiModal from '../components/shared/KpiModal';
 
 const STATIC_PROBABILITIES = [
   { state: "Abierto", conversion: 2.14, loss: 97.86, steps: 14.2, stddev: 4.5 },
@@ -9,6 +11,75 @@ const STATIC_PROBABILITIES = [
   { state: "En Llamada", conversion: 14.15, loss: 85.85, steps: 8.9, stddev: 3.2 },
   { state: "Pre-Cerrado (Sin tarjeta)", conversion: 13.01, loss: 86.99, steps: 11.5, stddev: 3.9 }
 ];
+
+const CRM_TRANSLATIONS = {
+  'PreClosed – Cash Only': 'Pre-Cierre (Solo Efectivo)',
+  'PreClosed - Cash Only': 'Pre-Cierre (Solo Efectivo)',
+  'PreClosed Cash Only': 'Pre-Cierre (Solo Efectivo)',
+  'PreClosed Reactivación': 'Pre-Cierre (Reactivación)',
+  'PreClosed Reactivacin': 'Pre-Cierre (Reactivación)',
+  'PreClosed - No Card': 'Pre-Cierre (Sin Tarjeta)',
+  'PreClosed - No Answer': 'Pre-Cierre (Sin Respuesta)',
+  'PreClosed - Busy': 'Pre-Cierre (Ocupado)',
+  'PreClosed - Hung Up': 'Pre-Cierre (Llamada Colgada)',
+  'PreClosed - Distrust': 'Pre-Cierre (Desconfianza)',
+  'PreClosed - Indirect Client': 'Pre-Cierre (Cliente Indirecto)',
+  'PreClosed - Needs to be Approved': 'Pre-Cierre (Pendiente Aprobación)',
+  'PreClosed - No Money - No Job': 'Pre-Cierre (Sin Dinero/Trabajo)',
+  'PreClosed - No Price': 'Pre-Cierre (Sin Dinero/Trabajo)',
+  'PreClosed - Prefers to go to the office': 'Pre-Cierre (Prefiere Oficina)',
+  'PreClosed Opportunity': 'Oportunidad de Pre-Cierre',
+  'Pre-Cerrado (Sin tarjeta)': 'Pre-Cierre (Sin Tarjeta)',
+  'Abierto (Open)': 'Abierto',
+  'Busy - Callback': 'Ocupado (Re-llamada)',
+  'Connected Voicemail': 'Buzón de Voz',
+  'EN LLAMADA': 'En Llamada',
+  'New Lead': 'Nuevo Lead',
+  'No Answer': 'Sin Respuesta',
+  'New Lead Primer Intento': 'Nuevo Lead - 1er Intento',
+  'Alivio Vendido': 'Alivio Vendido',
+  'Cita en oficina': 'Cita en Oficina',
+  'Connected - Not Interested': 'Contactado (No Interesado)',
+  'Consult Booked': 'Consulta Agendada',
+  'Consult Booked PROMO': 'Consulta Agendada (Promo)',
+  'Customer Service Call': 'Llamada Atención Cliente',
+  'Detenidos - Cortes': 'Detenidos / Cortes',
+  'Duplicate Lead': 'Lead Duplicado',
+  'Hung Up': 'Llamada Colgada',
+  'Indirect Client': 'Cliente Indirecto',
+  'Leads Opportunity': 'Oportunidad de Lead',
+  'OutReach Primer Intento': 'Contacto - 1er Intento',
+  'OutReach Segundo Intento': 'Contacto - 2do Intento',
+  'Pre Closed PROMO': 'Pre-Cierre (Promo)',
+  'Reconversion Lead': 'Reconversión de Lead',
+  'Recovery Department': 'Dpto. de Recuperación',
+  'Recovery No Answer': 'Recuperación - Sin Respuesta',
+  'Transfer to Detenidos': 'Transferido a Detenidos',
+  'Wrong Number': 'Número Equivocado',
+  'Consult Booked HS': 'Consulta Agendada (HS)',
+  'NL Agendado CDMX': 'Lead Agendado CDMX',
+  'Consult Booked - Referal to Detainees': 'Consulta Agendada (Ref. Detenidos)',
+  'Hot Transfer Cancn': 'Transferencia Directa Cancún',
+  'NL Connector CUN': 'Conector Lead Nuevo CUN',
+  'New Lead Segundo Intento': 'Nuevo Lead - 2do Intento',
+  'Outeach 3 intento': 'Contacto - 3er Intento',
+  'Recovery Not Interested': 'Recuperación - No Interesado',
+  'NL Agendado CUN': 'Lead Agendado CUN'
+};
+
+function cleanStateName(name) {
+  if (!name) return '—';
+  const trimmed = name.trim();
+  if (CRM_TRANSLATIONS[trimmed]) return CRM_TRANSLATIONS[trimmed];
+  
+  let result = trimmed;
+  for (const [key, val] of Object.entries(CRM_TRANSLATIONS)) {
+    const escapedKey = key.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const regex = new RegExp(escapedKey, 'gi');
+    result = result.replace(regex, val);
+  }
+  return result;
+}
 
 function formatProb(val) {
   if (typeof val === 'number') {
@@ -35,6 +106,7 @@ function formatSteps(val) {
 
 export default function FunnelPage() {
   const { data, loading } = useDashboardStore();
+  const [modal, setModal] = useState({ open: false, label: '', value: '' });
 
   if (loading || !data) {
     return (
@@ -78,16 +150,21 @@ export default function FunnelPage() {
   // Feeders are loaded from funnel.feeders
   const feeders = funnel.feeders || [];
 
-  const probabilities = funnel.probabilities || [];
-  const displayProbabilities = probabilities.length > 0 
-    ? probabilities.map(p => ({
-        state: p.state || p.status || p.label || '—',
-        conversion: p.conversion_prob !== undefined ? p.conversion_prob : (p.probability !== undefined ? p.probability : 0),
-        loss: p.prob_loss !== undefined ? p.prob_loss : (p.loss !== undefined ? p.loss : 0),
-        steps: p.expected_steps !== undefined ? p.expected_steps : (p.steps !== undefined ? p.steps : 0),
-        stddev: p.step_stddev !== undefined ? p.step_stddev : (p.stddev !== undefined ? p.stddev : 0)
-      }))
+  const rawProbabilities = funnel.absorption_probabilities || [];
+  const displayProbabilities = rawProbabilities.length > 0 
+    ? rawProbabilities
+        .filter(p => (p.prob_conversion || 0) > 0.0001) // Filter out practically 0% conversion states to keep it clean
+        .map(p => ({
+          state: cleanStateName(p.state),
+          conversion: p.prob_conversion !== undefined ? p.prob_conversion : 0,
+          loss: p.prob_loss !== undefined ? p.prob_loss : 0,
+          steps: p.expected_steps !== undefined ? p.expected_steps : 0,
+          stddev: p.step_stddev !== undefined ? p.step_stddev : 0
+        }))
     : STATIC_PROBABILITIES;
+
+  // Final fallback if filter removed all rows
+  const finalProbabilities = displayProbabilities.length > 0 ? displayProbabilities : STATIC_PROBABILITIES;
 
   return (
     <>
@@ -104,7 +181,7 @@ export default function FunnelPage() {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>
-            Desempeño y Absorción de Leads
+            Funnel Absorption (Desempeño y Absorción de Leads)
           </h2>
           <span className="badge badge-success">Objetivo</span>
         </div>
@@ -112,8 +189,20 @@ export default function FunnelPage() {
           Análisis probabilístico de la conversión general de contactos.
         </p>
         <div className="grid-2">
-          <KpiCard label="Global CVR (tasa de conversión)" value={convPct} color="green" animateValue={false} />
-          <KpiCard label="Revenue at Risk (ingreso en riesgo)" value={riskRevenue} color="red" animateValue={false} />
+          <KpiCard
+            label="Global CVR (Tasa de Conversión Global)"
+            value={convPct}
+            color="green"
+            animateValue={false}
+            onClick={() => setModal({ open: true, label: 'Global CVR (Tasa de Conversión Global)', value: `${convPct.toFixed(2)}%` })}
+          />
+          <KpiCard
+            label="Revenue at Risk (Ingreso en Riesgo por Fugas)"
+            value={riskRevenue}
+            color="red"
+            animateValue={false}
+            onClick={() => setModal({ open: true, label: 'Revenue at Risk (Ingreso en Riesgo por Fugas)', value: riskRevenue })}
+          />
         </div>
       </motion.div>
 
@@ -122,11 +211,11 @@ export default function FunnelPage() {
         <motion.div className="card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <div className="chart-title">
             <span className="dot" style={{ background: 'var(--green)' }} />
-            Feeders (rutas que convierten)
+            Feeders (Rutas de Conversión)
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
             {feeders.length > 0 ? feeders.map((f, i) => {
-              const state = f.from || 'Origen';
+              const state = cleanStateName(f.from || 'Origen');
               const pct = typeof f.pct === 'number' ? f.pct : parseFloat(f.pct) || 0;
               const count = f.cnt || 0;
               return (
@@ -153,12 +242,12 @@ export default function FunnelPage() {
         <motion.div className="card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <div className="chart-title">
             <span className="dot" style={{ background: 'var(--red)' }} />
-            Leaks (fugas del embudo)
+            Leaks (Puntos de Pérdida de Leads)
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
             {leaks.length > 0 ? leaks.map((l, i) => {
-              const source = l.from || 'Origen';
-              const target = l.to || 'Destino';
+              const source = cleanStateName(l.from || 'Origen');
+              const target = cleanStateName(l.to || 'Destino');
               const pct = typeof l.pct === 'number' ? l.pct : parseFloat(l.pct) || 0;
               const count = l.cnt || 0;
               return (
@@ -188,7 +277,7 @@ export default function FunnelPage() {
         <div className="section-header">
           <div className="section-title">
             <span className="bar" />
-            Probabilidades de Conversión y Pasos Operativos Esperados
+            Markov Probabilities (Probabilidades de Conversión)
           </div>
         </div>
         <motion.div className="card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
@@ -204,7 +293,7 @@ export default function FunnelPage() {
                 </tr>
               </thead>
               <tbody>
-                {displayProbabilities.map((p, i) => (
+                {finalProbabilities.map((p, i) => (
                   <tr key={i}>
                     <td style={{ fontWeight: 600, color: 'white' }}>{p.state}</td>
                     <td style={{ textAlign: 'right', color: 'var(--green)', fontWeight: 'bold' }}>
@@ -226,6 +315,14 @@ export default function FunnelPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* Explanation Modal */}
+      <KpiModal
+        isOpen={modal.open}
+        label={modal.label}
+        value={modal.value}
+        onClose={() => setModal({ open: false, label: '', value: '' })}
+      />
     </>
   );
 }

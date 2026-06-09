@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import useDashboardStore from '../stores/useDashboardStore';
 import KpiCard from '../components/shared/KpiCard';
+import KpiModal from '../components/shared/KpiModal';
 
 const COLORS = [
   '#3b82f6', // Neon Blue
@@ -17,6 +18,7 @@ const COLORS = [
 export default function InvestmentPage() {
   const { data, loading } = useDashboardStore();
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [modal, setModal] = useState({ open: false, label: '', value: '' });
 
   if (loading || !data) {
     return (
@@ -48,7 +50,7 @@ export default function InvestmentPage() {
       <div className="section-header">
         <div className="section-title">
           <span className="bar" />
-          Presupuesto Publicitario y Distribución
+          Ad Spend & Budget (Presupuesto Publicitario y Distribución)
         </div>
       </div>
 
@@ -57,7 +59,7 @@ export default function InvestmentPage() {
         <motion.div className="card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="chart-title">
             <span className="dot" style={{ background: 'var(--green)' }} />
-            Distribución del Gasto por Campaña
+            Campaign Budget Share (Distribución del Gasto por Campaña)
           </div>
 
           {chartData.length > 0 ? (
@@ -245,19 +247,21 @@ export default function InvestmentPage() {
         {/* KPI Cards */}
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 'var(--gap-bento)' }}>
           <KpiCard
-            label="Inversión Total Ejecutada"
+            label="Ad Spend (Inversión Total Ejecutada)"
             value={inv.total_spend || 0}
             sub="Registrado en bases financieras"
             color="gold"
             prefix="$"
             delay={0.05}
+            onClick={() => setModal({ open: true, label: 'Ad Spend (Inversión Total Ejecutada)', value: `$${(inv.total_spend || 0).toLocaleString()}` })}
           />
           <KpiCard
-            label="Campañas Activas Modeladas"
+            label="Active Campaigns (Campañas Activas Modeladas)"
             value={inv.campaign_count || campaigns.length || 0}
             sub="Modeladas por el motor de atribución"
             color="blue"
             delay={0.1}
+            onClick={() => setModal({ open: true, label: 'Active Campaigns (Campañas Activas Modeladas)', value: String(inv.campaign_count || campaigns.length || 0) })}
           />
         </div>
       </div>
@@ -274,7 +278,7 @@ export default function InvestmentPage() {
           <div className="section-header" style={{ marginBottom: 12 }}>
             <div className="section-title">
               <span className="bar" />
-              Desglose Detallado de Campañas
+              Campaign Breakdown (Desglose Detallado de Campañas)
             </div>
           </div>
           <div className="custom-table-container">
@@ -301,6 +305,14 @@ export default function InvestmentPage() {
           </div>
         </motion.div>
       )}
+
+      {/* Explanation Modal */}
+      <KpiModal
+        isOpen={modal.open}
+        label={modal.label}
+        value={modal.value}
+        onClose={() => setModal({ open: false, label: '', value: '' })}
+      />
     </>
   );
 }

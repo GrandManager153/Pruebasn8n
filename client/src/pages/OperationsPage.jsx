@@ -17,10 +17,12 @@ import {
 } from 'recharts';
 import useDashboardStore from '../stores/useDashboardStore';
 import KpiCard from '../components/shared/KpiCard';
+import KpiModal from '../components/shared/KpiModal';
 
 export default function OperationsPage() {
   const { data, loading } = useDashboardStore();
   const [chartType, setChartType] = useState('bar');
+  const [modal, setModal] = useState({ open: false, label: '', value: '' });
 
   if (loading || !data) {
     return (
@@ -97,34 +99,46 @@ export default function OperationsPage() {
       {/* KPI Cards */}
       <div className="grid-4" style={{ marginTop: 16 }}>
         <KpiCard
-          label="Registros"
+          label="Total Records (Registros de Llamadas)"
           value={totalRecords}
           sub="llamadas totales"
           color="blue"
           delay={0}
+          onClick={() => {
+            setModal({ open: true, label: 'Total Records (Registros de Llamadas)', value: totalRecords.toLocaleString() });
+          }}
         />
         <KpiCard
-          label="Contactos"
+          label="Unique Leads (Contactos Únicos)"
           value={uniqueContacts}
           sub="leads únicos"
           color="blue"
           delay={0.04}
+          onClick={() => {
+            setModal({ open: true, label: 'Unique Leads (Contactos Únicos)', value: uniqueContacts.toLocaleString() });
+          }}
         />
         <KpiCard
-          label="Avg Dial Attempts (intentos promedio)"
+          label="Avg Dial Attempts (Intentos Promedio)"
           value={attemptsAvg}
           decimals={2}
           sub={`rango: 1-${attemptsMax}`}
           color={attemptsAvg > 7 ? 'red' : 'blue'}
           delay={0.08}
+          onClick={() => {
+            setModal({ open: true, label: 'Avg Dial Attempts (Intentos Promedio)', value: attemptsAvg.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) });
+          }}
         />
         <KpiCard
-          label="Avg Callback Interval (min entre intentos)"
+          label="Avg Callback Interval (Minutos entre Intentos)"
           value={Math.round(intervalAvg)}
           suffix=" min"
           sub={`~${Math.round(intervalAvg / 60)}h entre marcaciones`}
           color={intervalAvg > 1440 ? 'red' : 'blue'}
           delay={0.12}
+          onClick={() => {
+            setModal({ open: true, label: 'Avg Callback Interval (Minutos entre Intentos)', value: `${Math.round(intervalAvg)} min` });
+          }}
         />
       </div>
 
@@ -139,7 +153,7 @@ export default function OperationsPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div className="chart-title" style={{ marginBottom: 0 }}>
             <span className="dot" style={{ background: '#3b82f6' }} />
-            Volumen Diario
+            Daily Volume (Volumen Diario de Leads)
           </div>
           {/* Line / Bar Switcher */}
           <div className="chart-toolbar" style={{ display: 'flex', gap: 4 }}>
@@ -230,7 +244,7 @@ export default function OperationsPage() {
         <motion.div className="card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <div className="chart-title" style={{ marginBottom: 4 }}>
             <span className="dot" style={{ background: '#ef4444' }} />
-            Distribución Horaria
+            Hourly Distribution (Distribución Horaria)
           </div>
           {ops.peak_hour !== undefined && (
             <p id="hourly-chart-sub" style={{ fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 12 }}>
@@ -266,7 +280,7 @@ export default function OperationsPage() {
         <motion.div className="card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <div className="chart-title">
             <span className="dot" style={{ background: 'var(--gold)' }} />
-            Distribución de Contacto
+            Contact Distribution (Distribución de Contacto)
           </div>
           <p id="contact-total-calls" style={{ fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 12 }}>
             {totalRecords.toLocaleString()} llamadas totales
@@ -325,6 +339,14 @@ export default function OperationsPage() {
           )}
         </motion.div>
       </div>
+
+      {/* Explanation Modal */}
+      <KpiModal
+        isOpen={modal.open}
+        label={modal.label}
+        value={modal.value}
+        onClose={() => setModal({ open: false, label: '', value: '' })}
+      />
     </>
   );
 }

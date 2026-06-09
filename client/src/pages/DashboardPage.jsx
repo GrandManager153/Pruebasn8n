@@ -37,7 +37,7 @@ export default function DashboardPage() {
     let animateValue = true;
 
     if (k.label === 'Health Score') {
-      label = 'Salud del Sistema';
+      label = 'SHS (Salud Operativa Consolidada)';
       const score = parseInt(k.value) || 79;
       color = score >= 80 ? 'green' : score >= 60 ? 'gold' : 'red';
     }
@@ -68,7 +68,7 @@ export default function DashboardPage() {
       let formattedName = bestModelName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
       value = `~${bestModelVal}`;
       sub = `${formattedName} | ${bestConfidence.replace(/\b\w/g, c => c.toUpperCase())}`;
-      label = 'Pronóstico Diario';
+      label = 'Daily Forecast (Pronóstico Diario de Demanda)';
       animateValue = false;
     }
 
@@ -91,12 +91,12 @@ export default function DashboardPage() {
       value = Number(bestMase).toFixed(2);
       sub = formattedName;
       color = 'white';
-      label = 'Precisión del Modelo';
+      label = 'MASE (Precisión del Modelo)';
       decimals = 2;
     }
 
     if (k.label === 'CPL implicito') {
-      label = 'Costo Promedio por Lead';
+      label = 'CPL (Costo por Lead Implícito)';
       sub = 'Global';
       color = 'blue';
       prefix = '$';
@@ -104,16 +104,41 @@ export default function DashboardPage() {
     }
 
     if (k.label === 'Cambio regimen' || k.label === 'Cambio de Régimen') {
+      label = 'Regime Shift (Cambio de Régimen)';
       color = 'blue';
     }
 
     if (k.label === 'Gasto total') {
-      label = 'Inversión Publicitaria';
+      label = 'Ad Spend (Inversión Publicitaria)';
       prefix = '$';
     }
 
     if (k.label === 'HHI') {
-      label = 'Diversificación de Pauta';
+      label = 'HHI (Concentración de Pauta)';
+    }
+
+    if (k.label === 'Leads totales') {
+      label = 'Total Leads (Volumen Total de Leads)';
+    }
+
+    if (k.label === 'Promedio diario') {
+      label = 'Daily Avg (Promedio Diario de Leads)';
+    }
+
+    if (k.label === 'Cambio semanal') {
+      label = 'WoW (Cambio Semanal vs Anterior)';
+    }
+
+    if (k.label === 'Hora pico') {
+      label = 'Peak Hour (Hora Pico de Contactos)';
+    }
+
+    if (k.label === 'Conversion global') {
+      label = 'Global CVR (Tasa de Conversión Global)';
+    }
+
+    if (k.label === 'Revenue at Risk') {
+      label = 'Revenue at Risk (Ingreso en Riesgo por Fugas)';
     }
 
     if (k.label === 'Prevision diaria' && !sub) {
@@ -159,7 +184,7 @@ export default function DashboardPage() {
       kpis.push({
         key: 'Leads Hoy',
         value: data.operations.latest.leads,
-        label: 'Leads Hoy',
+        label: 'Leads Today (Leads Recibidos Hoy)',
         sub: data.operations.latest.date || 'Último día registrado',
         color: 'blue',
         animateValue: true
@@ -169,7 +194,7 @@ export default function DashboardPage() {
       kpis.push({
         key: 'Máximo Diario',
         value: data.operations.max_daily,
-        label: 'Máximo Diario',
+        label: 'Max Daily (Máximo Diario)',
         sub: 'Pico histórico del periodo',
         color: 'white',
         animateValue: true
@@ -179,7 +204,7 @@ export default function DashboardPage() {
       kpis.push({
         key: 'Tasa de Sobre-Contacto',
         value: data.operations.contact_distribution.overcontact_pct,
-        label: 'Tasa de Sobre-Contacto',
+        label: 'Overcontact Rate (Tasa de Sobre-Contacto)',
         sub: 'Llamadas > 7 intentos',
         color: 'red',
         suffix: '%',
@@ -190,11 +215,11 @@ export default function DashboardPage() {
       kpis.push({
         key: 'Promedio Intentos',
         value: data.operations.call_metrics.call_rank.avg,
-        label: 'Promedio Intentos',
+        label: 'Avg Dial Attempts (Intentos Promedio)',
         sub: 'Marcaciones por lead (umbral: 7)',
         color: 'red',
         animateValue: true,
-        decimals: 1
+        decimals: 2
       });
     }
   }
@@ -213,7 +238,7 @@ export default function DashboardPage() {
       <div className="section-header">
         <div className="section-title">
           <span className="bar" />
-          Indicadores Clave de Rendimiento
+          KPIs (Indicadores Clave de Rendimiento)
         </div>
       </div>
       <div className="grid-4">
@@ -239,7 +264,7 @@ export default function DashboardPage() {
               }
               if (kpi.prefix) formattedVal = kpi.prefix + formattedVal;
               if (kpi.suffix) formattedVal = formattedVal + kpi.suffix;
-              setModal({ open: true, label: kpi.key, value: formattedVal });
+              setModal({ open: true, label: kpi.label, value: formattedVal });
             }}
           />
         ))}
@@ -251,7 +276,7 @@ export default function DashboardPage() {
           <div className="section-header">
             <div className="section-title">
               <span className="bar" />
-              Acciones Operativas Sugeridas
+              Suggested Actions (Acciones Operativas Sugeridas)
             </div>
           </div>
           <div className="grid-3">

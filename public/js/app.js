@@ -18,20 +18,20 @@ let showAllModels = false;
 
 /** Backend KPI label → display label (término en inglés + descripción en español). */
 const KPI_BACKEND_LABEL_MAP = {
-    'Health Score': 'SHS (salud operativa consolidada)',
-    'Leads totales': 'Total Leads (volumen total del periodo)',
-    'Promedio diario': 'Daily Avg (promedio diario de leads)',
-    'Cambio semanal': 'WoW (cambio vs semana anterior)',
-    'Hora pico': 'Peak Hour (hora pico de contactos)',
-    'Prevision diaria': 'Daily Forecast (pronóstico diario de demanda)',
-    'MASE': 'MASE (error medio absoluto escalado)',
-    'CPL implicito': 'CPL (costo por lead implícito)',
-    'Gasto total': 'Ad Spend (gasto total en pauta)',
-    'HHI': 'HHI (concentración del gasto en campañas)',
-    'Conversion global': 'Global CVR (tasa de conversión entrada a cierre)',
-    'Revenue at Risk': 'Revenue at Risk (ingreso en riesgo por fugas)',
-    'Utilizacion capacidad': 'Capacity Utilization (uso de capacidad operativa)',
-    'Cambio regimen': 'Regime Shift (cambio estructural de demanda)',
+    'Health Score': 'SHS (Salud Operativa Consolidada)',
+    'Leads totales': 'Total Leads (Volumen Total de Leads)',
+    'Promedio diario': 'Daily Avg (Promedio Diario de Leads)',
+    'Cambio semanal': 'WoW (Cambio Semanal vs Anterior)',
+    'Hora pico': 'Peak Hour (Hora Pico de Contactos)',
+    'Prevision diaria': 'Daily Forecast (Pronóstico Diario de Demanda)',
+    'MASE': 'MASE (Precisión del Modelo)',
+    'CPL implicito': 'CPL (Costo por Lead Implícito)',
+    'Gasto total': 'Ad Spend (Inversión Publicitaria)',
+    'HHI': 'HHI (Concentración de Pauta)',
+    'Conversion global': 'Global CVR (Tasa de Conversión Global)',
+    'Revenue at Risk': 'Revenue at Risk (Ingreso en Riesgo por Fugas)',
+    'Utilizacion capacidad': 'Capacity Utilization (Uso de Capacidad Operativa)',
+    'Cambio regimen': 'Regime Shift (Cambio de Régimen)',
 };
 
 const INDUSTRY_INLINE_REPLACEMENTS = [
@@ -858,7 +858,7 @@ function renderBOS(data) {
         if (data.operations.latest && data.operations.latest.leads) {
             cleanedKpis.push({
                 value: String(data.operations.latest.leads),
-                label: 'Leads Hoy',
+                label: 'Leads Today (Leads Recibidos Hoy)',
                 sub: data.operations.latest.date || 'Último día registrado',
                 color: 'blue'
             });
@@ -866,7 +866,7 @@ function renderBOS(data) {
         if (data.operations.max_daily) {
             cleanedKpis.push({
                 value: String(data.operations.max_daily),
-                label: 'Máximo Diario',
+                label: 'Max Daily (Máximo Diario)',
                 sub: 'Pico histórico del periodo',
                 color: 'white'
             });
@@ -874,7 +874,7 @@ function renderBOS(data) {
         if (data.operations.contact_distribution && data.operations.contact_distribution.overcontact_pct != null) {
             cleanedKpis.push({
                 value: data.operations.contact_distribution.overcontact_pct + '%',
-                label: 'Tasa de Sobre-Contacto',
+                label: 'Overcontact Rate (Tasa de Sobre-Contacto)',
                 sub: 'Llamadas > 7 intentos',
                 color: 'red'
             });
@@ -882,7 +882,7 @@ function renderBOS(data) {
         if (data.operations.call_metrics && data.operations.call_metrics.call_rank) {
             cleanedKpis.push({
                 value: String(data.operations.call_metrics.call_rank.avg),
-                label: 'Promedio Intentos',
+                label: 'Avg Dial Attempts (Intentos Promedio)',
                 sub: 'Marcaciones por lead (umbral: 7)',
                 color: 'red'
             });
@@ -2102,25 +2102,25 @@ function renderOperationsTab(data) {
 
         const kpis = [
             {
-                label: 'Registros',
+                label: 'Total Records (Registros de Llamadas)',
                 value: totalRecords.toLocaleString(),
                 sub: 'llamadas totales',
                 color: 'blue'
             },
             {
-                label: 'Contactos',
+                label: 'Unique Leads (Contactos Únicos)',
                 value: uniqueContacts.toLocaleString(),
                 sub: 'leads únicos',
                 color: 'blue'
             },
             {
-                label: 'Avg Dial Attempts (intentos promedio)',
+                label: 'Avg Dial Attempts (Intentos Promedio)',
                 value: attemptsAvg.toFixed(2),
                 sub: `rango: 1-${call.call_rank ? call.call_rank.max : 365}`,
                 color: attemptsAvg > 7 ? 'red' : 'blue'
             },
             {
-                label: 'Avg Callback Interval (min entre intentos)',
+                label: 'Avg Callback Interval (Minutos entre Intentos)',
                 value: `${Math.round(intervalAvg).toLocaleString()} min`,
                 sub: `~${Math.round(intervalAvg / 60)}h entre marcaciones`,
                 color: intervalAvg > 1440 ? 'red' : 'blue'
