@@ -867,7 +867,7 @@ function renderBOS(data) {
         overlays: getActiveOverlays()
     });
     renderCampaignChart(data.investment.campaigns);
-    renderHourlyChart(data.operations.hourly_distribution);
+    renderOperationsTab(data);
 
     // 10. Update Sync Date in top header
     const genDate = new Date(data.meta.generated_at);
@@ -2372,8 +2372,10 @@ function renderOperationsTab(data) {
     }
     renderDailyVolumeChart(ops);
 
-    if (dashboardData?.forecast?.seasonal_indices) {
-        renderSeasonalChart(dashboardData.forecast.seasonal_indices);
+    const seasonalIndices = data?.operations?.seasonal_indices
+        || data?.forecast?.seasonal_indices;
+    if (seasonalIndices) {
+        renderSeasonalChart(seasonalIndices);
     }
 
     // 3. Populate Contact Distribution Bars
