@@ -64,221 +64,81 @@
     },
     "backtest_series": [
       {
-        "date": "2026-04-27",
-        "actual": 107,
-        "predicted": 107
-      },
-      {
-        "date": "2026-04-28",
-        "actual": 108,
-        "predicted": 107
-      },
-      {
-        "date": "2026-04-29",
-        "actual": 108,
-        "predicted": 108
-      },
-      {
-        "date": "2026-04-30",
-        "actual": 107,
-        "predicted": 108
-      },
-      {
-        "date": "2026-05-01",
-        "actual": 105,
-        "predicted": 107
-      },
-      {
-        "date": "2026-05-02",
-        "actual": 104,
-        "predicted": 105
-      },
-      {
-        "date": "2026-05-03",
-        "actual": 101,
-        "predicted": 104
-      },
-      {
-        "date": "2026-05-04",
-        "actual": 98,
-        "predicted": 101
-      },
-      {
-        "date": "2026-05-05",
-        "actual": 96,
-        "predicted": 98
-      },
-      {
-        "date": "2026-05-06",
-        "actual": 92,
-        "predicted": 96
-      },
-      {
-        "date": "2026-05-07",
-        "actual": 89,
-        "predicted": 92
-      },
-      {
-        "date": "2026-05-08",
-        "actual": 86,
-        "predicted": 89
-      },
-      {
-        "date": "2026-05-09",
-        "actual": 82,
-        "predicted": 86
-      },
-      {
-        "date": "2026-05-10",
-        "actual": 80,
-        "predicted": 82
-      },
-      {
-        "date": "2026-05-11",
-        "actual": 77,
-        "predicted": 80
-      },
-      {
-        "date": "2026-05-12",
-        "actual": 75,
-        "predicted": 77
-      },
-      {
-        "date": "2026-05-13",
-        "actual": 74,
-        "predicted": 75
-      },
-      {
-        "date": "2026-05-14",
-        "actual": 73,
-        "predicted": 74
-      },
-      {
-        "date": "2026-05-15",
-        "actual": 72,
-        "predicted": 73
-      },
-      {
-        "date": "2026-05-16",
-        "actual": 73,
-        "predicted": 72
-      },
-      {
-        "date": "2026-05-17",
-        "actual": 74,
-        "predicted": 73
-      },
-      {
-        "date": "2026-05-18",
-        "actual": 75,
-        "predicted": 74
-      },
-      {
-        "date": "2026-05-19",
-        "actual": 77,
-        "predicted": 75
-      },
-      {
-        "date": "2026-05-20",
-        "actual": 79,
-        "predicted": 77
-      },
-      {
         "date": "2026-05-21",
-        "actual": 81,
-        "predicted": 76.65
+        "actual": 92,
+        "predicted": 83.41
       },
       {
         "date": "2026-05-22",
-        "actual": 84,
-        "predicted": 78.29
+        "actual": 94,
+        "predicted": 86.63
       },
       {
         "date": "2026-05-23",
-        "actual": 87,
-        "predicted": 80.56
+        "actual": 95,
+        "predicted": 89.55
       },
       {
         "date": "2026-05-24",
-        "actual": 89,
-        "predicted": 82.6
+        "actual": 97,
+        "predicted": 91.11
       },
       {
         "date": "2026-05-25",
-        "actual": 92,
-        "predicted": 84.08
+        "actual": 98,
+        "predicted": 93.02
       },
       {
         "date": "2026-05-26",
-        "actual": 94,
-        "predicted": 87.2
+        "actual": 97,
+        "predicted": 95.11
       },
       {
         "date": "2026-05-27",
-        "actual": 95,
-        "predicted": 87.13
+        "actual": 97,
+        "predicted": 95.68
       },
       {
         "date": "2026-05-28",
-        "actual": 97,
-        "predicted": 88.14
+        "actual": 96,
+        "predicted": 95.21
       },
       {
         "date": "2026-05-29",
-        "actual": 98,
-        "predicted": 89.08
+        "actual": 94,
+        "predicted": 94.25
       },
       {
         "date": "2026-05-30",
-        "actual": 97,
-        "predicted": 93.43
+        "actual": 92,
+        "predicted": 93.55
       },
       {
         "date": "2026-05-31",
-        "actual": 97,
-        "predicted": 94.75
+        "actual": 89,
+        "predicted": 89.92
       },
       {
         "date": "2026-06-01",
-        "actual": 96,
-        "predicted": 94.68
+        "actual": 86,
+        "predicted": 85.32
       },
       {
         "date": "2026-06-02",
-        "actual": 94,
-        "predicted": 94.29
+        "actual": 83,
+        "predicted": 82.71
       },
       {
         "date": "2026-06-03",
-        "actual": 92,
-        "predicted": 94.11
-      },
-      {
-        "date": "2026-06-04",
-        "actual": 89,
-        "predicted": 92.87
-      },
-      {
-        "date": "2026-06-05",
-        "actual": 86,
-        "predicted": 87.81
-      },
-      {
-        "date": "2026-06-06",
-        "actual": 83,
-        "predicted": 83.27
-      },
-      {
-        "date": "2026-06-07",
         "actual": 80,
-        "predicted": 81.86
+        "predicted": 79.64
       }
     ],
     "next_point": {
-      "date": "2026-06-08",
+      "date": "2026-06-04",
       "forecast": 80,
-      "band_low": 72,
-      "band_high": 88
+      "band_low": 75,
+      "band_high": 86
     },
     "diagnostics": {
       "total_history_days": 42,
@@ -548,214 +408,172 @@
       "regime": "stable",
       "time_series": [
         {
+          "date": "2026-04-23",
+          "value": 107
+        },
+        {
+          "date": "2026-04-24",
+          "value": 108
+        },
+        {
+          "date": "2026-04-25",
+          "value": 108
+        },
+        {
+          "date": "2026-04-26",
+          "value": 107
+        },
+        {
           "date": "2026-04-27",
-          "value": 107,
-          "spend": 1078
+          "value": 105
         },
         {
           "date": "2026-04-28",
-          "value": 108,
-          "spend": 1039
+          "value": 104
         },
         {
           "date": "2026-04-29",
-          "value": 108,
-          "spend": 984
+          "value": 101
         },
         {
           "date": "2026-04-30",
-          "value": 107,
-          "spend": 920
+          "value": 98
         },
         {
           "date": "2026-05-01",
-          "value": 105,
-          "spend": 854
+          "value": 96
         },
         {
           "date": "2026-05-02",
-          "value": 104,
-          "spend": 793
+          "value": 92
         },
         {
           "date": "2026-05-03",
-          "value": 101,
-          "spend": 743
+          "value": 89
         },
         {
           "date": "2026-05-04",
-          "value": 98,
-          "spend": 711
+          "value": 86
         },
         {
           "date": "2026-05-05",
-          "value": 96,
-          "spend": 700
+          "value": 82
         },
         {
           "date": "2026-05-06",
-          "value": 92,
-          "spend": 711
+          "value": 80
         },
         {
           "date": "2026-05-07",
-          "value": 89,
-          "spend": 742
+          "value": 77
         },
         {
           "date": "2026-05-08",
-          "value": 86,
-          "spend": 791
+          "value": 75
         },
         {
           "date": "2026-05-09",
-          "value": 82,
-          "spend": 852
+          "value": 74
         },
         {
           "date": "2026-05-10",
-          "value": 80,
-          "spend": 918
+          "value": 73
         },
         {
           "date": "2026-05-11",
-          "value": 77,
-          "spend": 982
+          "value": 72
         },
         {
           "date": "2026-05-12",
-          "value": 75,
-          "spend": 1038
+          "value": 73
         },
         {
           "date": "2026-05-13",
-          "value": 74,
-          "spend": 1077
+          "value": 74
         },
         {
           "date": "2026-05-14",
-          "value": 73,
-          "spend": 1098
+          "value": 75
         },
         {
           "date": "2026-05-15",
-          "value": 72,
-          "spend": 1097
+          "value": 77
         },
         {
           "date": "2026-05-16",
-          "value": 73,
-          "spend": 1073
+          "value": 79
         },
         {
           "date": "2026-05-17",
-          "value": 74,
-          "spend": 1031
+          "value": 81
         },
         {
           "date": "2026-05-18",
-          "value": 75,
-          "spend": 975
+          "value": 84
         },
         {
           "date": "2026-05-19",
-          "value": 77,
-          "spend": 910
+          "value": 87
         },
         {
           "date": "2026-05-20",
-          "value": 79,
-          "spend": 844
+          "value": 89
         },
         {
           "date": "2026-05-21",
-          "value": 81,
-          "spend": 784
+          "value": 92
         },
         {
           "date": "2026-05-22",
-          "value": 84,
-          "spend": 737
+          "value": 94
         },
         {
           "date": "2026-05-23",
-          "value": 87,
-          "spend": 708
+          "value": 95
         },
         {
           "date": "2026-05-24",
-          "value": 89,
-          "spend": 700
+          "value": 97
         },
         {
           "date": "2026-05-25",
-          "value": 92,
-          "spend": 714
+          "value": 98
         },
         {
           "date": "2026-05-26",
-          "value": 94,
-          "spend": 749
+          "value": 97
         },
         {
           "date": "2026-05-27",
-          "value": 95,
-          "spend": 800
+          "value": 97
         },
         {
           "date": "2026-05-28",
-          "value": 97,
-          "spend": 862
+          "value": 96
         },
         {
           "date": "2026-05-29",
-          "value": 98,
-          "spend": 928
+          "value": 94
         },
         {
           "date": "2026-05-30",
-          "value": 97,
-          "spend": 991
+          "value": 92
         },
         {
           "date": "2026-05-31",
-          "value": 97,
-          "spend": 1045
+          "value": 89
         },
         {
           "date": "2026-06-01",
-          "value": 96,
-          "spend": 1082
+          "value": 86
         },
         {
           "date": "2026-06-02",
-          "value": 94,
-          "spend": 1099
+          "value": 83
         },
         {
           "date": "2026-06-03",
-          "value": 92,
-          "spend": 1094
-        },
-        {
-          "date": "2026-06-04",
-          "value": 89,
-          "spend": 1068
-        },
-        {
-          "date": "2026-06-05",
-          "value": 86,
-          "spend": 1024
-        },
-        {
-          "date": "2026-06-06",
-          "value": 83,
-          "spend": 965
-        },
-        {
-          "date": "2026-06-07",
-          "value": 80,
-          "spend": 900
+          "value": 80
         }
       ]
     },
@@ -806,209 +624,126 @@
       ],
       "backtest_series": [
         {
-          "date": "2026-04-27",
-          "actual": 107,
-          "predicted": 107
-        },
-        {
-          "date": "2026-04-28",
-          "actual": 108,
-          "predicted": 107
-        },
-        {
-          "date": "2026-04-29",
-          "actual": 108,
-          "predicted": 108
-        },
-        {
-          "date": "2026-04-30",
-          "actual": 107,
-          "predicted": 108
-        },
-        {
-          "date": "2026-05-01",
-          "actual": 105,
-          "predicted": 107
-        },
-        {
-          "date": "2026-05-02",
-          "actual": 104,
-          "predicted": 105
-        },
-        {
-          "date": "2026-05-03",
-          "actual": 101,
-          "predicted": 104
-        },
-        {
-          "date": "2026-05-04",
-          "actual": 98,
-          "predicted": 101
-        },
-        {
-          "date": "2026-05-05",
-          "actual": 96,
-          "predicted": 98
-        },
-        {
-          "date": "2026-05-06",
-          "actual": 92,
-          "predicted": 96
-        },
-        {
-          "date": "2026-05-07",
-          "actual": 89,
-          "predicted": 92
-        },
-        {
-          "date": "2026-05-08",
-          "actual": 86,
-          "predicted": 89
-        },
-        {
-          "date": "2026-05-09",
-          "actual": 82,
-          "predicted": 86
-        },
-        {
-          "date": "2026-05-10",
-          "actual": 80,
-          "predicted": 82
-        },
-        {
-          "date": "2026-05-11",
-          "actual": 77,
-          "predicted": 80
-        },
-        {
-          "date": "2026-05-12",
-          "actual": 75,
-          "predicted": 77
-        },
-        {
-          "date": "2026-05-13",
-          "actual": 74,
-          "predicted": 75
-        },
-        {
-          "date": "2026-05-14",
-          "actual": 73,
-          "predicted": 74
-        },
-        {
-          "date": "2026-05-15",
-          "actual": 72,
-          "predicted": 73
-        },
-        {
-          "date": "2026-05-16",
-          "actual": 73,
-          "predicted": 72
-        },
-        {
-          "date": "2026-05-17",
-          "actual": 74,
-          "predicted": 73
-        },
-        {
-          "date": "2026-05-18",
-          "actual": 75,
-          "predicted": 74
-        },
-        {
-          "date": "2026-05-19",
-          "actual": 77,
-          "predicted": 75
-        },
-        {
-          "date": "2026-05-20",
-          "actual": 79,
-          "predicted": 77
-        },
-        {
           "date": "2026-05-21",
-          "actual": 81,
-          "predicted": 76.65
+          "actual": 92,
+          "predicted": 83.41
         },
         {
           "date": "2026-05-22",
-          "actual": 84,
-          "predicted": 78.29
+          "actual": 94,
+          "predicted": 86.63
         },
         {
           "date": "2026-05-23",
-          "actual": 87,
-          "predicted": 80.56
+          "actual": 95,
+          "predicted": 89.55
         },
         {
           "date": "2026-05-24",
-          "actual": 89,
-          "predicted": 82.6
+          "actual": 97,
+          "predicted": 91.11
         },
         {
           "date": "2026-05-25",
-          "actual": 92,
-          "predicted": 84.08
+          "actual": 98,
+          "predicted": 93.02
         },
         {
           "date": "2026-05-26",
-          "actual": 94,
-          "predicted": 87.2
+          "actual": 97,
+          "predicted": 95.11
         },
         {
           "date": "2026-05-27",
-          "actual": 95,
-          "predicted": 87.13
+          "actual": 97,
+          "predicted": 95.68
         },
         {
           "date": "2026-05-28",
-          "actual": 97,
-          "predicted": 88.14
+          "actual": 96,
+          "predicted": 95.21
         },
         {
           "date": "2026-05-29",
-          "actual": 98,
-          "predicted": 89.08
+          "actual": 94,
+          "predicted": 94.25
         },
         {
           "date": "2026-05-30",
-          "actual": 97,
-          "predicted": 93.43
+          "actual": 92,
+          "predicted": 93.55
         },
         {
           "date": "2026-05-31",
-          "actual": 97,
-          "predicted": 94.75
+          "actual": 89,
+          "predicted": 89.92
         },
         {
           "date": "2026-06-01",
-          "actual": 96,
-          "predicted": 94.68
+          "actual": 86,
+          "predicted": 85.32
         },
         {
           "date": "2026-06-02",
-          "actual": 94,
-          "predicted": 94.29
+          "actual": 83,
+          "predicted": 82.71
         },
         {
           "date": "2026-06-03",
-          "actual": 92,
-          "predicted": 94.11
+          "actual": 80,
+          "predicted": 79.64
+        }
+      ],
+      "next_point": {
+        "date": "2026-06-04",
+        "forecast": 80,
+        "band_low": 75,
+        "band_high": 86
+      },
+      "time_series": [
+        {
+          "date": "2026-04-23",
+          "value": 107
         },
         {
-          "date": "2026-06-04",
-          "actual": 89,
-          "predicted": 92.87
+          "date": "2026-04-24",
+          "value": 108
         },
         {
-          "date": "2026-06-05",
-          "actual": 86,
-          "predicted": 87.81
+          "date": "2026-04-25",
+          "value": 108
         },
         {
-          "date": "2026-06-06",
-          "actual": 83,
-          "predicted": 83.27
+          "date": "2026-04-26",
+          "value": 107
+        },
+        {
+          "date": "2026-04-27",
+          "value": 105
+        },
+        {
+          "date": "2026-04-28",
+          "value": 104
+        },
+        {
+          "date": "2026-04-29",
+          "value": 101
+        },
+        {
+          "date": "2026-04-30",
+          "value": 98
+        },
+        {
+          "date": "2026-05-01",
+          "value": 96
+        },
+        {
+          "date": "2026-05-02",
+          "value": 92
+        },
+        {
+          "date": "2026-05-03",
+          "value": 89
         },
         {
           "date": "2026-06-07",
@@ -1027,217 +762,131 @@
       "label": "Forecast random forest favorable (MASE: 0.3897)",
       "time_series": [
         {
-          "date": "2026-04-27",
-          "value": 107,
-          "spend": 1078
-        },
-        {
-          "date": "2026-04-28",
-          "value": 108,
-          "spend": 1039
-        },
-        {
-          "date": "2026-04-29",
-          "value": 108,
-          "spend": 984
-        },
-        {
-          "date": "2026-04-30",
-          "value": 107,
-          "spend": 920
-        },
-        {
-          "date": "2026-05-01",
-          "value": 105,
-          "spend": 854
-        },
-        {
-          "date": "2026-05-02",
-          "value": 104,
-          "spend": 793
-        },
-        {
-          "date": "2026-05-03",
-          "value": 101,
-          "spend": 743
-        },
-        {
           "date": "2026-05-04",
-          "value": 98,
-          "spend": 711
+          "value": 86
         },
         {
           "date": "2026-05-05",
-          "value": 96,
-          "spend": 700
+          "value": 82
         },
         {
           "date": "2026-05-06",
-          "value": 92,
-          "spend": 711
+          "value": 80
         },
         {
           "date": "2026-05-07",
-          "value": 89,
-          "spend": 742
+          "value": 77
         },
         {
           "date": "2026-05-08",
-          "value": 86,
-          "spend": 791
+          "value": 75
         },
         {
           "date": "2026-05-09",
-          "value": 82,
-          "spend": 852
+          "value": 74
         },
         {
           "date": "2026-05-10",
-          "value": 80,
-          "spend": 918
+          "value": 73
         },
         {
           "date": "2026-05-11",
-          "value": 77,
-          "spend": 982
+          "value": 72
         },
         {
           "date": "2026-05-12",
-          "value": 75,
-          "spend": 1038
+          "value": 73
         },
         {
           "date": "2026-05-13",
-          "value": 74,
-          "spend": 1077
+          "value": 74
         },
         {
           "date": "2026-05-14",
-          "value": 73,
-          "spend": 1098
+          "value": 75
         },
         {
           "date": "2026-05-15",
-          "value": 72,
-          "spend": 1097
+          "value": 77
         },
         {
           "date": "2026-05-16",
-          "value": 73,
-          "spend": 1073
+          "value": 79
         },
         {
           "date": "2026-05-17",
-          "value": 74,
-          "spend": 1031
+          "value": 81
         },
         {
           "date": "2026-05-18",
-          "value": 75,
-          "spend": 975
+          "value": 84
         },
         {
           "date": "2026-05-19",
-          "value": 77,
-          "spend": 910
+          "value": 87
         },
         {
           "date": "2026-05-20",
-          "value": 79,
-          "spend": 844
+          "value": 89
         },
         {
           "date": "2026-05-21",
-          "value": 81,
-          "spend": 784
+          "value": 92
         },
         {
           "date": "2026-05-22",
-          "value": 84,
-          "spend": 737
+          "value": 94
         },
         {
           "date": "2026-05-23",
-          "value": 87,
-          "spend": 708
+          "value": 95
         },
         {
           "date": "2026-05-24",
-          "value": 89,
-          "spend": 700
+          "value": 97
         },
         {
           "date": "2026-05-25",
-          "value": 92,
-          "spend": 714
+          "value": 98
         },
         {
           "date": "2026-05-26",
-          "value": 94,
-          "spend": 749
+          "value": 97
         },
         {
           "date": "2026-05-27",
-          "value": 95,
-          "spend": 800
+          "value": 97
         },
         {
           "date": "2026-05-28",
-          "value": 97,
-          "spend": 862
+          "value": 96
         },
         {
           "date": "2026-05-29",
-          "value": 98,
-          "spend": 928
+          "value": 94
         },
         {
           "date": "2026-05-30",
-          "value": 97,
-          "spend": 991
+          "value": 92
         },
         {
           "date": "2026-05-31",
-          "value": 97,
-          "spend": 1045
+          "value": 89
         },
         {
           "date": "2026-06-01",
-          "value": 96,
-          "spend": 1082
+          "value": 86
         },
         {
           "date": "2026-06-02",
-          "value": 94,
-          "spend": 1099
+          "value": 83
         },
         {
           "date": "2026-06-03",
-          "value": 92,
-          "spend": 1094
-        },
-        {
-          "date": "2026-06-04",
-          "value": 89,
-          "spend": 1068
-        },
-        {
-          "date": "2026-06-05",
-          "value": 86,
-          "spend": 1024
-        },
-        {
-          "date": "2026-06-06",
-          "value": 83,
-          "spend": 965
-        },
-        {
-          "date": "2026-06-07",
-          "value": 80,
-          "spend": 900
+          "value": 80
         }
       ]
     }
   },
-  "generated_at": "2026-06-08T16:56:25.707Z"
+  "generated_at": "2026-06-04T14:59:31.680Z"
 }

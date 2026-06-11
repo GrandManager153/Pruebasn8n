@@ -7,29 +7,11 @@ from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.linear_model import Ridge
+from sklearn.neural_network import MLPRegressor
 
-from features import (
-    build_backtest_target_features,
-    build_backtest_train_matrix,
-    build_feature_matrix,
-    build_next_features,
-    series_to_dataframe,
-)
-
-try:
-    import lightgbm as lgb
-
-    _HAS_LIGHTGBM = True
-except ImportError:
-    _HAS_LIGHTGBM = False
-
-try:
-    from statsmodels.tsa.holtwinters import ExponentialSmoothing
-
-    _HAS_STATSMODELS = True
-except ImportError:
-    _HAS_STATSMODELS = False
+from features import build_feature_matrix, build_next_features, series_to_dataframe
 
 
 def _seasonal_naive_mae(actual: np.ndarray, history: np.ndarray) -> float:
@@ -47,234 +29,221 @@ def _metrics(actual: np.ndarray, pred: np.ndarray) -> dict[str, float]:
     return {"mae": round(mae, 2), "rmse": round(rmse, 2)}
 
 
-def _confidence_from_mase(mase: float, model_label: str) -> tuple[str, str, str]:
-    if mase < 0.8:
-        return "model", "alta", f"Forecast {model_label} favorable (MASE: {mase})"
-    if mase < 1.0:
-        return "weak_model", "media", f"Forecast {model_label} orientativo (MASE: {mase})"
-    return "observed_fallback", "baja", f"{model_label} no supera baseline estacional (MASE: {mase})"
+def run_forecast(
+    series: list[dict],
+    backtest_days: int = 14,
+    min_points: int = 21,
+) -> dict[str, Any]:
+    df = series_to_dataframe(series)
+    n = len(df)
+    if n < min_points:
+        return {
+            "error": f"Need at least {min_points} daily points, got {n}",
+            "model_name": "random_forest",
+        }
 
+    values = df["value"].to_numpy()
+    bt = min(backtest_days, n - 15)
+    bt = max(bt, 0)
 
-def _make_sklearn_model(model_name: str):
-    if model_name == "random_forest":
-        return RandomForestRegressor(
+    model_names = ["random_forest", "gradient_boosting", "ridge", "mlp_neural_network"]
+    preds_bt_dict: dict[str, list[float]] = {name: [] for name in model_names}
+    acts_bt: list[float] = []
+    dates_bt: list[str] = []
+
+    for i in range(n - bt, n):
+        train_df = df.iloc[:i].copy()
+        X_train, y_train = build_feature_matrix(train_df)
+        if len(X_train) < 10:
+            continue
+        row_df = df.iloc[: i + 1]
+        X_next = build_next_features(row_df)
+        if X_next is None:
+            continue
+
+        acts_bt.append(float(values[i]))
+        dates_bt.append(str(df["date"].iloc[i]))
+
+        for name in model_names:
+            if name == "random_forest":
+                model = RandomForestRegressor(
+                    n_estimators=80,
+                    max_depth=8,
+                    min_samples_leaf=2,
+                    random_state=42,
+                    n_jobs=-1,
+                )
+            elif name == "gradient_boosting":
+                model = GradientBoostingRegressor(
+                    n_estimators=80,
+                    max_depth=5,
+                    min_samples_leaf=2,
+                    random_state=42,
+                )
+            elif name == "ridge":
+                model = Ridge(alpha=1.0)
+            elif name == "mlp_neural_network":
+                model = MLPRegressor(
+                    hidden_layer_sizes=(50, 25),
+                    max_iter=500,
+                    random_state=42,
+                )
+
+            model.fit(X_train, y_train)
+            p = float(model.predict(X_next)[0])
+            preds_bt_dict[name].append(p)
+
+    if not acts_bt:
+        return {"error": "Backtest produced no predictions", "model_name": "random_forest"}
+
+    act_a = np.array(acts_bt)
+    naive_mae = _seasonal_naive_mae(act_a, values[n - bt - 7 : n])
+
+    model_results = {}
+    for name in model_names:
+        pred_a = np.array(preds_bt_dict[name])
+        m = _metrics(act_a, pred_a)
+        mase = round(m["mae"] / naive_mae, 4) if naive_mae > 0 else 999.0
+        model_results[name] = {
+            "mae": m["mae"],
+            "rmse": m["rmse"],
+            "mase": mase,
+            "preds": pred_a,
+        }
+
+    # Select best model based on MASE
+    best_model_name = min(model_results.keys(), key=lambda k: model_results[k]["mase"])
+    best_mase = model_results[best_model_name]["mase"]
+
+    X_full, y_full = build_feature_matrix(df)
+    if best_model_name == "random_forest":
+        final_model = RandomForestRegressor(
             n_estimators=100,
             max_depth=8,
             min_samples_leaf=2,
             random_state=42,
             n_jobs=-1,
         )
-    if model_name == "lightgbm":
-        if not _HAS_LIGHTGBM:
-            raise RuntimeError("lightgbm not installed")
-        return lgb.LGBMRegressor(
-            n_estimators=120,
-            max_depth=8,
-            learning_rate=0.08,
-            num_leaves=31,
+    elif best_model_name == "gradient_boosting":
+        final_model = GradientBoostingRegressor(
+            n_estimators=100,
+            max_depth=5,
+            min_samples_leaf=2,
             random_state=42,
-            verbose=-1,
         )
-    raise ValueError(f"Unknown model: {model_name}")
-
-
-def _rolling_ml_backtest(
-    df: pd.DataFrame,
-    model_name: str,
-    backtest_days: int,
-) -> tuple[list[dict[str, Any]], dict[str, float], float]:
-    values = df["value"].to_numpy()
-    n = len(values)
-    bt = min(backtest_days, n - 15)
-    bt = max(bt, 0)
-    min_train_rows = 10
-
-    backtest_rows: list[dict[str, Any]] = []
-    for i in range(n):
-        if i == 0:
-            backtest_rows.append(
-                {
-                    "date": str(df["date"].iloc[i]),
-                    "actual": round(float(values[i]), 2),
-                    "predicted": round(float(values[i]), 2),
-                }
-            )
-            continue
-
-        X_train, y_train = build_backtest_train_matrix(df, i)
-        if len(X_train) < min_train_rows:
-            fallback = float(values[i - 1])
-            backtest_rows.append(
-                {
-                    "date": str(df["date"].iloc[i]),
-                    "actual": round(float(values[i]), 2),
-                    "predicted": round(fallback, 2),
-                }
-            )
-            continue
-
-        X_next = build_backtest_target_features(df, i)
-        if X_next is None:
-            continue
-
-        model = _make_sklearn_model(model_name)
-        model.fit(X_train, y_train)
-        pred = max(0.0, float(model.predict(X_next)[0]))
-        backtest_rows.append(
-            {
-                "date": str(df["date"].iloc[i]),
-                "actual": round(float(values[i]), 2),
-                "predicted": round(pred, 2),
-            }
+    elif best_model_name == "ridge":
+        final_model = Ridge(alpha=1.0)
+    elif best_model_name == "mlp_neural_network":
+        final_model = MLPRegressor(
+            hidden_layer_sizes=(50, 25),
+            max_iter=500,
+            random_state=42,
         )
 
-    if not backtest_rows:
-        return [], {"mae": 999.0, "rmse": 999.0}, 999.0
+    final_model.fit(X_full, y_full)
+    X_next = build_next_features(df)
+    if X_next is None:
+        return {"error": f"Could not build next-day features for {best_model_name}", "model_name": best_model_name}
 
-    mase_rows = backtest_rows[-bt:] if bt else backtest_rows
-    act_a = np.array([row["actual"] for row in mase_rows], dtype=float)
-    pred_a = np.array([row["predicted"] for row in mase_rows], dtype=float)
-    m = _metrics(act_a, pred_a)
-    hist_start = max(0, len(values) - bt - 7)
-    naive_mae = _seasonal_naive_mae(act_a, values[hist_start : len(values)])
-    mase = round(m["mae"] / naive_mae, 4) if naive_mae > 0 else 999.0
-    return backtest_rows, m, mase
+    forecast = max(0.0, float(final_model.predict(X_next)[0]))
+    best_preds = model_results[best_model_name]["preds"]
+    residuals = np.abs(act_a - best_preds)
 
+    q50 = float(np.quantile(residuals, 0.5))
+    q80 = float(np.quantile(residuals, 0.8))
 
-def _autoets_predict(train_values: np.ndarray) -> float:
-    if len(train_values) < 14:
-        return float(train_values[-1])
-    if not _HAS_STATSMODELS:
-        return float(np.mean(train_values[-7:]))
-    try:
-        seasonal = len(train_values) >= 21
-        if seasonal:
-            fitted = ExponentialSmoothing(
-                train_values,
-                trend="add",
-                seasonal="add",
-                seasonal_periods=7,
-                initialization_method="estimated",
-            ).fit(optimized=True)
-        else:
-            fitted = ExponentialSmoothing(
-                train_values,
-                trend="add",
-                seasonal=None,
-                initialization_method="estimated",
-            ).fit(optimized=True)
-        return max(0.0, float(fitted.forecast(1)[0]))
-    except Exception:
-        return float(np.mean(train_values[-7:]))
+    fc_int = int(round(forecast))
+    band_low = max(0, int(round(forecast - q80)))
+    band_high = int(round(forecast + q80))
 
-
-def _rolling_autoets_backtest(
-    df: pd.DataFrame,
-    backtest_days: int,
-) -> tuple[list[dict[str, Any]], dict[str, float], float]:
-    values = df["value"].to_numpy()
-    n = len(values)
-    bt = min(backtest_days, n - 15)
-    bt = max(bt, 0)
-    min_train = 14
-
-    backtest_rows: list[dict[str, Any]] = []
-    for i in range(n):
-        if i < min_train:
-            pred = float(values[i - 1]) if i > 0 else float(values[0])
-        else:
-            pred = _autoets_predict(values[:i])
-        backtest_rows.append(
-            {
-                "date": str(df["date"].iloc[i]),
-                "actual": round(float(values[i]), 2),
-                "predicted": round(pred, 2),
-            }
-        )
-
-    mase_rows = backtest_rows[-bt:] if bt else backtest_rows
-    act_a = np.array([row["actual"] for row in mase_rows], dtype=float)
-    pred_a = np.array([row["predicted"] for row in mase_rows], dtype=float)
-    m = _metrics(act_a, pred_a)
-    hist_start = max(0, len(values) - bt - 7)
-    naive_mae = _seasonal_naive_mae(act_a, values[hist_start : len(values)])
-    mase = round(m["mae"] / naive_mae, 4) if naive_mae > 0 else 999.0
-    return backtest_rows, m, mase
-
-
-def _build_response(
-    model_name: str,
-    df: pd.DataFrame,
-    backtest_rows: list[dict[str, Any]],
-    metrics: dict[str, float],
-    mase: float,
-    forecast_value: float,
-    backtest_days: int,
-    all_models: list[dict[str, Any]] | None = None,
-) -> dict[str, Any]:
-    mase_rows = backtest_rows[-backtest_days:] if backtest_days else backtest_rows
-    act_a = np.array([row["actual"] for row in mase_rows], dtype=float)
-    pred_a = np.array([row["predicted"] for row in mase_rows], dtype=float)
-    residuals = np.abs(act_a - pred_a)
-    q50 = float(np.quantile(residuals, 0.5)) if len(residuals) else 0.0
-    q80 = float(np.quantile(residuals, 0.8)) if len(residuals) else 0.0
-
-    fc_int = int(round(forecast_value))
-    band_low = max(0, int(round(forecast_value - q80)))
-    band_high = int(round(forecast_value + q80))
-    mode, confidence, label = _confidence_from_mase(mase, model_name.replace("_", " "))
-
-    hist_start = max(0, len(df) - backtest_days - 7)
-    naive_mae = _seasonal_naive_mae(
-        act_a,
-        df["value"].to_numpy()[hist_start : len(df)],
-    )
-
-    model_entries = all_models or [
+    backtest_series = [
         {
-            "name": model_name,
-            "mae": metrics["mae"],
-            "mase": mase,
-            "rmse": metrics["rmse"],
+            "date": dates_bt[k],
+            "actual": round(float(acts_bt[k]), 2),
+            "predicted": round(float(preds_bt_dict[best_model_name][k]), 2),
         }
+        for k in range(len(acts_bt))
     ]
 
     last_date = pd.to_datetime(df["date"].iloc[-1])
     next_date = (last_date + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    next_point = {
+        "date": next_date,
+        "forecast": fc_int,
+        "band_low": band_low,
+        "band_high": band_high,
+    }
+
+    if best_mase < 0.8:
+        mode, confidence = "model", "alta"
+        label = f"Forecast {best_model_name} favorable (MASE: {best_mase})"
+    elif best_mase < 1.0:
+        mode, confidence = "weak_model", "media"
+        label = f"Forecast {best_model_name} orientativo (MASE: {best_mase})"
+    else:
+        mode, confidence = "observed_fallback", "baja"
+        label = f"{best_model_name} no supera baseline estacional (MASE: {best_mase})"
+
+    models_list = []
+    for name in model_names:
+        series_aligned = [None] * n
+        for k in range(len(acts_bt)):
+            idx = n - bt + k
+            series_aligned[idx] = round(float(preds_bt_dict[name][k]), 2)
+
+        models_list.append({
+            "name": name,
+            "mae": model_results[name]["mae"],
+            "mase": model_results[name]["mase"],
+            "rmse": model_results[name]["rmse"],
+            "series": series_aligned,
+        })
+
+    naive_series_aligned = [None] * n
+    for k in range(len(acts_bt)):
+        idx = n - bt + k
+        naive_series_aligned[idx] = float(values[idx - 7]) if idx >= 7 else None
+
+    models_list.append({
+        "name": "seasonal_naive",
+        "mae": round(naive_mae, 2),
+        "mase": 1.0,
+        "rmse": round(naive_mae * 1.2, 2),
+        "series": naive_series_aligned,
+    })
+    models_list.sort(key=lambda x: x["mase"])
 
     return {
-        "model_name": model_name,
+        "model_name": best_model_name,
         "recommended_value": fc_int,
-        "mase": mase,
+        "mase": best_mase,
         "confidence": confidence,
         "mode": mode,
         "label": label,
         "backtest": {
             "window_days": backtest_days,
             "naive_mae": round(naive_mae, 2),
-            "models": model_entries
-            + [
-                {
-                    "name": "seasonal_naive",
-                    "mae": round(naive_mae, 2),
-                    "mase": 1.0,
-                    "rmse": round(naive_mae * 1.2, 2),
-                }
-            ],
-            "selected": model_name,
+            "models": models_list,
+            "selected": best_model_name,
         },
         "forecast_horizons": {
             "next_1d": {
                 "forecast": fc_int,
                 "band_low": band_low,
                 "band_high": band_high,
-                "method": model_name,
+                "method": best_model_name,
             },
             "next_7d": {
                 "forecast": fc_int * 7,
-                "band_low": max(0, int(round((forecast_value - q80) * 7))),
-                "band_high": int(round((forecast_value + q80) * 7)),
-                "method": f"{model_name}+scale",
+                "band_low": max(0, int(round((forecast - q80) * 7))),
+                "band_high": int(round((forecast + q80) * 7)),
+                "method": f"{best_model_name}+scale",
+            },
+            "next_14d": {
+                "forecast": fc_int * 14,
+                "band_low": max(0, int(round((forecast - q80) * 14))),
+                "band_high": int(round((forecast + q80) * 14)),
+                "method": f"{best_model_name}+scale",
             },
         },
         "intervals": {
@@ -290,11 +259,10 @@ def _build_response(
             "band_high": band_high,
         },
         "diagnostics": {
-            "total_history_days": len(df),
-            "backtest_days": backtest_days,
-            "best_model": model_name,
-            "best_mase": mase,
-            "features_used": ["lags", "spend", "changepoint_recent"],
+            "total_history_days": n,
+            "backtest_days": bt,
+            "best_model": best_model_name,
+            "best_mase": best_mase,
         },
     }
 

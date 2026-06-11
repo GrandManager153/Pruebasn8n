@@ -19,11 +19,17 @@
 
     function initTheme() {
         applyTheme('light');
+        if (window.parent !== window) {
+            document.body.classList.add('embedded');
+        }
         
         // Listen for parent messages if embedded inside iframe
         window.addEventListener('message', (e) => {
             if (e.data === 'theme-light' || e.data === 'theme-dark') {
+                const targetTheme = e.data === 'theme-light' ? 'light' : 'dark';
+                localStorage.setItem('theme', targetTheme);
                 applyTheme('light'); // Always stay light-mode in LaTeX reports!
+                updateToggleIcon();
             }
         });
         

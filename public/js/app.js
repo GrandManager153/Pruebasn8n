@@ -19,20 +19,20 @@ let visibleModelNames = new Set();
 
 /** Backend KPI label → display label (término en inglés + descripción en español). */
 const KPI_BACKEND_LABEL_MAP = {
-    'Health Score': 'SHS (salud operativa consolidada)',
-    'Leads totales': 'Total Leads (volumen total del periodo)',
-    'Promedio diario': 'Daily Avg (promedio diario de leads)',
-    'Cambio semanal': 'WoW (cambio vs semana anterior)',
-    'Hora pico': 'Peak Hour (hora pico de contactos)',
-    'Prevision diaria': 'Daily Forecast (pronóstico diario de demanda)',
-    'MASE': 'MASE (error medio absoluto escalado)',
-    'CPL implicito': 'CPL (costo por lead implícito)',
-    'Gasto total': 'Ad Spend (gasto total en pauta)',
-    'HHI': 'HHI (concentración del gasto en campañas)',
-    'Conversion global': 'Global CVR (tasa de conversión entrada a cierre)',
-    'Revenue at Risk': 'Revenue at Risk (ingreso en riesgo por fugas)',
-    'Utilizacion capacidad': 'Capacity Utilization (uso de capacidad operativa)',
-    'Cambio regimen': 'Regime Shift (cambio estructural de demanda)',
+    'Health Score': 'SHS (Salud Operativa Consolidada)',
+    'Leads totales': 'Total Leads (Volumen Total de Leads)',
+    'Promedio diario': 'Daily Avg (Promedio Diario de Leads)',
+    'Cambio semanal': 'WoW (Cambio Semanal vs Anterior)',
+    'Hora pico': 'Peak Hour (Hora Pico de Contactos)',
+    'Prevision diaria': 'Daily Forecast (Pronóstico Diario de Demanda)',
+    'MASE': 'MASE (Precisión del Modelo)',
+    'CPL implicito': 'CPL (Costo por Lead Implícito)',
+    'Gasto total': 'Ad Spend (Inversión Publicitaria)',
+    'HHI': 'HHI (Concentración de Pauta)',
+    'Conversion global': 'Global CVR (Tasa de Conversión Global)',
+    'Revenue at Risk': 'Revenue at Risk (Ingreso en Riesgo por Fugas)',
+    'Utilizacion capacidad': 'Capacity Utilization (Uso de Capacidad Operativa)',
+    'Cambio regimen': 'Regime Shift (Cambio de Régimen)',
 };
 
 const INDUSTRY_INLINE_REPLACEMENTS = [
@@ -93,6 +93,8 @@ const KPI_EXPLANATION_ALIASES = {
     'Ingresos en Riesgo Estimados': 'Revenue at Risk',
     'Revenue at Risk (ingreso en riesgo)': 'Revenue at Risk',
     'Severidad Máxima': 'RPN max',
+    'Regime Shift (cambio estructural de demanda)': 'Cambio de Régimen',
+    'Cambio regimen': 'Cambio de Régimen',
 };
 
 const KPI_EXPLANATIONS = {
@@ -284,9 +286,33 @@ const KPI_EXPLANATIONS = {
     },
     'Avg Callback Interval (min entre intentos)': {
         icon: '⏳',
-        definition: 'Avg Callback Interval: tiempo medio entre intentos consecutivos al mismo lead (minutos).',
-        interpretation: 'Speed-to-lead y follow-up cadence importan. Intervalos muy largos (horas/días) reducen connect rate y conversión.',
-        source: 'call_metrics.minutes_since_prev.avg'
+        definition: 'El tiempo promedio transcurrido entre intentos de contacto consecutivos realizados a un mismo lead.',
+        interpretation: 'El speed-to-lead inicial y la insistencia oportuna son claves. Intervalos muy largos (por ejemplo, miles de minutos) degradan severamente la probabilidad de conversión ya que el prospecto se enfría.',
+        source: 'CRM integrado — minutes_since_prev.avg'
+    },
+    'Cambio de Régimen': {
+        icon: '📉',
+        definition: 'Indica un cambio o quiebre estructural significativo en el volumen diario de entrada de leads, detectado mediante el algoritmo de Sumas Acumuladas (CUSUM).',
+        interpretation: 'Un valor negativo (como -14%) confirma que la media de entrada diaria ha sufrido una reducción persistente en su línea base, indicando fatiga en canales de adquisición o pauta publicitaria. Un valor positivo refleja un incremento sostenido en la demanda.',
+        source: 'Algoritmo estadístico CUSUM (Suma Acumulada) integrado en el motor de predicción BOS'
+    },
+    'Pre-Cierre (Solo Efectivo)': {
+        icon: '💵',
+        definition: 'Prospectos en la etapa final de pre-cierre que han indicado que realizarán el pago únicamente en efectivo (sin tarjetas de crédito o débito).',
+        interpretation: 'Representa leads con muy alta intención de compra, pero cuya conversión final puede requerir mayor seguimiento logístico para coordinar el depósito o pago físico.',
+        source: 'Mapeo de transiciones del CRM de ventas vía n8n'
+    },
+    'Pre-Cierre (Reactivación)': {
+        icon: '🔄',
+        definition: 'Prospectos previamente inactivos o estancados en el embudo de ventas que fueron contactados de nuevo y reactivados exitosamente en la etapa de pre-cierre.',
+        interpretation: 'Muestra la efectividad de las estrategias de seguimiento y la persistencia de los agentes para recuperar leads antiguos.',
+        source: 'Mapeo de transiciones del CRM de ventas vía n8n'
+    },
+    'Pre-Cierre (Sin Tarjeta)': {
+        icon: '💳',
+        definition: 'Prospectos listos para el cierre comercial que no cuentan con tarjetas de crédito/débito o prefieren no ingresarlas en el sistema.',
+        interpretation: 'Requieren que los agentes ofrezcan alternativas de pago especiales como transferencias bancarias o depósitos para consolidar el caso sin perder el interés comercial.',
+        source: 'Mapeo de transiciones del CRM de ventas vía n8n'
     }
 };
 
@@ -300,6 +326,40 @@ function openKpiModal(label, value) {
     document.getElementById('kpi-modal-definition').textContent = explain.definition;
     document.getElementById('kpi-modal-interpretation').textContent = explain.interpretation;
     document.getElementById('kpi-modal-source-text').textContent = explain.source;
+
+    document.getElementById('kpi-modal-overlay').classList.add('open');
+}
+
+function openFeederModal(state, pct) {
+    const cleanState = cleanTechnicalTerms(state);
+    const explainKey = resolveKpiExplanationKey(cleanState);
+    const explain = explainKey ? KPI_EXPLANATIONS[explainKey] : null;
+
+    document.getElementById('kpi-modal-title').textContent = cleanState;
+    document.getElementById('kpi-modal-value').textContent = pct;
+
+    if (explain) {
+        document.getElementById('kpi-modal-definition').textContent = explain.definition;
+        document.getElementById('kpi-modal-interpretation').textContent = explain.interpretation;
+        document.getElementById('kpi-modal-source-text').textContent = explain.source;
+    } else {
+        document.getElementById('kpi-modal-definition').textContent = `Canal de atribución o ruta de conversión ("feeder") que aporta leads calificados al estado de conversión final.`;
+        document.getElementById('kpi-modal-interpretation').textContent = `Este canal representa el ${pct} de todos los leads que logran convertirse en el periodo. Un porcentaje alto indica que es un canal muy eficiente que vale la pena potenciar.`;
+        document.getElementById('kpi-modal-source-text').textContent = `Mapeo de transiciones del CRM de ventas vía n8n`;
+    }
+
+    document.getElementById('kpi-modal-overlay').classList.add('open');
+}
+
+function openLeakModal(from, to, value) {
+    const cleanFrom = cleanTechnicalTerms(from);
+    const cleanTo = cleanTechnicalTerms(to);
+
+    document.getElementById('kpi-modal-title').textContent = `Fuga: de ${cleanFrom} a ${cleanTo}`;
+    document.getElementById('kpi-modal-value').textContent = value;
+    document.getElementById('kpi-modal-definition').textContent = `Fuga de prospectos detectada durante la transición de la etapa "${cleanFrom}" a "${cleanTo}". Representa leads que abandonan el embudo en este punto.`;
+    document.getElementById('kpi-modal-interpretation').textContent = `Un valor de ${value} indica una pérdida de prospectos en esta transición. Se aconseja evaluar los tiempos de respuesta o la calidad del contacto del equipo de ventas.`;
+    document.getElementById('kpi-modal-source-text').textContent = `Análisis de transición de estados del CRM`;
 
     document.getElementById('kpi-modal-overlay').classList.add('open');
 }
@@ -325,23 +385,99 @@ document.addEventListener('keydown', (e) => {
 
 function cleanText(str) {
     if (!str || typeof str !== 'string') return str;
-    
+
     // Remove all emojis and emoticons
     let clean = str.replace(/[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{27BF}\u{2000}-\u{3300}\u{1F000}-\u{1F0FF}\u{1F100}-\u{1F1FF}\u{1F200}-\u{1F2FF}\u{1F700}-\u{1F7FF}\u{1FA00}-\u{1FAFF}]/gu, '');
-    
+
     // Remove backend/metadata parentheses only (keep industry glossary parens)
     clean = clean.replace(/\s*\([^)]*(?:umbral:\s*\d|FactsBuilder|n8n|webhook|server error)[^)]*\)/gi, '');
-    
+
     // Standardize white spaces
     clean = clean.replace(/\s+/g, ' ').trim();
-    
+
     return clean;
 }
 
+const CRM_TRANSLATIONS = {
+    'PreClosed – Cash Only': 'Pre-Cierre (Solo Efectivo)',
+    'PreClosed - Cash Only': 'Pre-Cierre (Solo Efectivo)',
+    'PreClosed Cash Only': 'Pre-Cierre (Solo Efectivo)',
+    'PreClosed Reactivación': 'Pre-Cierre (Reactivación)',
+    'PreClosed Reactivacin': 'Pre-Cierre (Reactivación)',
+    'PreClosed - No Card': 'Pre-Cierre (Sin Tarjeta)',
+    'PreClosed - No Answer': 'Pre-Cierre (Sin Respuesta)',
+    'PreClosed - Busy': 'Pre-Cierre (Ocupado)',
+    'PreClosed - Hung Up': 'Pre-Cierre (Llamada Colgada)',
+    'PreClosed - Distrust': 'Pre-Cierre (Desconfianza)',
+    'PreClosed - Indirect Client': 'Pre-Cierre (Cliente Indirecto)',
+    'PreClosed - Needs to be Approved': 'Pre-Cierre (Pendiente Aprobación)',
+    'PreClosed - No Money - No Job': 'Pre-Cierre (Sin Dinero/Trabajo)',
+    'PreClosed - No Price': 'Pre-Cierre (Sin Dinero/Trabajo)', // simplified for common user
+    'PreClosed - Prefers to go to the office': 'Pre-Cierre (Prefiere Oficina)',
+    'PreClosed Opportunity': 'Oportunidad de Pre-Cierre',
+    'Pre-Cerrado (Sin tarjeta)': 'Pre-Cierre (Sin Tarjeta)',
+    'Abierto (Open)': 'Abierto',
+    'Busy - Callback': 'Ocupado (Re-llamada)',
+    'Connected Voicemail': 'Buzón de Voz',
+    'EN LLAMADA': 'En Llamada',
+    'New Lead': 'Nuevo Lead',
+    'No Answer': 'Sin Respuesta',
+    'New Lead Primer Intento': 'Nuevo Lead - 1er Intento',
+    'Alivio Vendido': 'Alivio Vendido',
+    'Cita en oficina': 'Cita en Oficina',
+    'Connected - Not Interested': 'Contactado (No Interesado)',
+    'Consult Booked': 'Consulta Agendada',
+    'Consult Booked PROMO': 'Consulta Agendada (Promo)',
+    'Customer Service Call': 'Llamada Atención Cliente',
+    'Detenidos - Cortes': 'Detenidos / Cortes',
+    'Duplicate Lead': 'Lead Duplicado',
+    'Hung Up': 'Llamada Colgada',
+    'Indirect Client': 'Cliente Indirecto',
+    'Leads Opportunity': 'Oportunidad de Lead',
+    'OutReach Primer Intento': 'Contacto - 1er Intento',
+    'OutReach Segundo Intento': 'Contacto - 2do Intento',
+    'Pre Closed PROMO': 'Pre-Cierre (Promo)',
+    'Reconversion Lead': 'Reconversión de Lead',
+    'Recovery Department': 'Dpto. de Recuperación',
+    'Recovery No Answer': 'Recuperación - Sin Respuesta',
+    'Transfer to Detenidos': 'Transferido a Detenidos',
+    'Wrong Number': 'Número Equivocado',
+    'Consult Booked HS': 'Consulta Agendada (HS)',
+    'NL Agendado CDMX': 'Lead Agendado CDMX',
+    'Consult Booked - Referal to Detainees': 'Consulta Agendada (Ref. Detenidos)',
+    'Hot Transfer Cancn': 'Transferencia Directa Cancún',
+    'NL Connector CUN': 'Conector Lead Nuevo CUN',
+    'New Lead Segundo Intento': 'Nuevo Lead - 2do Intento',
+    'Outeach 3 intento': 'Contacto - 3er Intento',
+    'Recovery Not Interested': 'Recuperación - No Interesado',
+    'NL Agendado CUN': 'Lead Agendado CUN'
+};
+
 function cleanTechnicalTerms(str) {
     if (!str || typeof str !== 'string') return str;
-    let text = applyIndustryInlineTerms(str);
+    let text = applyIndustryInlineTerms(str.trim());
+
+    // Check exact match in CRM translations
+    if (CRM_TRANSLATIONS[text]) {
+        return CRM_TRANSLATIONS[text];
+    }
+
+    // Check partial/regex replacements or replace inline parts of the text
+    for (const [key, val] of Object.entries(CRM_TRANSLATIONS)) {
+        const escapedKey = key.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const regex = new RegExp(escapedKey, 'gi');
+        text = text.replace(regex, val);
+    }
+
+    // Replace technical models and internal jargon with elegant corporate terminology
+    text = text.replace(/ensemble_weighted/gi, 'Modelo Predictivo');
     text = text.replace(/FactsBuilder/gi, 'Motor BOS');
+    text = text.replace(/baseline/gi, 'Línea Base');
+    text = text.replace(/CPL implicito/gi, 'Costo por Lead');
+
+    // Standardize CUSUM changepoint labels to elegant corporate terminology
+    text = text.replace(/Cambio regimen/gi, 'Cambio de Régimen');
+
     return cleanText(text);
 }
 
@@ -353,22 +489,22 @@ function restartHealthRing() {
     const ring = document.getElementById('health-fg-ring');
     const numVal = document.getElementById('health-num-val');
     if (!dashboardData || !dashboardData.system) return;
-    
+
     const scoreVal = dashboardData.system.health_score;
     const circumference = 2 * Math.PI * 58;
     const dashOffset = circumference - (scoreVal / 100) * circumference;
-    
+
     if (ring) {
         ring.style.transition = 'none';
         ring.style.strokeDashoffset = circumference;
         void ring.offsetWidth; // Force reflow
-        
+
         requestAnimationFrame(() => {
             ring.style.transition = 'stroke-dashoffset 0.85s cubic-bezier(0.16, 1, 0.3, 1)';
             ring.style.strokeDashoffset = dashOffset;
         });
     }
-    
+
     if (numVal) {
         numVal.textContent = '0';
         parseAndAnimate(numVal, scoreVal, 750);
@@ -425,7 +561,7 @@ function switchTab(tabId) {
                     wave.style.transition = 'none';
                     wave.style.height = '0%';
                     void wave.offsetWidth; // Force reflow
-                    
+
                     requestAnimationFrame(() => {
                         wave.style.transition = 'height 1.5s cubic-bezier(0.16, 1, 0.3, 1)';
                         wave.style.height = wave.getAttribute('data-target-height');
@@ -504,17 +640,17 @@ function animateValue(element, start, end, duration, options = {}) {
         useSeparator = false,
         isTime = false
     } = options;
-    
+
     let startTimestamp = null;
     const step = (timestamp) => {
         if (!startTimestamp) startTimestamp = timestamp;
         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        
+
         // Easing function: easeOutQuad
         const easeProgress = progress * (2 - progress);
-        
+
         let currentVal = easeProgress * (end - start) + start;
-        
+
         if (isTime) {
             const totalMinutes = Math.floor(currentVal);
             const hrs = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
@@ -529,7 +665,7 @@ function animateValue(element, start, end, duration, options = {}) {
             }
             element.textContent = `${prefix}${formatted}${suffix}`;
         }
-        
+
         if (progress < 1) {
             window.requestAnimationFrame(step);
         } else {
@@ -557,7 +693,7 @@ function animateValue(element, start, end, duration, options = {}) {
 function parseAndAnimate(element, rawValue, duration = 700) {
     if (!element) return;
     const valueStr = String(rawValue).trim();
-    
+
     // Check if it's clock format (e.g., "19:00")
     if (valueStr.includes(':') && !valueStr.includes('$')) {
         const parts = valueStr.split(':');
@@ -568,7 +704,7 @@ function parseAndAnimate(element, rawValue, duration = 700) {
     } else {
         // Strip $, %, approximate sign (~), commas and spaces
         const stripped = valueStr.replace(/[$\s%,~]/g, '');
-        
+
         // Check for fractional/ratio formats like "79/100"
         if (stripped.includes('/')) {
             const parts = stripped.split('/');
@@ -577,11 +713,11 @@ function parseAndAnimate(element, rawValue, duration = 700) {
             animateValue(element, 0, current, duration, { suffix: `/${maxVal}` });
         } else {
             const parsedNumber = parseFloat(stripped) || 0;
-            
+
             const isCurrency = valueStr.includes('$');
             const isPercentage = valueStr.includes('%');
             const isApprox = valueStr.includes('~');
-            
+
             let decimals = 0;
             if (stripped.includes('.')) {
                 decimals = Math.min(stripped.split('.')[1].length, 2);
@@ -589,11 +725,11 @@ function parseAndAnimate(element, rawValue, duration = 700) {
             if (isCurrency && parsedNumber >= 1000) {
                 decimals = 0; // Large currencies look cleaner without decimals
             }
-            
+
             const prefix = isApprox ? '~' + (isCurrency ? '$' : '') : (isCurrency ? '$' : '');
             const suffix = isPercentage ? '%' : '';
             const useSeparator = parsedNumber >= 1000 || stripped.length > 4;
-            
+
             animateValue(element, 0, parsedNumber, duration, {
                 prefix,
                 suffix,
@@ -679,6 +815,10 @@ function renderBOS(data) {
                 <h2 class="health-info-title">Salud Operativa</h2>
                 <span class="custom-badge ${data.system.status.color === 'amarillo' ? 'custom-badge-warning' : data.system.status.color === 'rojo' ? 'custom-badge-critical' : 'custom-badge-success'}">${cleanTechnicalTerms(data.system.status.label)}</span>
             </div>
+            <p class="text-muted" style="font-size: 13.5px; line-height: 1.6;">Auditoría integral de la pauta publicitaria, flujo operativo en centros de llamadas y proyecciones basadas en modelos predictivos matemáticos de precisión.</p>
+            <div class="health-reasons">
+                ${data.system.status.reasons.map(r => `
+                    <div class="health-reason"><span style="color: var(--text-main); font-weight: bold;">*</span> ${cleanTechnicalTerms(r)}</div>
             <div class="health-reasons health-reasons-inline">
                 ${data.system.status.reasons.slice(0, 3).map(r => `
                     <span class="health-reason-chip">${cleanTechnicalTerms(r)}</span>
@@ -702,21 +842,97 @@ function renderBOS(data) {
     // 2. Render KPIs in Dashboard Tab
     const kpisGrid = document.getElementById('dashboard-kpis');
 
+    const cleanedKpis = data.kpis.map(k => {
+
     const kpisWithBestForecast = applyBestForecastToKpis(data.kpis, data);
 
     const cleanedKpis = kpisWithBestForecast.map(k => {
         let label = formatKpiLabel(k.label);
         let sub = applyIndustryInlineTerms(k.sub || '');
 
+        if (k.label === 'Health Score') {
+            label = 'Salud del Sistema';
+        }
+        if (k.label === 'Prevision diaria') {
+            let bestModelVal = 264;
+            let bestModelName = 'Theta Lite';
+            let bestConfidence = 'Alta';
+
+            let maseRf = (data.forecast_rf && data.forecast_rf.mase != null) ? data.forecast_rf.mase : 999;
+            let maseLocal = (data.forecast && data.forecast.mase != null) ? data.forecast.mase : 999;
+            if (data.forecast && Array.isArray(data.forecast.backtest_models)) {
+                data.forecast.backtest_models.forEach(m => {
+                    if (m.mase != null && m.mase < maseLocal) maseLocal = m.mase;
+                });
+            }
+
+            if (maseRf <= maseLocal && data.forecast_rf && data.forecast_rf.recommended_value != null) {
+                bestModelVal = data.forecast_rf.recommended_value;
+                bestModelName = data.forecast_rf.model_name || 'Random Forest';
+                bestConfidence = data.forecast_rf.confidence || 'Alta';
+            } else if (data.forecast && data.forecast.recommended_value != null) {
+                bestModelVal = data.forecast.recommended_value;
+                bestModelName = data.forecast.method || 'Theta Lite';
+                bestConfidence = data.forecast.confidence || 'Alta';
+            }
+
+            let formattedName = bestModelName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            k.value = `~${bestModelVal}`;
+            sub = `${formattedName} | ${bestConfidence.replace(/\b\w/g, c => c.toUpperCase())}`;
+            label = 'Pronóstico Diario';
+        }
         if (k.label === 'MASE') {
+            let bestModelName = 'Random Forest';
+            let bestMase = 999;
+            if (data.forecast_rf && data.forecast_rf.mase != null) {
+                bestMase = data.forecast_rf.mase;
+                bestModelName = data.forecast_rf.model_name || 'Random Forest';
+            }
+            if (data.forecast_rf && Array.isArray(data.forecast_rf.backtest_models)) {
+                data.forecast_rf.backtest_models.forEach(m => {
+                    if (m.mase != null && m.mase < bestMase) {
+                        bestMase = m.mase;
+                        bestModelName = m.name;
+                    }
+                });
+            }
+            if (data.forecast && data.forecast.mase != null && data.forecast.mase < bestMase) {
+                bestMase = data.forecast.mase;
+                bestModelName = data.forecast.method || 'Theta Lite';
+            }
+            if (data.forecast && Array.isArray(data.forecast.backtest_models)) {
+                data.forecast.backtest_models.forEach(m => {
+                    if (m.mase != null && m.mase < bestMase) {
+                        bestMase = m.mase;
+                        bestModelName = m.name;
+                    }
+                });
+            }
+            let formattedName = bestModelName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            k.value = Number(bestMase).toFixed(3);
+            sub = formattedName;
+            k.color = 'white';
+            label = 'Precisión del Modelo';
             sub = applyIndustryInlineTerms(k.sub || '') || 'vs línea base naive';
             if (!k.color) k.color = 'white';
         }
         if (k.label === 'CPL implicito') {
-            sub = sub || 'global';
+            label = 'Costo Promedio por Lead';
+            sub = 'Global';
             k.color = 'blue';
         }
-        if (k.label === 'Prevision diaria' && !sub) sub = 'estimación puntual';
+        if (k.label === 'Cambio regimen' || k.label === 'Cambio de Régimen') {
+            k.color = 'blue';
+        }
+        if (k.label === 'Gasto total') {
+            label = 'Inversión Publicitaria';
+        }
+        if (k.label === 'HHI') {
+            label = 'Diversificación de Pauta';
+        }
+        if (k.label === 'Prevision diaria' && !sub) {
+            sub = 'estimación puntual';
+        }
 
         return { ...k, label, sub };
     });
@@ -726,7 +942,7 @@ function renderBOS(data) {
         if (data.operations.latest && data.operations.latest.leads) {
             cleanedKpis.push({
                 value: String(data.operations.latest.leads),
-                label: 'Leads Hoy',
+                label: 'Leads Today (Leads Recibidos Hoy)',
                 sub: data.operations.latest.date || 'Último día registrado',
                 color: 'blue'
             });
@@ -734,7 +950,7 @@ function renderBOS(data) {
         if (data.operations.max_daily) {
             cleanedKpis.push({
                 value: String(data.operations.max_daily),
-                label: 'Máximo Diario',
+                label: 'Max Daily (Máximo Diario)',
                 sub: 'Pico histórico del periodo',
                 color: 'white'
             });
@@ -742,7 +958,7 @@ function renderBOS(data) {
         if (data.operations.contact_distribution && data.operations.contact_distribution.overcontact_pct != null) {
             cleanedKpis.push({
                 value: data.operations.contact_distribution.overcontact_pct + '%',
-                label: 'Tasa de Sobre-Contacto',
+                label: 'Overcontact Rate (Tasa de Sobre-Contacto)',
                 sub: 'Llamadas > 7 intentos',
                 color: 'red'
             });
@@ -750,7 +966,7 @@ function renderBOS(data) {
         if (data.operations.call_metrics && data.operations.call_metrics.call_rank) {
             cleanedKpis.push({
                 value: String(data.operations.call_metrics.call_rank.avg),
-                label: 'Promedio Intentos',
+                label: 'Avg Dial Attempts (Intentos Promedio)',
                 sub: 'Marcaciones por lead (umbral: 7)',
                 color: 'red'
             });
@@ -899,19 +1115,19 @@ function renderBOS(data) {
 function renderFunnelDetails(data) {
     const leadKPI = data.kpis.find(k => k.label.includes('leads') || k.label.includes('Leads'));
     const totalLeads = leadKPI ? parseInt(leadKPI.value.replace(/,/g, '')) : 11113;
-    
+
     const consults = data.funnel.transitions
         .filter(t => t.to === 'Consult Booked' || t.to === 'absorption')
         .reduce((acc, curr) => acc + curr.cnt, 0) || 684;
 
     const conversionRate = ((consults / totalLeads) * 100).toFixed(2);
-    
+
     const funnelConvVal = document.getElementById('funnel-conv-pct');
     if (funnelConvVal) {
         funnelConvVal.setAttribute('data-value', `${conversionRate}%`);
         parseAndAnimate(funnelConvVal, `${conversionRate}%`);
     }
-    
+
     const targetLabel = document.getElementById('funnel-target-label');
     if (targetLabel) {
         targetLabel.textContent = `Objetivo: ${cleanTechnicalTerms(data.funnel.conversion_target)}`;
@@ -922,11 +1138,11 @@ function renderFunnelDetails(data) {
             const to = t.to.toLowerCase();
             return to.includes('not interested') || to.includes('no answer') || to.includes('hung up') || to.includes('wrong number') || to.includes('busy') || to.includes('lost');
         });
-        
+
     const totalLostLeads = leaks.reduce((acc, curr) => acc + curr.cnt, 0);
     const caseValue = 1200;
     const revenueAtRisk = totalLostLeads * caseValue;
-    
+
     const riskRevVal = document.getElementById('funnel-risk-revenue');
     if (riskRevVal) {
         riskRevVal.setAttribute('data-value', `$${revenueAtRisk}`);
@@ -935,7 +1151,7 @@ function renderFunnelDetails(data) {
 
     const feederAlerts = data.system.alerts.filter(a => a.title.includes('Feeder a conversion'));
     const feedersList = document.getElementById('funnel-feeders-list');
-    
+
     if (feedersList) {
         if (feederAlerts.length > 0) {
             feedersList.innerHTML = feederAlerts.map((f, idx) => {
@@ -944,9 +1160,9 @@ function renderFunnelDetails(data) {
                 const state = parts[0] || 'Origen';
                 const metricsStr = parts[1] || '0%';
                 const pct = metricsStr.split('%')[0] || '0';
-                
+
                 return `
-                    <div class="card-animate" style="padding: 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; animation-delay: ${(idx * 0.025) + 0.12}s;">
+                    <div class="card-animate" onclick="openFeederModal('${state.replace(/'/g, "\\'")}', '${pct}%')" style="cursor: pointer; padding: 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; animation-delay: ${(idx * 0.025) + 0.12}s;">
                         <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; color: white;">
                             <span>${state}</span>
                             <span style="color: var(--green);" class="progress-bar-val" data-value="${pct}%">${pct}%</span>
@@ -972,7 +1188,7 @@ function renderFunnelDetails(data) {
         leaksList.innerHTML = sortedLeaks.map((l, idx) => {
             const leakPct = l.pct.toFixed(2);
             return `
-                <div class="card-animate" style="padding: 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; animation-delay: ${(idx * 0.025) + 0.12}s;">
+                <div class="card-animate" onclick="openLeakModal('${l.from.replace(/'/g, "\\'")}', '${l.to.replace(/'/g, "\\'")}', '${leakPct}%')" style="cursor: pointer; padding: 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; animation-delay: ${(idx * 0.025) + 0.12}s;">
                     <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; color: white;">
                         <span>De ${cleanTechnicalTerms(l.from)} a ${cleanTechnicalTerms(l.to)}</span>
                         <span style="color: var(--red);" class="progress-bar-val" data-value="${leakPct}%">${leakPct}%</span>
@@ -989,13 +1205,38 @@ function renderFunnelDetails(data) {
         }).join('');
     }
 
-    const statesData = [
-        { state: "Abierto", conversion: 2.14, loss: 97.86, steps: 14.2, stddev: 4.5 },
-        { state: "Conectado - Interesado", conversion: 35.24, loss: 64.76, steps: 5.4, stddev: 1.8 },
-        { state: "Reactivación", conversion: 20.00, loss: 80.00, steps: 7.2, stddev: 2.1 },
-        { state: "En Llamada", conversion: 14.15, loss: 85.85, steps: 8.9, stddev: 3.2 },
-        { state: "Pre-Cerrado (Sin tarjeta)", conversion: 13.01, loss: 86.99, steps: 11.5, stddev: 3.9 }
-    ];
+    let statesData = [];
+    if (data.funnel && Array.isArray(data.funnel.absorption_probabilities) && data.funnel.absorption_probabilities.length > 0) {
+        statesData = data.funnel.absorption_probabilities
+            .filter(ap => (ap.prob_conversion || 0) > 0.0001) // Filter out practically 0% conversion states to keep the table clean
+            .map(ap => ({
+                state: cleanTechnicalTerms(ap.state),
+                conversion: (ap.prob_conversion || 0) * 100,
+                loss: (ap.prob_loss || 0) * 100,
+                steps: ap.expected_steps || 0,
+                stddev: ap.step_stddev || 0
+            }));
+        if (statesData.length === 0) {
+            statesData = data.funnel.absorption_probabilities
+                .map(ap => ({
+                    state: cleanTechnicalTerms(ap.state),
+                    conversion: (ap.prob_conversion || 0) * 100,
+                    loss: (ap.prob_loss || 0) * 100,
+                    steps: ap.expected_steps || 0,
+                    stddev: ap.step_stddev || 0
+                }))
+                .sort((a, b) => b.conversion - a.conversion)
+                .slice(0, 5);
+        }
+    } else {
+        statesData = [
+            { state: "Abierto", conversion: 2.14, loss: 97.86, steps: 14.2, stddev: 4.5 },
+            { state: "Conectado - Interesado", conversion: 35.24, loss: 64.76, steps: 5.4, stddev: 1.8 },
+            { state: "Reactivación", conversion: 20.00, loss: 80.00, steps: 7.2, stddev: 2.1 },
+            { state: "En Llamada", conversion: 14.15, loss: 85.85, steps: 8.9, stddev: 3.2 },
+            { state: "Pre-Cerrado (Sin tarjeta)", conversion: 13.01, loss: 86.99, steps: 11.5, stddev: 3.9 }
+        ];
+    }
 
     const probBody = document.getElementById('funnel-probabilities-body');
     if (probBody) {
@@ -1004,8 +1245,8 @@ function renderFunnelDetails(data) {
                 <td style="font-weight: 600; color: white;">${s.state}</td>
                 <td style="text-align: right; color: var(--green); font-weight: bold;">${s.conversion.toFixed(2)}%</td>
                 <td style="text-align: right; color: var(--text-muted);">${s.loss.toFixed(2)}%</td>
-                <td style="text-align: right; font-family: var(--mono); color: white;">${s.steps}</td>
-                <td style="text-align: right; font-family: var(--mono); color: var(--text-dim);">${s.stddev}</td>
+                <td style="text-align: right; font-family: var(--mono); color: white;">${s.steps.toFixed(1)}</td>
+                <td style="text-align: right; font-family: var(--mono); color: var(--text-dim);">${s.stddev.toFixed(1)}</td>
             </tr>
         `).join('');
     }
@@ -1396,6 +1637,30 @@ function renderHorizonCards(horizons, options = {}) {
     }
 }
 
+    const modelsBody = document.getElementById(`${prefix}forecast-models-body`);
+    if (modelsBody && Array.isArray(forecast.backtest_models)) {
+        const models = forecast.backtest_models.slice();
+
+        // Incluir todos los modelos de forecast_rf (ML models) en la clasificación
+        if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.forecast_rf && dashboardData.forecast_rf.available !== false) {
+            const rf = dashboardData.forecast_rf;
+            if (Array.isArray(rf.backtest_models)) {
+                rf.backtest_models.forEach(rfModel => {
+                    if (rfModel && rfModel.mase != null && !models.some(m => m.name === rfModel.name)) {
+                        models.push({
+                            name: rfModel.name,
+                            mase: rfModel.mase,
+                            mae: rfModel.mae,
+                            rmse: rfModel.rmse
+                        });
+                    }
+                });
+            } else {
+                const rfName = rf.model_name || 'random_forest';
+                let rfEntry = { name: rfName, mase: rf.mase, mae: rf.mae, rmse: rf.rmse };
+                if (rfEntry.mase != null && !models.some(m => m.name === rfEntry.name)) {
+                    models.push(rfEntry);
+                }
 function seriesHasChartPoints(series) {
     return Array.isArray(series) && series.some((v) => v != null && isFinite(v));
 }
@@ -1474,6 +1739,49 @@ function getChartVisibleModelNames() {
             if (ds._modelName && chart.isDatasetVisible(idx)) {
                 names.push(ds._modelName);
             }
+        }
+
+        // Ordenar por MASE ascendente (mejor desempeño primero)
+        models.sort((a, b) => (a.mase != null ? a.mase : Infinity) - (b.mase != null ? b.mase : Infinity));
+
+        modelsBody.innerHTML = models.map(m => {
+            const maseColor = m.mase < 0.75 ? 'var(--green)' : (m.mase < 1.0 ? 'var(--amber)' : 'var(--red)');
+            const stateLabel = m.mase < 0.75 ? 'Excelente' : (m.mase < 1.0 ? 'Aceptable' : 'Subóptimo');
+            return `
+                <tr>
+                    <td style="font-weight: 600; color: white;">${cleanTechnicalTerms(m.name.replace(/_/g, ' ').toUpperCase())}</td>
+                    <td style="text-align: right; font-family: var(--mono); color: ${maseColor}; font-weight: bold;">${m.mase.toFixed(3)}</td>
+                    <td style="text-align: right; font-family: var(--mono); color: var(--text-muted);">${m.mae ? m.mae.toFixed(2) : 'N/A'}</td>
+                    <td style="text-align: right; font-family: var(--mono); color: var(--text-dim);">${m.rmse ? m.rmse.toFixed(2) : 'N/A'}</td>
+                    <td><span class="custom-badge" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: ${maseColor}">${stateLabel}</span></td>
+                </tr>
+            `;
+        }).join('');
+    }
+}
+
+// =====================================================================
+//  COMPARADOR DE MODELOS (lista desplegable + overlay)
+// =====================================================================
+
+// Color consistente por modelo (mapa fijo para los conocidos + hash determinístico).
+const MODEL_COLORS = {
+    theta_lite: '#38bdf8',
+    holt_winters: '#f472b6',
+    trend_season: '#f59e0b',
+    seasonal_naive: '#a78bfa',
+    fourier_regression: '#34d399',
+    mean_7d: '#fb7185',
+    ewma: '#facc15',
+    random_forest: '#10b981',
+};
+
+function getModelColor(name) {
+    if (!name) return '#f472b6';
+    if (MODEL_COLORS[name]) return MODEL_COLORS[name];
+    let h = 0;
+    for (const c of String(name)) h = (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0;
+    return `hsl(${h % 360}, 70%, 62%)`;
         });
         if (showAllModels || selectedCompareModel || names.length) {
             return dashboardData ? sortModelNamesByMase(dashboardData, names) : names;
@@ -1567,6 +1875,29 @@ function buildComparableModels(data) {
 
     const rf = data ? data.forecast_rf : null;
     if (rf && rf.available !== false) {
+        if (Array.isArray(rf.backtest_models)) {
+            rf.backtest_models.forEach(m => {
+                if (!list.some(x => x.name === m.name)) {
+                    let series = Array.isArray(m.series) ? m.series : null;
+                    if (!series && m.name === (rf.model_name || 'random_forest')) {
+                        series = Array.isArray(rf.series) ? rf.series : buildRfAlignedSeries(data);
+                    }
+                    list.push({
+                        name: m.name,
+                        mase: m.mase,
+                        mae: m.mae,
+                        rmse: m.rmse,
+                        series: series
+                    });
+                }
+            });
+        } else {
+            const rfName = rf.model_name || 'random_forest';
+            if (!list.some(m => m.name === rfName)) {
+                let series = Array.isArray(rf.series) ? rf.series : null;
+                if (!series) series = buildRfAlignedSeries(data);
+                list.push({ name: rfName, mase: rf.mase, mae: rf.mae, rmse: rf.rmse, series: series });
+            }
         const rfName = rf.model_name || 'random_forest';
         if (!list.some(m => normModelName(m.name) === normModelName(rfName))) {
             let series = Array.isArray(rf.series) ? rf.series : null;
@@ -1846,7 +2177,7 @@ function renderAlertsTableList(filteredList) {
         const rpnPct = Math.min(((a.rpn_score || 0) / maxRpn) * 100, 100);
         const rpnColor = a.severity === 'critical' ? 'var(--red)' : a.severity === 'warning' ? 'var(--amber)' : 'var(--gold)';
         const badgeLabel = a.severity === 'critical' ? 'Crítica' : a.severity === 'warning' ? 'Precaución' : 'Informativa';
-        
+
         return `
             <tr style="animation: fadeIn 0.3s ease-out;">
                 <td>
@@ -1993,6 +2324,13 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
             plugins: {
                 legend: {
                     display: true,
+                    labels: {
+                        color: isLight ? '#475569' : '#94a3b8',
+                        font: { size: 11, family: 'Inter' },
+                        boxWidth: 12
+                    }
+                legend: {
+                    display: true,
                     onClick: (evt, legendItem, legend) => {
                         const chart = legend.chart;
                         const index = legendItem.datasetIndex;
@@ -2025,13 +2363,13 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
                 }
             },
             scales: {
-                x: { 
-                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' }, 
-                    ticks: { color: isLight ? '#475569' : '#64748b', font: { size: 10 }, maxTicksLimit: 10 } 
+                x: {
+                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' },
+                    ticks: { color: isLight ? '#475569' : '#64748b', font: { size: 10 }, maxTicksLimit: 10 }
                 },
-                y: { 
-                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' }, 
-                    ticks: { color: isLight ? '#475569' : '#64748b', font: { size: 11, family: 'JetBrains Mono' } } 
+                y: {
+                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' },
+                    ticks: { color: isLight ? '#475569' : '#64748b', font: { size: 11, family: 'JetBrains Mono' } }
                 }
             }
         }
@@ -2118,7 +2456,7 @@ function renderSeasonalChart(indices, options = {}) {
                     return delay;
                 }
             },
-            responsive: true, 
+            responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
@@ -2135,11 +2473,11 @@ function renderSeasonalChart(indices, options = {}) {
             },
             scales: {
                 x: { grid: { display: false }, ticks: { color: isLight ? '#475569' : '#94a3b8', font: { size: 11, weight: '600' } } },
-                y: { 
-                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' }, 
-                    ticks: { color: isLight ? '#475569' : '#64748b' }, 
-                    min: 0.6, 
-                    max: 1.3 
+                y: {
+                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' },
+                    ticks: { color: isLight ? '#475569' : '#64748b' },
+                    min: 0.6,
+                    max: 1.3
                 }
             }
         }
@@ -2154,7 +2492,7 @@ function renderCampaignChart(campaigns) {
 
     const isLight = document.body.classList.contains('light-mode');
     const ctx = element.getContext('2d');
-    const colors = isLight 
+    const colors = isLight
         ? ['#0284c7', '#84cc16', '#7c3aed', '#ea580c', '#db2777', '#cca43b', '#e11d48']
         : ['#38bdf8', '#a3e635', '#8b5cf6', '#f97316', '#ec4899', '#fbbf24', '#f43f5e'];
 
@@ -2182,18 +2520,18 @@ function renderCampaignChart(campaigns) {
                     return delay;
                 }
             },
-            responsive: true, 
-            maintainAspectRatio: false, 
+            responsive: true,
+            maintainAspectRatio: false,
             cutout: '65%',
             plugins: {
-                legend: { 
-                    position: 'right', 
-                    labels: { 
-                        color: isLight ? '#475569' : '#94a3b8', 
-                        font: { size: 11 }, 
-                        boxWidth: 10, 
-                        padding: 8 
-                    } 
+                legend: {
+                    position: 'right',
+                    labels: {
+                        color: isLight ? '#475569' : '#94a3b8',
+                        font: { size: 11 },
+                        boxWidth: 10,
+                        padding: 8
+                    }
                 },
                 tooltip: {
                     backgroundColor: isLight ? '#ffffff' : '#090f20',
@@ -2259,7 +2597,7 @@ function renderHourlyChart(hourly) {
                     return delay;
                 }
             },
-            responsive: true, 
+            responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
@@ -2282,12 +2620,12 @@ function renderHourlyChart(hourly) {
             },
             scales: {
                 x: { grid: { display: false }, ticks: { color: isLight ? '#475569' : '#94a3b8', font: { size: 9 } } },
-                y: { 
-                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' }, 
-                    ticks: { 
+                y: {
+                    grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' },
+                    ticks: {
                         color: isLight ? '#475569' : '#64748b',
                         callback: (value) => `${value}%`
-                    } 
+                    }
                 }
             }
         }
@@ -2302,7 +2640,7 @@ function renderDailyVolumeChart(ops) {
 
     const isLight = document.body.classList.contains('light-mode');
     const ctx = element.getContext('2d');
-    
+
     // Calculate values
     const labels = ops.daily_volumes.map(d => {
         const parts = d.date.split('-');
@@ -2315,7 +2653,7 @@ function renderDailyVolumeChart(ops) {
     });
     const leads = ops.daily_volumes.map(d => d.leads);
     const avgVal = ops.avg_daily || 0;
-    
+
     const avgLine = Array(leads.length).fill(avgVal);
     const isBar = dailyVolumeType === 'bar';
 
@@ -2339,7 +2677,7 @@ function renderDailyVolumeChart(ops) {
                     label: 'Leads Recibidos',
                     data: leads,
                     type: isBar ? 'bar' : 'line',
-                    backgroundColor: isBar 
+                    backgroundColor: isBar
                         ? (isLight ? 'rgba(2, 132, 199, 0.75)' : 'rgba(56, 189, 248, 0.7)')
                         : (isLight ? 'rgba(2, 132, 199, 0.15)' : 'rgba(56, 189, 248, 0.15)'),
                     borderColor: isLight ? '#0284c7' : '#38bdf8',
@@ -2395,13 +2733,13 @@ function renderDailyVolumeChart(ops) {
                 }
             },
             scales: {
-                x: { 
-                    grid: { display: false }, 
-                    ticks: { 
-                        color: isLight ? '#475569' : '#94a3b8', 
-                        font: { size: 9 }, 
-                        maxTicksLimit: 7 
-                    } 
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        color: isLight ? '#475569' : '#94a3b8',
+                        font: { size: 9 },
+                        maxTicksLimit: 7
+                    }
                 },
                 y: {
                     grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' },
@@ -2443,25 +2781,25 @@ function renderOperationsTab(data) {
 
         const kpis = [
             {
-                label: 'Registros',
+                label: 'Total Records (Registros de Llamadas)',
                 value: totalRecords.toLocaleString(),
                 sub: 'llamadas totales',
                 color: 'blue'
             },
             {
-                label: 'Contactos',
+                label: 'Unique Leads (Contactos Únicos)',
                 value: uniqueContacts.toLocaleString(),
                 sub: 'leads únicos',
                 color: 'blue'
             },
             {
-                label: 'Avg Dial Attempts (intentos promedio)',
+                label: 'Avg Dial Attempts (Intentos Promedio)',
                 value: attemptsAvg.toFixed(2),
                 sub: `rango: 1-${call.call_rank ? call.call_rank.max : 365}`,
                 color: attemptsAvg > 7 ? 'red' : 'blue'
             },
             {
-                label: 'Avg Callback Interval (min entre intentos)',
+                label: 'Avg Callback Interval (Minutos entre Intentos)',
                 value: `${Math.round(intervalAvg).toLocaleString()} min`,
                 sub: `~${Math.round(intervalAvg / 60)}h entre marcaciones`,
                 color: intervalAvg > 1440 ? 'red' : 'blue'
@@ -2572,7 +2910,7 @@ function initSpotlight() {
     const flashlight = document.querySelector('.global-flashlight');
     const sidebar = document.querySelector('.sidebar');
     const topbar = document.querySelector('.topbar');
-    
+
     document.addEventListener('mousemove', e => {
         if (flashlight) {
             flashlight.style.setProperty('--global-mouse-x', `${e.clientX}px`);
@@ -2611,7 +2949,7 @@ function loadReportInViewer(url, title, event) {
     if (event) {
         event.preventDefault(); // Intercept and stop opening new tab
     }
-    
+
     const iframe = document.getElementById('viewer-iframe');
     const placeholder = document.getElementById('viewer-placeholder');
     const titleText = document.getElementById('viewer-report-title');
@@ -2620,20 +2958,20 @@ function loadReportInViewer(url, title, event) {
     const closeBtn = document.getElementById('viewer-close-btn');
     const printBtn = document.getElementById('viewer-print-btn');
     const card = document.getElementById('report-viewer-card');
-    
+
     if (!iframe || !placeholder) return;
-    
+
     // Set loading indicator
     titleText.textContent = "Cargando: " + title;
     statusDot.style.backgroundColor = "var(--gold)";
     statusDot.style.animation = "pulse 1.2s infinite";
     statusDot.style.boxShadow = "0 0 8px var(--gold-glow)";
-    
+
     // Switch view states
     placeholder.style.display = 'none';
     iframe.style.display = 'block';
     iframe.src = url + (url.includes('?') ? '&' : '?') + '_=' + Date.now();
-    
+
     // Show control buttons
     if (openLink) {
         openLink.href = url;
@@ -2645,12 +2983,12 @@ function loadReportInViewer(url, title, event) {
     if (printBtn) {
         printBtn.style.display = 'inline-flex';
     }
-    
+
     // Smooth scroll down to the embedded viewer card after a brief render delay
     setTimeout(() => {
         card.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
-    
+
     // Update loading state once iframe load completes
     iframe.onload = () => {
         titleText.textContent = title;
@@ -2668,20 +3006,20 @@ function closeReportViewer() {
     const openLink = document.getElementById('viewer-open-link');
     const closeBtn = document.getElementById('viewer-close-btn');
     const printBtn = document.getElementById('viewer-print-btn');
-    
+
     if (!iframe || !placeholder) return;
-    
+
     // Unload iframe and revert back to placeholder state
     iframe.src = '';
     iframe.style.display = 'none';
     placeholder.style.display = 'flex';
-    
+
     // Reset header
     titleText.textContent = "Visor de Informe Interactivo";
     statusDot.style.backgroundColor = "var(--gold)";
     statusDot.style.animation = "none";
     statusDot.style.boxShadow = "none";
-    
+
     if (openLink) openLink.style.display = 'none';
     if (closeBtn) closeBtn.style.display = 'none';
     if (printBtn) printBtn.style.display = 'none';
@@ -2713,7 +3051,7 @@ function printActiveReport() {
 function updateThemeIcon(isLight) {
     const btn = document.getElementById('theme-toggle');
     if (!btn) return;
-    
+
     if (isLight) {
         // Sun SVG Icon
         btn.innerHTML = `
@@ -2739,10 +3077,10 @@ function updateThemeIcon(isLight) {
     }
 }
 
-window.toggleTheme = function(event) {
+window.toggleTheme = function (event) {
     let x = window.innerWidth / 2;
     let y = window.innerHeight / 2;
-    
+
     if (event && event.clientX !== undefined && event.clientY !== undefined) {
         x = event.clientX;
         y = event.clientY;
@@ -2776,7 +3114,7 @@ window.toggleTheme = function(event) {
             document.body.classList.remove('light-mode');
             localStorage.setItem('theme', 'dark');
         }
-        
+
         updateThemeIcon(nextThemeIsLight);
 
         const reportIframe = document.getElementById('viewer-iframe');
@@ -2810,7 +3148,7 @@ window.toggleTheme = function(event) {
     }, 700);
 };
 
-window.triggerSync = async function(event) {
+window.triggerSync = async function (event) {
     const icon = document.getElementById('sync-icon-svg');
     const sbarText = document.getElementById('main-sbar-text');
     if (icon) {
@@ -2822,14 +3160,14 @@ window.triggerSync = async function(event) {
             icon.style.transition = 'transform 1s ease';
         }, 1000);
     }
-    
+
     if (sbarText) {
         sbarText.innerHTML = "Sincronizando datos con n8n al instante...";
     }
-    
+
     // Call loadBOS to fetch the latest dynamic data from the server
     await loadBOS();
-    
+
     // Reload report viewer iframe if it is currently open
     const iframe = document.getElementById('viewer-iframe');
     if (iframe && iframe.style.display !== 'none' && iframe.src) {
