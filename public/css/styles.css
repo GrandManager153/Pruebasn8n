@@ -4,47 +4,70 @@
    ===================================================================== */
 
 :root {
-    --bg-main: #080c14;
-    --bg-sidebar: #05080f;
-    --bg-card: linear-gradient(135deg, rgba(13, 20, 35, 0.8), rgba(7, 10, 17, 0.9));
-    --border: rgba(255, 255, 255, 0.05);
-    --border-hover: rgba(224, 153, 42, 0.35);
-    /* Brand Gold light glow border */
-    --chartreuse: #e0992a;
-    /* Manuel Solis Brand Gold */
-    --chartreuse-glow: rgba(224, 153, 42, 0.15);
+    /* === Obsidian Aurora — Dark palette === */
+    --bg-main: #030712;
+    --bg-elevated: #0a1020;
+    --bg-sidebar: #070b14;
+    --bg-card: linear-gradient(148deg, rgba(16, 22, 40, 0.94) 0%, rgba(6, 10, 20, 0.98) 100%);
+    --bg-card-hover: linear-gradient(148deg, rgba(22, 30, 52, 0.96) 0%, rgba(10, 14, 28, 0.98) 100%);
+
+    --border: rgba(148, 163, 184, 0.09);
+    --border-hover: rgba(232, 168, 56, 0.45);
+
+    /* Brand — warm gold (Manuel Solis) */
+    --brand-gold: #e8a838;
+    --brand-gold-bright: #f5c842;
+    --chartreuse: #e8a838;
+    --chartreuse-glow: rgba(232, 168, 56, 0.22);
+    --gold: #f0b429;
+    --gold-glow: rgba(240, 180, 41, 0.22);
+
+    /* Semantic accents — each hue reads distinctly */
     --blue: #38bdf8;
-    /* Azul eléctrico trading */
-    --blue-glow: rgba(56, 189, 248, 0.15);
-    --crimson: #f43f5e;
-    /* Rojo carmesí neón trading */
-    --crimson-glow: rgba(244, 63, 94, 0.15);
-    --gold: #cca43b;
-    /* Conservar para compatibilidad */
-    --gold-glow: rgba(204, 164, 59, 0.15);
-    --text-main: #f8fafc;
-    --text-muted: #94a3b8;
-    --text-dim: #64748b;
-    --green: #10b981;
-    /* Verde esmeralda suave */
-    --red: #f43f5e;
-    /* Reemplazado por carmesí neón */
-    --amber: #fbbf24;
+    --blue-glow: rgba(56, 189, 248, 0.22);
+    --cyan: #22d3ee;
+    --cyan-glow: rgba(34, 211, 238, 0.2);
+    --green: #2dd4a8;
+    --green-glow: rgba(45, 212, 168, 0.22);
+    --crimson: #fb7185;
+    --crimson-glow: rgba(251, 113, 133, 0.22);
+    --red: #f87171;
+    --red-glow: rgba(248, 113, 113, 0.22);
+    --amber: #fcd34d;
+    --amber-glow: rgba(252, 211, 77, 0.22);
+    --violet: #a78bfa;
+    --violet-glow: rgba(167, 139, 250, 0.2);
+
+    /* KPI metric colors — values no longer all white */
+    --color-metric-gold: #f5c842;
+    --color-metric-blue: #67e8f9;
+    --color-metric-green: #6ee7b7;
+    --color-metric-red: #fca5a5;
+    --color-metric-crimson: #fda4af;
+    --color-metric-white: #e2e8f0;
+    --color-metric-violet: #c4b5fd;
+
+    /* Datos tipo "azul" → neutro: blanco (oscuro) / negro (claro) */
+    --color-metric-neutral: #ffffff;
+
+    --text-main: #f0f4fa;
+    --text-muted: #8b9cb8;
+    --text-dim: #566680;
     --font: 'Inter', sans-serif;
     --mono: 'JetBrains Mono', monospace;
-    --metric-value: #ffffff; /* Unified premium white in dark mode */
-    --metric-value-glow: rgba(255, 255, 255, 0.45);
+    --metric-value: #f0f4fa;
+    --metric-value-glow: rgba(240, 244, 250, 0.35);
 
-    /* === Bento / Floating layout language (RETRADE-style) === */
+    /* === Bento / Floating layout language === */
     --radius-lg: 24px;
     /* tarjetas y paneles principales */
     --radius-md: 16px;
     /* botones primarios y módulos medianos */
     --radius-sm: 12px;
     /* chips, sub-bloques */
-    --gap-bento: 22px;
+    --gap-bento: 16px;
     /* separación entre módulos flotantes */
-    --shell-pad: 16px;
+    --shell-pad: 12px;
     /* margen exterior del "shell" flotante */
     --soft-shadow: 0 14px 40px rgba(0, 0, 0, 0.38), inset 0 1px 1px rgba(255, 255, 255, 0.04);
 }
@@ -54,34 +77,50 @@
    ===================================================================== */
 body.light-mode {
     --bg-main: #f8fafc;
-    /* Cool metallic white */
-    --bg-sidebar: rgba(241, 245, 249, 0.85);
-    /* Cool slate frosted glass */
-    --bg-card: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(241, 245, 249, 0.95));
-    /* White glass */
+    --bg-elevated: #ffffff;
+    --bg-sidebar: rgba(241, 245, 249, 0.92);
+    --bg-card: linear-gradient(148deg, rgba(255, 255, 255, 0.96) 0%, rgba(241, 245, 249, 0.98) 100%);
     --border: rgba(15, 23, 42, 0.08);
-    /* Dark slate subtle border */
-    --border-hover: rgba(178, 116, 21, 0.45);
-    /* Brand Gold border light mode */
-    --chartreuse: #b27415;
-    /* Brand Gold adjusted for white contrast */
-    --chartreuse-glow: rgba(178, 116, 21, 0.10);
-    --blue: #0284c7;
-    /* Sky blue trading */
-    --blue-glow: rgba(2, 132, 199, 0.10);
+    --border-hover: rgba(180, 83, 9, 0.45);
+
+    /* Brand & accents — saturated for light backgrounds */
+    --brand-gold: #b45309;
+    --brand-gold-bright: #92400e;
+    --chartreuse: #b45309;
+    --chartreuse-glow: rgba(180, 83, 9, 0.12);
+    --gold: #d97706;
+    --gold-glow: rgba(217, 119, 6, 0.12);
+    --blue: #0369a1;
+    --blue-glow: rgba(3, 105, 161, 0.12);
+    --cyan: #0891b2;
+    --cyan-glow: rgba(8, 145, 178, 0.12);
+    --green: #059669;
+    --green-glow: rgba(5, 150, 105, 0.12);
     --crimson: #e11d48;
-    /* Crimson rose */
-    --crimson-glow: rgba(225, 29, 72, 0.10);
+    --crimson-glow: rgba(225, 29, 72, 0.12);
+    --red: #dc2626;
+    --red-glow: rgba(220, 38, 38, 0.12);
+    --amber: #d97706;
+    --amber-glow: rgba(217, 119, 6, 0.12);
+    --violet: #7c3aed;
+    --violet-glow: rgba(124, 58, 237, 0.12);
+
+    /* KPI metric colors — darker for contrast on white cards */
+    --color-metric-gold: #b45309;
+    --color-metric-blue: #0369a1;
+    --color-metric-green: #047857;
+    --color-metric-red: #b91c1c;
+    --color-metric-crimson: #be123c;
+    --color-metric-violet: #6d28d9;
+    --color-metric-white: #5b21b6;
+
+    --color-metric-neutral: #0f172a;
+
     --text-main: #0f172a;
-    /* Deep charcoal black */
     --text-muted: #475569;
-    /* Slate grey */
     --text-dim: #64748b;
-    /* Muted grey */
-    --gold: #cca43b;
-    --gold-glow: rgba(204, 164, 59, 0.10);
-    --metric-value: #0f172a; /* Unified cool charcoal black in light mode */
-    --metric-value-glow: rgba(15, 23, 42, 0.20);
+    --metric-value: #0f172a;
+    --metric-value-glow: rgba(15, 23, 42, 0.15);
 }
 
 /* Smooth color transitions for theme toggles */
@@ -108,13 +147,14 @@ body.light-mode .global-flashlight {
 body.light-mode .sidebar-brand h1,
 body.light-mode .topbar-left h2,
 body.light-mode .section-title,
-body.light-mode .chart-title,
-body.light-mode .list-group-item:hover,
-body.light-mode .custom-table td,
 body.light-mode .health-reasons,
 body.light-mode .action-text {
     color: #0f172a !important;
-    /* Force true charcoal color for important headings */
+}
+
+/* Table cells: default text only — metric classes keep their colors */
+body.light-mode .custom-table td:not([class*="metric-"]) {
+    color: var(--text-main);
 }
 
 body.light-mode .list-group-item.active {
@@ -214,6 +254,10 @@ body.light-mode .theme-toggle-btn:hover {
 body {
     font-family: var(--font);
     background-color: var(--bg-main);
+    background-image:
+        radial-gradient(ellipse 80% 60% at 10% 0%, rgba(232, 168, 56, 0.07) 0%, transparent 55%),
+        radial-gradient(ellipse 70% 50% at 90% 10%, rgba(56, 189, 248, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 50% 100%, rgba(167, 139, 250, 0.05) 0%, transparent 55%);
     color: var(--text-main);
     min-height: 100vh;
     overflow-x: hidden;
@@ -246,8 +290,7 @@ body {
     pointer-events: none;
     z-index: 1;
     filter: blur(160px);
-    opacity: 0.10;
-    /* Atenuado para un look fintech limpio (estilo RETRADE) */
+    opacity: 0.11;
     mix-blend-mode: screen;
     animation: floatNebula 25s infinite alternate ease-in-out;
 }
@@ -263,11 +306,22 @@ body {
 .nebula-crimson {
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, var(--crimson) 0%, transparent 70%);
+    background: radial-gradient(circle, var(--violet) 0%, transparent 70%);
     bottom: 5%;
     right: -150px;
     animation-duration: 35s;
     animation-delay: -5s;
+}
+
+.nebula-violet {
+    width: 480px;
+    height: 480px;
+    background: radial-gradient(circle, var(--cyan) 0%, transparent 70%);
+    top: 45%;
+    left: 35%;
+    opacity: 0.08;
+    animation-duration: 30s;
+    animation-delay: -12s;
 }
 
 /* === Global Flashlight Background Effect === */
@@ -280,10 +334,8 @@ body {
     pointer-events: none;
     z-index: 1;
     background: radial-gradient(750px circle at var(--global-mouse-x, 50%) var(--global-mouse-y, 50%),
-            rgba(255, 255, 255, 0.045) 0%,
-            /* Pure white clean spotlight */
-            rgba(255, 255, 255, 0.015) 50%,
-            /* Very soft silver halo */
+            rgba(232, 168, 56, 0.04) 0%,
+            rgba(56, 189, 248, 0.025) 40%,
             transparent 100%);
     mix-blend-mode: screen;
 }
@@ -430,6 +482,25 @@ body.light-mode .wave-4 svg path {
 }
 
 /* === Custom Vanilla Grid & Layout System === */
+.v-grid-kpi {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: var(--gap-bento);
+}
+
+.v-grid-kpi .card {
+    padding: 16px 18px;
+}
+
+.v-grid-kpi .card-stat-value {
+    font-size: 26px;
+}
+
+.v-grid-kpi .card-stat-label {
+    font-size: 9.5px;
+}
+
 .v-grid-4 {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -563,21 +634,223 @@ body.light-mode .wave-4 svg path {
 }
 
 .custom-badge-critical {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--red);
-    border-color: rgba(239, 68, 68, 0.2);
+    background: rgba(248, 113, 113, 0.14);
+    color: #fca5a5;
+    border-color: rgba(248, 113, 113, 0.35);
 }
 
 .custom-badge-warning {
-    background: rgba(245, 158, 11, 0.1);
-    color: var(--amber);
-    border-color: rgba(245, 158, 11, 0.2);
+    background: rgba(252, 211, 77, 0.12);
+    color: #fcd34d;
+    border-color: rgba(252, 211, 77, 0.35);
 }
 
 .custom-badge-success {
-    background: rgba(16, 185, 129, 0.1);
-    color: var(--green);
-    border-color: rgba(16, 185, 129, 0.2);
+    background: rgba(45, 212, 168, 0.12);
+    color: #6ee7b7;
+    border-color: rgba(45, 212, 168, 0.35);
+}
+
+/* === Semantic metric colors (tables & forecast) — both themes === */
+.metric-mase-good {
+    color: var(--green) !important;
+    font-weight: 700;
+    font-family: var(--mono);
+}
+
+.metric-mase-warn {
+    color: var(--amber) !important;
+    font-weight: 700;
+    font-family: var(--mono);
+}
+
+.metric-mase-bad {
+    color: var(--red) !important;
+    font-weight: 700;
+    font-family: var(--mono);
+}
+
+.metric-mae {
+    color: var(--color-metric-neutral) !important;
+    font-weight: 600;
+    font-family: var(--mono);
+}
+
+.metric-rmse {
+    color: var(--color-metric-violet) !important;
+    font-weight: 600;
+    font-family: var(--mono);
+}
+
+.metric-model-name {
+    color: var(--text-main) !important;
+    font-weight: 600;
+}
+
+.metric-pron {
+    color: var(--color-metric-neutral) !important;
+    font-weight: 600;
+    font-family: var(--mono);
+}
+
+.metric-badge-good {
+    background: rgba(45, 212, 168, 0.12) !important;
+    border-color: rgba(45, 212, 168, 0.35) !important;
+    color: var(--green) !important;
+}
+
+.metric-badge-warn {
+    background: rgba(252, 211, 77, 0.12) !important;
+    border-color: rgba(252, 211, 77, 0.35) !important;
+    color: var(--amber) !important;
+}
+
+.metric-badge-bad {
+    background: rgba(248, 113, 113, 0.12) !important;
+    border-color: rgba(248, 113, 113, 0.35) !important;
+    color: var(--red) !important;
+}
+
+body.light-mode .metric-badge-good {
+    background: rgba(5, 150, 105, 0.1) !important;
+    border-color: rgba(5, 150, 105, 0.3) !important;
+    color: var(--green) !important;
+}
+
+body.light-mode .metric-badge-warn {
+    background: rgba(217, 119, 6, 0.1) !important;
+    border-color: rgba(217, 119, 6, 0.3) !important;
+    color: var(--amber) !important;
+}
+
+body.light-mode .metric-badge-bad {
+    background: rgba(220, 38, 38, 0.1) !important;
+    border-color: rgba(220, 38, 38, 0.3) !important;
+    color: var(--red) !important;
+}
+
+.custom-table td.metric-mase-good,
+.custom-table td.metric-mase-warn,
+.custom-table td.metric-mase-bad,
+.custom-table td.metric-mae,
+.custom-table td.metric-rmse,
+.custom-table td.metric-pron {
+    text-align: right;
+}
+
+/* === Forecast model leaderboard === */
+.model-leaderboard-row.model-row-alt td {
+    background: rgba(255, 255, 255, 0.015);
+}
+
+.model-leaderboard-row.model-row-best td {
+    background: rgba(232, 168, 56, 0.06) !important;
+}
+
+.model-leaderboard-row.model-row-best td:first-child {
+    box-shadow: inset 3px 0 0 var(--brand-gold);
+}
+
+.model-rank-cell {
+    text-align: center;
+    width: 48px;
+    vertical-align: middle;
+}
+
+.model-medal {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 900;
+    font-family: var(--mono);
+}
+
+.model-medal.medal-1 {
+    background: linear-gradient(135deg, #fde68a, #f59e0b);
+    color: #78350f;
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
+}
+
+.model-medal.medal-2 {
+    background: linear-gradient(135deg, #e2e8f0, #94a3b8);
+    color: #1e293b;
+    box-shadow: 0 0 10px rgba(148, 163, 184, 0.25);
+}
+
+.model-medal.medal-3 {
+    background: linear-gradient(135deg, #fdba74, #ea580c);
+    color: #431407;
+    box-shadow: 0 0 10px rgba(234, 88, 12, 0.25);
+}
+
+.model-rank-num {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-dim);
+    font-family: var(--mono);
+}
+
+.best-model-tag {
+    display: inline-block;
+    margin-left: 8px;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 2px 8px;
+    border-radius: 50px;
+    background: rgba(232, 168, 56, 0.15);
+    border: 1px solid rgba(232, 168, 56, 0.35);
+    color: var(--brand-gold-bright);
+    vertical-align: middle;
+}
+
+.mase-cell {
+    text-align: right;
+    min-width: 120px;
+}
+
+.mase-cell-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+}
+
+.mase-bar {
+    width: 72px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+}
+
+.mase-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.light-mode .model-leaderboard-row.model-row-alt td {
+    background: rgba(15, 23, 42, 0.02);
+}
+
+body.light-mode .model-leaderboard-row.model-row-best td {
+    background: rgba(217, 119, 6, 0.08) !important;
+}
+
+body.light-mode .best-model-tag {
+    background: rgba(217, 119, 6, 0.12);
+    border-color: rgba(217, 119, 6, 0.3);
+    color: #b45309;
+}
+
+body.light-mode .mase-bar {
+    background: rgba(15, 23, 42, 0.08);
 }
 
 /* --- Custom Responsive Tables --- */
@@ -680,9 +953,10 @@ body.light-mode .wave-4 svg path {
 /* === Sidebar Menu (Left - Frosted Glass Panel) === */
 .sidebar {
     background:
-        linear-gradient(180deg, rgba(56, 189, 248, 0.04) 0%, rgba(163, 230, 53, 0.03) 30%, rgba(5, 8, 15, 0.0) 60%, rgba(56, 189, 248, 0.03) 100%),
-        linear-gradient(135deg, rgba(20, 30, 55, 0.85) 0%, rgba(10, 15, 28, 0.75) 40%, rgba(15, 22, 40, 0.82) 100%) !important;
-    border: 1px solid rgba(56, 189, 248, 0.12);
+        linear-gradient(180deg, rgba(232, 168, 56, 0.06) 0%, transparent 35%, rgba(56, 189, 248, 0.04) 100%),
+        linear-gradient(160deg, rgba(14, 18, 32, 0.97) 0%, rgba(8, 11, 22, 0.98) 100%) !important;
+    border: 1px solid rgba(232, 168, 56, 0.14);
+    border-left: 3px solid rgba(232, 168, 56, 0.55);
     border-radius: var(--radius-lg);
     backdrop-filter: blur(28px) saturate(200%);
     -webkit-backdrop-filter: blur(28px) saturate(200%);
@@ -710,7 +984,7 @@ body.light-mode .wave-4 svg path {
     left: 0;
     right: 0;
     height: 120px;
-    background: linear-gradient(180deg, rgba(56, 189, 248, 0.06) 0%, rgba(163, 230, 53, 0.03) 40%, transparent 100%);
+    background: linear-gradient(180deg, rgba(232, 168, 56, 0.08) 0%, rgba(56, 189, 248, 0.04) 50%, transparent 100%);
     pointer-events: none;
     z-index: 0;
 }
@@ -754,8 +1028,11 @@ body.light-mode .wave-4 svg path {
     font-size: 17px;
     font-weight: 900;
     letter-spacing: -0.5px;
-    color: white;
     line-height: 1.2;
+    background: linear-gradient(135deg, #fde68a 0%, #f0b429 50%, #d4922a 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .brand-text p {
@@ -780,13 +1057,35 @@ body.light-mode .wave-4 svg path {
     padding-left: 8px;
 }
 
-/* Sidebar Menu Button Item */
+.menu-header-spaced {
+    margin-top: 20px;
+}
+
+.nav-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-dim);
+    flex-shrink: 0;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.nav-icon svg {
+    width: 15px;
+    height: 15px;
+    display: block;
+}
+
 .list-group-item {
     background: transparent;
     color: var(--text-muted);
     border: 1px solid transparent;
-    padding: 12px 14px;
-    font-size: 13px;
+    padding: 10px 12px;
+    font-size: 12.5px;
     font-weight: 700;
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -794,8 +1093,9 @@ body.light-mode .wave-4 svg path {
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     display: flex;
     align-items: center;
+    gap: 10px;
     width: 100%;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
     position: relative;
     overflow: hidden;
     box-shadow: none !important;
@@ -809,20 +1109,41 @@ body.light-mode .wave-4 svg path {
     /* micro-slide action */
 }
 
-/* Active state — elegant white background with soft glow */
+/* Active state — gold aurora glow on dark */
 .list-group-item.active {
-    background: #ffffff !important;
-    color: #080c14 !important;
+    background: linear-gradient(135deg, rgba(232, 168, 56, 0.16) 0%, rgba(232, 168, 56, 0.04) 100%) !important;
+    color: var(--brand-gold-bright) !important;
     font-weight: 800;
-    box-shadow: 0 0 24px rgba(255, 255, 255, 0.25), 0 4px 16px rgba(255, 255, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
-    border-left: 4px solid var(--blue) !important;
-    padding-left: 14px;
+    box-shadow: 0 0 24px rgba(232, 168, 56, 0.12), inset 0 1px 0 rgba(232, 168, 56, 0.12) !important;
+    border: 1px solid rgba(232, 168, 56, 0.3) !important;
+    border-left: 3px solid var(--brand-gold-bright) !important;
+    padding-left: 12px;
 }
 
 .list-group-item.active:hover {
-    padding-left: 14px;
-    /* lock active item padding */
-    box-shadow: 0 0 32px rgba(255, 255, 255, 0.35), 0 6px 20px rgba(255, 255, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+    padding-left: 12px;
+    box-shadow: 0 0 32px rgba(232, 168, 56, 0.18), inset 0 1px 0 rgba(232, 168, 56, 0.15) !important;
+}
+
+.list-group-item:hover .nav-icon {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--chartreuse);
+}
+
+.list-group-item.active .nav-icon {
+    background: rgba(232, 168, 56, 0.2);
+    color: var(--brand-gold-bright);
+    box-shadow: 0 0 10px rgba(232, 168, 56, 0.15);
+}
+
+body.light-mode .nav-icon {
+    background: rgba(15, 23, 42, 0.05);
+    color: #64748b;
+}
+
+body.light-mode .list-group-item.active .nav-icon {
+    background: rgba(217, 119, 6, 0.15);
+    color: #b45309;
 }
 
 .sidebar-footer {
@@ -851,13 +1172,14 @@ body.light-mode .wave-4 svg path {
 
 .topbar {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 28px;
-    background: rgba(8, 12, 20, 0.55);
+    flex-direction: column;
+    gap: 0;
+    padding: 0;
+    background: linear-gradient(135deg, rgba(14, 20, 36, 0.88) 0%, rgba(8, 12, 24, 0.92) 100%);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(56, 189, 248, 0.12);
+    border-top: 1px solid rgba(232, 168, 56, 0.2);
     border-radius: var(--radius-lg);
     position: sticky;
     top: var(--shell-pad);
@@ -865,15 +1187,71 @@ body.light-mode .wave-4 svg path {
     margin-bottom: var(--gap-bento);
     box-shadow: var(--soft-shadow);
     transition: background 0.4s ease, border-color 0.3s ease;
+    overflow: hidden;
+}
+
+.topbar-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 22px;
+    gap: 16px;
+}
+
+.topbar-left {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.topbar-icon {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    transition: transform 0.5s ease;
+}
+
+#sync-icon-svg {
+    transition: transform 1s ease;
+}
+
+.topbar-sync {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+
+.topbar-status {
+    margin: 0;
+    border-radius: 0;
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    padding: 8px 22px;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    box-shadow: none;
 }
 
 .topbar-left h2 {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 900;
     letter-spacing: -0.5px;
     color: white;
     margin: 0;
     text-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
+    line-height: 1.2;
 }
 
 .status-pill {
@@ -945,9 +1323,9 @@ body.light-mode .wave-4 svg path {
 }
 
 .status-green {
-    background: rgba(16, 185, 129, 0.08);
-    color: var(--green);
-    border: 1px solid rgba(16, 185, 129, 0.2);
+    background: rgba(45, 212, 168, 0.1);
+    color: #6ee7b7;
+    border: 1px solid rgba(45, 212, 168, 0.28);
 }
 
 .status-green .sdot {
@@ -955,9 +1333,9 @@ body.light-mode .wave-4 svg path {
 }
 
 .status-yellow {
-    background: rgba(251, 191, 36, 0.08);
-    color: var(--amber);
-    border: 1px solid rgba(251, 191, 36, 0.2);
+    background: rgba(252, 211, 77, 0.1);
+    color: #fcd34d;
+    border: 1px solid rgba(252, 211, 77, 0.28);
 }
 
 .status-yellow .sdot {
@@ -965,9 +1343,9 @@ body.light-mode .wave-4 svg path {
 }
 
 .status-red {
-    background: rgba(244, 63, 94, 0.08);
-    color: var(--crimson);
-    border: 1px solid rgba(244, 63, 94, 0.2);
+    background: rgba(248, 113, 113, 0.1);
+    color: #fca5a5;
+    border: 1px solid rgba(248, 113, 113, 0.28);
 }
 
 .status-red .sdot {
@@ -1107,7 +1485,7 @@ body.light-mode .wave-4 svg path {
     border: 1px solid var(--border) !important;
     border-radius: var(--radius-lg) !important;
     color: var(--text-main) !important;
-    padding: 26px;
+    padding: 20px;
     transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s, opacity 0.6s ease;
     position: relative;
     overflow: hidden;
@@ -1116,8 +1494,8 @@ body.light-mode .wave-4 svg path {
 
 .card:hover {
     transform: translateY(-4px);
-    border-color: rgba(255, 255, 255, 0.35) !important;
-    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1), 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(56, 189, 248, 0.25) !important;
+    box-shadow: inset 0 1px 0 rgba(56, 189, 248, 0.06), 0 16px 36px rgba(0, 0, 0, 0.55), 0 0 24px rgba(56, 189, 248, 0.08) !important;
 }
 
 /* Sequential Entry Animations for Dashboard Cards */
@@ -1195,20 +1573,91 @@ body.light-mode .wave-4 svg path {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1px;
-    margin-bottom: 8px;
+    margin-bottom: 0;
     transition: color 0.3s ease, text-shadow 0.3s ease;
 }
 
-/* Card hover triggers stat label white glow in dark mode */
-.card:hover .card-stat-label {
-    color: #ffffff !important;
-    text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+.card-stat-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    min-height: 20px;
 }
 
-/* Light mode override to keep corporate blue on card hover */
-body.light-mode .card:hover .card-stat-label {
+.kpi-trend-badge {
+    font-size: 10px;
+    font-weight: 800;
+    font-family: var(--mono);
+    padding: 3px 7px;
+    border-radius: 50px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+}
+
+.kpi-trend-up {
+    background: rgba(45, 212, 168, 0.12);
+    border: 1px solid rgba(45, 212, 168, 0.35);
+    color: var(--green);
+}
+
+.kpi-trend-down {
+    background: rgba(248, 113, 113, 0.12);
+    border: 1px solid rgba(248, 113, 113, 0.35);
+    color: var(--red);
+}
+
+.kpi-trend-neutral {
+    background: rgba(148, 163, 184, 0.1);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    color: var(--text-muted);
+}
+
+body.light-mode .kpi-trend-up {
+    background: rgba(5, 150, 105, 0.1);
+    border-color: rgba(5, 150, 105, 0.28);
+    color: #047857;
+}
+
+body.light-mode .kpi-trend-down {
+    background: rgba(220, 38, 38, 0.1);
+    border-color: rgba(220, 38, 38, 0.28);
+    color: #b91c1c;
+}
+
+body.light-mode .kpi-trend-neutral {
+    background: rgba(100, 116, 139, 0.1);
+    color: #475569;
+}
+
+/* Card hover — preserve semantic label colors on tinted KPI cards */
+.card:hover .card-stat-label {
+    filter: brightness(1.15);
+}
+
+.stat-card-gold:hover .card-stat-label { color: rgba(253, 224, 130, 0.95) !important; text-shadow: 0 0 10px rgba(245, 200, 66, 0.4); }
+.stat-card-blue:hover .card-stat-label {
+    color: rgba(255, 255, 255, 0.88) !important;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.25);
+}
+.stat-card-green:hover .card-stat-label { color: rgba(167, 243, 208, 0.95) !important; text-shadow: 0 0 10px rgba(110, 231, 183, 0.4); }
+.stat-card-red:hover .card-stat-label,
+.stat-card-crimson:hover .card-stat-label { color: rgba(254, 202, 202, 0.95) !important; text-shadow: 0 0 10px rgba(252, 165, 165, 0.4); }
+.stat-card-white:hover .card-stat-label { color: rgba(221, 214, 254, 0.95) !important; text-shadow: 0 0 10px rgba(196, 181, 253, 0.4); }
+
+/* Generic cards without stat tint */
+.card:not([class*="stat-card-"]):hover .card-stat-label {
+    color: var(--cyan) !important;
+    text-shadow: 0 0 8px rgba(34, 211, 238, 0.35);
+}
+
+/* Light mode — generic cards only; stat-cards keep semantic label colors */
+body.light-mode .card:not([class*="stat-card-"]):hover .card-stat-label {
     color: var(--blue) !important;
-    text-shadow: 0 0 8px rgba(2, 132, 199, 0.3) !important;
+    text-shadow: 0 0 8px rgba(3, 105, 161, 0.25) !important;
 }
 
 .card-stat-value {
@@ -1226,76 +1675,112 @@ body.light-mode .card:hover .card-stat-label {
 }
 
 .stat-card-gold {
-    background: linear-gradient(135deg, rgba(20, 30, 48, 0.85), rgba(80, 65, 20, 0.25)) !important;
-    border-color: rgba(234, 179, 8, 0.25) !important;
+    background: linear-gradient(145deg, rgba(40, 28, 6, 0.92) 0%, rgba(18, 14, 4, 0.96) 100%) !important;
+    border-color: rgba(240, 180, 41, 0.35) !important;
+    box-shadow: inset 0 1px 0 rgba(240, 180, 41, 0.1), 0 8px 32px rgba(240, 180, 41, 0.08) !important;
 }
 
 .stat-card-gold .card-stat-value {
-    color: var(--metric-value) !important;
+    color: var(--color-metric-gold) !important;
+    text-shadow: 0 0 28px rgba(245, 200, 66, 0.35);
+}
+
+.stat-card-gold .card-stat-label {
+    color: rgba(240, 180, 41, 0.75) !important;
 }
 
 .stat-card-crimson {
-    background: linear-gradient(135deg, rgba(20, 30, 48, 0.85), rgba(90, 20, 30, 0.25)) !important;
-    border-color: rgba(244, 63, 94, 0.25) !important;
+    background: linear-gradient(145deg, rgba(40, 10, 20, 0.92) 0%, rgba(20, 6, 12, 0.96) 100%) !important;
+    border-color: rgba(251, 113, 133, 0.35) !important;
+    box-shadow: inset 0 1px 0 rgba(251, 113, 133, 0.1), 0 8px 32px rgba(251, 113, 133, 0.08) !important;
 }
 
 .stat-card-crimson .card-stat-value {
-    color: var(--metric-value) !important;
+    color: var(--color-metric-crimson) !important;
+    text-shadow: 0 0 28px rgba(253, 164, 175, 0.35);
+}
+
+.stat-card-crimson .card-stat-label {
+    color: rgba(251, 113, 133, 0.75) !important;
 }
 
 .stat-card-green {
-    background: linear-gradient(135deg, rgba(20, 30, 48, 0.85), rgba(16, 80, 50, 0.25)) !important;
-    border-color: rgba(163, 230, 53, 0.25) !important;
+    background: linear-gradient(145deg, rgba(6, 36, 28, 0.92) 0%, rgba(4, 18, 14, 0.96) 100%) !important;
+    border-color: rgba(45, 212, 168, 0.35) !important;
+    box-shadow: inset 0 1px 0 rgba(45, 212, 168, 0.1), 0 8px 32px rgba(45, 212, 168, 0.08) !important;
 }
 
 .stat-card-green .card-stat-value {
-    color: var(--metric-value) !important;
+    color: var(--color-metric-green) !important;
+    text-shadow: 0 0 28px rgba(110, 231, 183, 0.35);
+}
+
+.stat-card-green .card-stat-label {
+    color: rgba(45, 212, 168, 0.75) !important;
 }
 
 .stat-card-blue {
-    background: linear-gradient(135deg, rgba(20, 30, 48, 0.85), rgba(30, 60, 110, 0.25)) !important;
-    border-color: rgba(56, 189, 248, 0.25) !important;
+    background: linear-gradient(145deg, rgba(6, 24, 44, 0.92) 0%, rgba(4, 12, 28, 0.96) 100%) !important;
+    border-color: rgba(56, 189, 248, 0.35) !important;
+    box-shadow: inset 0 1px 0 rgba(56, 189, 248, 0.1), 0 8px 32px rgba(56, 189, 248, 0.08) !important;
 }
 
 .stat-card-blue .card-stat-value {
-    color: var(--metric-value) !important;
+    color: var(--color-metric-neutral) !important;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+}
+
+.stat-card-blue .card-stat-label {
+    color: rgba(255, 255, 255, 0.62) !important;
 }
 
 .stat-card-red {
-    background: linear-gradient(135deg, rgba(20, 30, 48, 0.85), rgba(30, 60, 110, 0.25)) !important;
-    border-color: rgba(244, 63, 94, 0.3) !important;
+    background: linear-gradient(145deg, rgba(44, 10, 10, 0.92) 0%, rgba(24, 6, 6, 0.96) 100%) !important;
+    border-color: rgba(248, 113, 113, 0.35) !important;
+    box-shadow: inset 0 1px 0 rgba(248, 113, 113, 0.1), 0 8px 32px rgba(248, 113, 113, 0.08) !important;
 }
 
 .stat-card-red .card-stat-value {
-    color: var(--metric-value) !important;
+    color: var(--color-metric-red) !important;
+    text-shadow: 0 0 28px rgba(252, 165, 165, 0.35);
+}
+
+.stat-card-red .card-stat-label {
+    color: rgba(248, 113, 113, 0.75) !important;
 }
 
 .stat-card-red:hover {
-    border-color: rgba(244, 63, 94, 0.5) !important;
-    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1), 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(244, 63, 94, 0.2) !important;
+    border-color: rgba(248, 113, 113, 0.55) !important;
+    box-shadow: inset 0 1px 0 rgba(248, 113, 113, 0.15), 0 16px 36px rgba(0, 0, 0, 0.5), 0 0 24px rgba(248, 113, 113, 0.18) !important;
 }
 
 .stat-card-white {
-    background: linear-gradient(135deg, rgba(20, 30, 48, 0.85), rgba(30, 60, 110, 0.25)) !important;
-    border-color: rgba(255, 255, 255, 0.25) !important;
+    background: linear-gradient(145deg, rgba(20, 24, 36, 0.92) 0%, rgba(12, 14, 24, 0.96) 100%) !important;
+    border-color: rgba(167, 139, 250, 0.3) !important;
+    box-shadow: inset 0 1px 0 rgba(167, 139, 250, 0.08), 0 8px 32px rgba(167, 139, 250, 0.06) !important;
 }
 
 .stat-card-white .card-stat-value {
-    color: var(--metric-value) !important;
+    color: var(--color-metric-violet) !important;
+    text-shadow: 0 0 28px rgba(196, 181, 253, 0.3);
+}
+
+.stat-card-white .card-stat-label {
+    color: rgba(167, 139, 250, 0.75) !important;
 }
 
 .stat-card-white:hover {
-    border-color: rgba(255, 255, 255, 0.5) !important;
-    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.15), 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(167, 139, 250, 0.5) !important;
+    box-shadow: inset 0 1px 0 rgba(167, 139, 250, 0.12), 0 16px 36px rgba(0, 0, 0, 0.5), 0 0 24px rgba(167, 139, 250, 0.15) !important;
 }
 
 /* === KPI Salud del Sistema — tanque líquido animado (0–100) === */
 .liquid-tank {
-    --tank-bg: rgba(13, 20, 35, 0.92);
-    --tank-border: rgba(163, 230, 53, 0.35);
-    --liquid-top: #d4f96a;
-    --liquid-bottom: #84cc16;
-    --liquid-glow: rgba(163, 230, 53, 0.35);
+    --tank-bg: rgba(6, 28, 20, 0.92);
+    --tank-border: rgba(45, 212, 168, 0.45);
+    --liquid-top: #6ee7b7;
+    --liquid-bottom: #2dd4a8;
+    --liquid-glow: rgba(45, 212, 168, 0.4);
     --fill-level: 0;
     background: var(--tank-bg) !important;
     border: 2px solid var(--tank-border) !important;
@@ -1310,17 +1795,19 @@ body.light-mode .card:hover .card-stat-label {
 }
 
 .liquid-tank.liquid-tone-warn {
-    --tank-border: rgba(251, 191, 36, 0.4);
+    --tank-bg: rgba(32, 22, 4, 0.92);
+    --tank-border: rgba(252, 211, 77, 0.45);
     --liquid-top: #fde68a;
     --liquid-bottom: #f59e0b;
-    --liquid-glow: rgba(251, 191, 36, 0.35);
+    --liquid-glow: rgba(252, 211, 77, 0.4);
 }
 
 .liquid-tank.liquid-tone-critical {
-    --tank-border: rgba(244, 63, 94, 0.45);
+    --tank-bg: rgba(32, 8, 14, 0.92);
+    --tank-border: rgba(251, 113, 133, 0.5);
     --liquid-top: #fda4af;
-    --liquid-bottom: #e11d48;
-    --liquid-glow: rgba(244, 63, 94, 0.35);
+    --liquid-bottom: #f43f5e;
+    --liquid-glow: rgba(251, 113, 133, 0.4);
 }
 
 body.light-mode .liquid-tank {
@@ -1456,6 +1943,11 @@ body.light-mode .liquid-tank .card-stat-sub {
 }
 
 /* --- Section Titles & Chart wrappers --- */
+.section-header-tight {
+    margin-top: 12px;
+    margin-bottom: 12px;
+}
+
 .section-header {
     display: flex;
     align-items: center;
@@ -1465,7 +1957,7 @@ body.light-mode .liquid-tank .card-stat-sub {
 }
 
 .section-title {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 800;
     display: flex;
     align-items: center;
@@ -1477,7 +1969,7 @@ body.light-mode .liquid-tank .card-stat-sub {
     width: 4px;
     height: 18px;
     border-radius: 2px;
-    background: linear-gradient(to bottom, var(--blue), var(--chartreuse));
+    background: linear-gradient(to bottom, var(--cyan), var(--brand-gold));
 }
 
 .chart-title {
@@ -1485,22 +1977,24 @@ body.light-mode .liquid-tank .card-stat-sub {
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: var(--text-main);
+    color: var(--cyan);
     display: inline-flex;
     width: fit-content;
     align-items: center;
     gap: 8px;
     margin-bottom: 18px;
     padding: 7px 14px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--border);
+    background: rgba(34, 211, 238, 0.06);
+    border: 1px solid rgba(34, 211, 238, 0.18);
     border-radius: 50px;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
 }
 
 body.light-mode .chart-title {
-    background: rgba(15, 23, 42, 0.04);
+    color: var(--cyan) !important;
+    background: rgba(8, 145, 178, 0.08);
+    border-color: rgba(8, 145, 178, 0.2);
 }
 
 /* === Toolbar flotante reutilizable sobre charts (estilo RETRADE) === */
@@ -1824,42 +2318,42 @@ body.light-mode .model-compare-select option {
     width: 100%;
 }
 
-/* --- Health Ring --- */
 .health-hero {
     display: flex;
     align-items: center;
-    gap: 32px;
-    background: linear-gradient(135deg, rgba(17, 29, 53, 0.8), rgba(9, 15, 32, 0.9));
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 32px;
-    margin-bottom: 32px;
+    gap: 20px;
+    background: linear-gradient(135deg, rgba(32, 22, 6, 0.88) 0%, rgba(12, 18, 36, 0.94) 55%, rgba(6, 10, 24, 0.97) 100%);
+    border: 1px solid rgba(232, 168, 56, 0.22);
+    border-top: 2px solid rgba(232, 168, 56, 0.55);
+    border-radius: var(--radius-md);
+    padding: 18px 22px;
+    margin-bottom: var(--gap-bento);
+    box-shadow: 0 8px 40px rgba(232, 168, 56, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-@media (max-width: 768px) {
-    .health-hero {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-    }
-}
-
+/* --- Health Ring --- */
 .health-ring {
     position: relative;
+    flex-shrink: 0;
     width: 130px;
     height: 130px;
-    flex-shrink: 0;
+}
+
+.health-ring.health-ring-sm {
+    width: 96px;
+    height: 96px;
 }
 
 .health-ring svg {
-    width: 130px;
-    height: 130px;
+    width: 100%;
+    height: 100%;
     transform: rotate(-90deg);
+    display: block;
 }
 
 .health-ring .bg-ring {
     fill: none;
-    stroke: rgba(255, 255, 255, 0.03);
+    stroke: rgba(255, 255, 255, 0.08);
     stroke-width: 10;
 }
 
@@ -1870,18 +2364,25 @@ body.light-mode .model-compare-select option {
     transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.health-ring.health-ring-sm .health-score-text .num {
+    font-size: 28px;
+}
+
 .health-score-text {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     text-align: center;
+    z-index: 2;
+    pointer-events: none;
 }
 
 .health-score-text .num {
     font-size: 36px;
     font-weight: 900;
     font-family: var(--mono);
+    line-height: 1;
 }
 
 .health-score-text .label {
@@ -1889,10 +2390,45 @@ body.light-mode .model-compare-select option {
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 1px;
+    margin-top: 2px;
 }
 
 .health-info {
     flex: 1;
+    min-width: 0;
+}
+
+.health-info-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.health-info-title {
+    font-size: 15px;
+    font-weight: 800;
+    margin: 0;
+    color: white;
+}
+
+.health-reasons-inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 0;
+}
+
+.health-reason-chip {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    padding: 5px 10px;
+    background: rgba(232, 168, 56, 0.06);
+    border: 1px solid rgba(232, 168, 56, 0.15);
+    border-radius: 50px;
+    line-height: 1.35;
+    max-width: 100%;
 }
 
 .health-reasons {
@@ -1912,6 +2448,22 @@ body.light-mode .model-compare-select option {
     background: rgba(255, 255, 255, 0.02);
     border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+@media (max-width: 768px) {
+    .health-hero {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .health-info-head {
+        justify-content: center;
+    }
+
+    .health-reasons-inline {
+        justify-content: center;
+    }
 }
 
 /* --- RPN Bar --- */
@@ -1975,11 +2527,19 @@ body.light-mode .model-compare-select option {
 }
 
 .urgency-badge.today {
-    color: var(--red);
+    color: #fca5a5;
+    background: rgba(248, 113, 113, 0.1);
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(248, 113, 113, 0.25);
 }
 
 .urgency-badge.this_week {
-    color: var(--amber);
+    color: #fcd34d;
+    background: rgba(252, 211, 77, 0.1);
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(252, 211, 77, 0.25);
 }
 
 .owner-pill {
@@ -1993,6 +2553,62 @@ body.light-mode .model-compare-select option {
     padding: 4px 12px;
     border-radius: 50px;
     margin-top: 14px;
+}
+
+.action-text {
+    font-size: 14.5px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: white;
+    margin-bottom: 10px;
+}
+
+.action-card-footer {
+    margin-top: 12px;
+}
+
+.action-details {
+    margin-top: 4px;
+}
+
+.action-details summary {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    transition: color 0.2s;
+}
+
+.action-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.action-details summary::before {
+    content: '+ ';
+    color: var(--chartreuse);
+    font-weight: 800;
+}
+
+.action-details[open] summary::before {
+    content: '− ';
+}
+
+.action-details summary:hover {
+    color: var(--chartreuse);
+}
+
+.card .action-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
 }
 
 /* --- Report Cards --- */
@@ -2152,24 +2768,27 @@ body.light-mode .model-compare-select option {
 }
 
 .stat-card-gold .card-stat-value:hover {
-    text-shadow: 0 0 14px var(--metric-value-glow) !important;
+    text-shadow: 0 0 20px rgba(245, 200, 66, 0.55) !important;
 }
 
 .stat-card-crimson .card-stat-value:hover {
-    text-shadow: 0 0 14px var(--metric-value-glow) !important;
+    text-shadow: 0 0 20px rgba(253, 164, 175, 0.55) !important;
 }
 
 .stat-card-green .card-stat-value:hover {
-    text-shadow: 0 0 14px var(--metric-value-glow) !important;
+    text-shadow: 0 0 20px rgba(110, 231, 183, 0.55) !important;
 }
 
 .stat-card-blue .card-stat-value:hover {
-    text-shadow: 0 0 14px var(--metric-value-glow) !important;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.35) !important;
 }
 
-.stat-card-red .card-stat-value:hover,
+.stat-card-red .card-stat-value:hover {
+    text-shadow: 0 0 20px rgba(252, 165, 165, 0.55) !important;
+}
+
 .stat-card-white .card-stat-value:hover {
-    text-shadow: 0 0 14px var(--metric-value-glow) !important;
+    text-shadow: 0 0 20px rgba(196, 181, 253, 0.55) !important;
 }
 
 /* Table cells light up to pure white with text shadow on row hover */
@@ -2178,14 +2797,12 @@ body.light-mode .model-compare-select option {
 }
 
 .custom-table tr:hover td {
-    color: white !important;
-    text-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+    color: var(--text-main) !important;
 }
 
-/* Specific highlight for Campaign names in the table */
 .custom-table tr:hover td:first-child {
-    color: var(--chartreuse) !important;
-    text-shadow: 0 0 6px rgba(163, 230, 53, 0.4);
+    color: var(--brand-gold-bright) !important;
+    text-shadow: 0 0 8px rgba(245, 200, 66, 0.35);
 }
 
 /* =====================================================================
@@ -2202,12 +2819,22 @@ body.light-mode .health-hero {
 
 body.light-mode .health-hero .text-white,
 body.light-mode .health-hero h2,
+body.light-mode .health-hero .health-info-title,
 body.light-mode .health-hero .health-score-text .num {
     color: #0f172a !important;
 }
 
 body.light-mode .health-ring .bg-ring {
     stroke: rgba(15, 23, 42, 0.06) !important;
+}
+
+body.light-mode .health-reason-chip {
+    background: rgba(15, 23, 42, 0.03) !important;
+    border-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+body.light-mode .topbar-status {
+    border-top-color: rgba(15, 23, 42, 0.06) !important;
 }
 
 body.light-mode .health-reason {
@@ -2274,17 +2901,89 @@ body.light-mode .stat-card-green:hover {
 }
 
 body.light-mode .stat-card-blue:hover {
-    border-color: rgba(2, 132, 199, 0.35) !important;
+    border-color: rgba(3, 105, 161, 0.35) !important;
 }
 
-/* 3. Custom Table Text Visibility on Hover (Avoid text turning white on light rows) */
-body.light-mode .custom-table tr:hover td {
-    color: #0f172a !important;
+/* Light mode — preserve semantic KPI colors (same logic as dark) */
+body.light-mode .stat-card-gold .card-stat-value {
+    color: var(--color-metric-gold) !important;
+    text-shadow: none;
+}
+
+body.light-mode .stat-card-gold .card-stat-label {
+    color: rgba(180, 83, 9, 0.8) !important;
+}
+
+body.light-mode .stat-card-crimson .card-stat-value {
+    color: var(--color-metric-crimson) !important;
+    text-shadow: none;
+}
+
+body.light-mode .stat-card-crimson .card-stat-label {
+    color: rgba(190, 18, 60, 0.8) !important;
+}
+
+body.light-mode .stat-card-green .card-stat-value {
+    color: var(--color-metric-green) !important;
+    text-shadow: none;
+}
+
+body.light-mode .stat-card-green .card-stat-label {
+    color: rgba(4, 120, 87, 0.8) !important;
+}
+
+body.light-mode .stat-card-blue .card-stat-value {
+    color: var(--color-metric-neutral) !important;
+    text-shadow: none;
+}
+
+body.light-mode .stat-card-blue .card-stat-label {
+    color: rgba(15, 23, 42, 0.62) !important;
+}
+
+body.light-mode .stat-card-red .card-stat-value {
+    color: var(--color-metric-red) !important;
+    text-shadow: none;
+}
+
+body.light-mode .stat-card-red .card-stat-label {
+    color: rgba(185, 28, 28, 0.8) !important;
+}
+
+body.light-mode .stat-card-white .card-stat-value {
+    color: var(--color-metric-violet) !important;
+    text-shadow: none;
+}
+
+body.light-mode .stat-card-white .card-stat-label {
+    color: rgba(109, 40, 217, 0.8) !important;
+}
+
+body.light-mode .stat-card-gold:hover .card-stat-label { color: #92400e !important; }
+body.light-mode .stat-card-blue:hover .card-stat-label { color: #0f172a !important; }
+body.light-mode .stat-card-green:hover .card-stat-label { color: #065f46 !important; }
+body.light-mode .stat-card-red:hover .card-stat-label,
+body.light-mode .stat-card-crimson:hover .card-stat-label { color: #991b1b !important; }
+body.light-mode .stat-card-white:hover .card-stat-label { color: #5b21b6 !important; }
+
+/* 3. Custom Table — hover preserves metric colors */
+body.light-mode .custom-table tr:hover td:not([class*="metric-"]) {
+    color: var(--text-main) !important;
     text-shadow: none !important;
     background-color: rgba(15, 23, 42, 0.03) !important;
 }
 
-body.light-mode .custom-table tr:hover td:first-child {
+body.light-mode .custom-table tr:hover td[class*="metric-"] {
+    background-color: rgba(15, 23, 42, 0.03) !important;
+    filter: brightness(0.92);
+}
+
+body.light-mode .custom-table tr:hover td.metric-model-name {
+    color: var(--brand-gold) !important;
+    filter: none;
+}
+
+body.light-mode .custom-table tr:hover td:first-child:not([class*="metric-"]) {
     color: var(--chartreuse) !important;
 }
 
@@ -2293,11 +2992,11 @@ body.light-mode .card [style*="color: white"],
 body.light-mode .card [style*="color:white"],
 body.light-mode .card [style*="color: #fff"],
 body.light-mode .card [style*="color:#fff"],
-body.light-mode .custom-table td[style*="color: white"],
-body.light-mode .custom-table td[style*="color:white"],
-body.light-mode .custom-table td[style*="color: #fff"],
-body.light-mode .custom-table td[style*="color:#fff"] {
-    color: #0f172a !important;
+body.light-mode .custom-table td[style*="color: white"]:not([class*="metric-"]),
+body.light-mode .custom-table td[style*="color:white"]:not([class*="metric-"]),
+body.light-mode .custom-table td[style*="color: #fff"]:not([class*="metric-"]),
+body.light-mode .custom-table td[style*="color:#fff"]:not([class*="metric-"]) {
+    color: var(--text-main) !important;
 }
 
 /* 5. Custom Tab Banners & Inlined Gradients Overrides */

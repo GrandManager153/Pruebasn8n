@@ -447,6 +447,16 @@ function switchTab(tabId) {
             } else {
                 if (charts.timeseries) { charts.timeseries.reset(); charts.timeseries.update(); }
             }
+            setTimeout(() => {
+                document.querySelectorAll('#forecast-models-body .mase-bar-fill').forEach(bar => {
+                    const pct = bar.getAttribute('data-pct');
+                    if (pct != null) {
+                        bar.style.width = '0%';
+                        void bar.offsetWidth;
+                        bar.style.width = pct + '%';
+                    }
+                });
+            }, 80);
         } else if (tabId === 'investment') {
             if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.investment && dashboardData.investment.campaigns) {
                 renderCampaignChart(dashboardData.investment.campaigns);
@@ -641,7 +651,7 @@ function renderBOS(data) {
     const mainSbarText = document.getElementById('main-sbar-text');
     if (mainSbar && mainSbarText) {
         const severityClass = data.system.status.color === 'rojo' ? 'status-red' : data.system.status.color === 'amarillo' ? 'status-yellow' : 'status-green';
-        mainSbar.className = `sbar main-sbar ${severityClass}`;
+        mainSbar.className = `sbar topbar-status ${severityClass}`;
         mainSbarText.innerHTML = `ESTADO: ${cleanTechnicalTerms(data.system.status.label).toUpperCase()} &mdash; ${cleanTechnicalTerms(data.system.status.reasons[0] || 'Operación en curso.')}`;
     }
 
@@ -665,14 +675,13 @@ function renderBOS(data) {
             </div>
         </div>
         <div class="health-info">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px; flex-wrap: wrap;">
-                <h2 class="text-white" style="font-size: 16px; font-weight: 800; margin: 0;">Salud de la Operación Comercial</h2>
+            <div class="health-info-head">
+                <h2 class="health-info-title">Salud Operativa</h2>
                 <span class="custom-badge ${data.system.status.color === 'amarillo' ? 'custom-badge-warning' : data.system.status.color === 'rojo' ? 'custom-badge-critical' : 'custom-badge-success'}">${cleanTechnicalTerms(data.system.status.label)}</span>
             </div>
-            <p class="text-muted" style="font-size: 13.5px; line-height: 1.6;">Auditoría integral de la pauta publicitaria, flujo operativo en centros de llamadas y proyecciones basadas en modelos predictivos matemáticos de precisión.</p>
-            <div class="health-reasons">
-                ${data.system.status.reasons.map(r => `
-                    <div class="health-reason"><span style="color: var(--gold); font-weight: bold;">*</span> ${cleanTechnicalTerms(r)}</div>
+            <div class="health-reasons health-reasons-inline">
+                ${data.system.status.reasons.slice(0, 3).map(r => `
+                    <span class="health-reason-chip">${cleanTechnicalTerms(r)}</span>
                 `).join('')}
             </div>
         </div>
@@ -755,6 +764,7 @@ function renderBOS(data) {
         const isHealth = idx === 0;
         const escapedLabel = kpi.label.replace(/'/g, "\\'");
         const escapedValue = String(kpi.value).replace(/'/g, "\\'");
+        const trendBadge = isHealth ? '' : getKpiTrendBadgeHtml(kpi, data);
         if (isHealth) {
             return `
                 <div class="card liquid-tank liquid-tone-${liquidTone} card-animate"
@@ -766,7 +776,9 @@ function renderBOS(data) {
                         <div class="liquid-tank__surface liquid-tank__surface--2"></div>
                     </div>
                     <div class="liquid-tank__content">
-                        <div class="card-stat-label">${kpi.label}</div>
+                        <div class="card-stat-top">
+                            <div class="card-stat-label">${kpi.label}</div>
+                        </div>
                         <div class="card-stat-value" id="kpi-val-${idx}" data-value="${kpi.value}">0</div>
                         <div class="card-stat-sub">${kpi.sub || '&nbsp;'}</div>
                     </div>
@@ -774,9 +786,12 @@ function renderBOS(data) {
             `;
         }
         return `
-            <div class="card stat-card-${kpi.color || 'blue'} card-animate" style="animation-delay: ${idx * 0.025}s;"
+            <div class="card stat-card-${kpi.color || 'blue'} card-animate kpi-card" style="animation-delay: ${idx * 0.025}s;"
                 onclick="openKpiModal('${escapedLabel}', '${escapedValue}')">
-                <div class="card-stat-label">${kpi.label}</div>
+                <div class="card-stat-top">
+                    <div class="card-stat-label">${kpi.label}</div>
+                    ${trendBadge}
+                </div>
                 <div class="card-stat-value" id="kpi-val-${idx}" data-value="${kpi.value}">0</div>
                 <div class="card-stat-sub">${kpi.sub || '&nbsp;'}</div>
             </div>
@@ -802,13 +817,16 @@ function renderBOS(data) {
     actionsGrid.innerHTML = data.system.actions.map((a, idx) => `
         <div class="card card-animate" style="animation-delay: ${(idx + cleanedKpis.length) * 0.025 + 0.08}s;">
             <div class="urgency-badge ${a.urgency}">${a.urgency === 'today' ? 'Acción Inmediata' : 'Plan Semanal'}</div>
-            <div class="action-text" style="font-size: 14.5px; font-weight: 600; line-height: 1.4; color: white; margin-bottom: 12px;">${cleanTechnicalTerms(a.action)}</div>
-            <div class="action-meta" style="font-size: 12px; color: var(--text-muted); line-height: 1.6; display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px;">
-                <div><strong>Motivo:</strong> ${cleanTechnicalTerms(a.reason)}</div>
-                <div><strong>Evidencia:</strong> ${cleanTechnicalTerms(a.evidence)}</div>
-                <div><strong>Impacto Estimado:</strong> ${cleanTechnicalTerms(a.impact_est)}</div>
-            </div>
-            <div>
+            <div class="action-text">${cleanTechnicalTerms(a.action)}</div>
+            <details class="action-details">
+                <summary>Ver contexto</summary>
+                <div class="action-meta">
+                    <div><strong>Motivo:</strong> ${cleanTechnicalTerms(a.reason)}</div>
+                    <div><strong>Evidencia:</strong> ${cleanTechnicalTerms(a.evidence)}</div>
+                    <div><strong>Impacto Estimado:</strong> ${cleanTechnicalTerms(a.impact_est)}</div>
+                </div>
+            </details>
+            <div class="action-card-footer">
                 <span class="owner-pill">Responsable: ${cleanTechnicalTerms(a.owner)}</span>
             </div>
         </div>
@@ -997,6 +1015,117 @@ function renderFunnelDetails(data) {
 //  RENDER FORECAST TAB DETAILS
 // =====================================================================
 
+function getMaseMetricClass(mase) {
+    if (typeof mase !== 'number' || !isFinite(mase)) return 'metric-mase-warn';
+    if (mase < 0.85) return 'metric-mase-good';
+    if (mase < 1.0) return 'metric-mase-warn';
+    return 'metric-mase-bad';
+}
+
+function getMaseBadgeClass(mase) {
+    if (typeof mase !== 'number' || !isFinite(mase)) return 'metric-badge-warn';
+    if (mase < 0.85) return 'metric-badge-good';
+    if (mase < 1.0) return 'metric-badge-warn';
+    return 'metric-badge-bad';
+}
+
+function getMaseStateLabel(mase) {
+    return (typeof mase === 'number' && isFinite(mase) && mase < 1.0) ? 'Aceptable' : 'Subóptimo';
+}
+
+/** Badge de tendencia ↑/↓ para tarjetas KPI del dashboard. */
+function getKpiTrendBadgeHtml(kpi, data) {
+    const backendLabel = Object.keys(KPI_BACKEND_LABEL_MAP).find(k => KPI_BACKEND_LABEL_MAP[k] === kpi.label) || kpi.label;
+
+    if (backendLabel === 'MASE' || kpi.label.includes('MASE')) {
+        const mase = parseFloat(String(kpi.value).replace(/[^0-9.]/g, ''));
+        if (isFinite(mase)) {
+            if (mase < 1) {
+                const pct = ((1 - mase) * 100).toFixed(1);
+                return `<span class="kpi-trend-badge kpi-trend-up">↓ ${pct}% base</span>`;
+            }
+            const pct = ((mase - 1) * 100).toFixed(1);
+            return `<span class="kpi-trend-badge kpi-trend-down">↑ ${pct}% base</span>`;
+        }
+    }
+
+    let pct = null;
+    let goodWhenUp = true;
+
+    if (backendLabel === 'Cambio semanal' || kpi.label.includes('WoW')) {
+        pct = data?.operations?.wow_change_pct ?? parseFloat(String(kpi.value).replace(/[^0-9.\-+]/g, ''));
+        goodWhenUp = true;
+    } else if (backendLabel === 'Cambio regimen' || kpi.label.includes('Regime Shift')) {
+        pct = parseFloat(String(kpi.value).replace(/[^0-9.\-+]/g, ''));
+        goodWhenUp = true;
+    } else if (kpi.label.includes('Sobre-Contacto') || kpi.label.includes('Intentos')) {
+        pct = parseFloat(String(kpi.value).replace(/[^0-9.\-+]/g, ''));
+        goodWhenUp = false;
+    } else if (String(kpi.value).includes('%')) {
+        pct = parseFloat(String(kpi.value).replace(/[^0-9.\-+]/g, ''));
+        goodWhenUp = true;
+    }
+
+    if (pct == null || !isFinite(pct)) return '';
+
+    const absPct = Math.abs(pct).toFixed(1);
+    if (Math.abs(pct) < 0.05) {
+        return `<span class="kpi-trend-badge kpi-trend-neutral">→ ${absPct}%</span>`;
+    }
+
+    const isUp = pct > 0;
+    const isGood = goodWhenUp ? isUp : !isUp;
+    const arrow = isUp ? '↑' : '↓';
+    const cls = isGood ? 'kpi-trend-up' : 'kpi-trend-down';
+    return `<span class="kpi-trend-badge ${cls}">${arrow} ${absPct}%</span>`;
+}
+
+function getMaseBarStyle(mase) {
+    if (mase == null || !isFinite(mase)) return { width: 0, color: 'var(--text-dim)' };
+    const width = Math.min((mase / 1.5) * 100, 100);
+    const color = mase < 0.85 ? 'var(--green)' : mase < 1.0 ? 'var(--amber)' : 'var(--red)';
+    return { width, color };
+}
+
+function renderModelLeaderboardRow(m, rank) {
+    const maseClass = getMaseMetricClass(m.mase);
+    const badgeClass = getMaseBadgeClass(m.mase);
+    const stateLabel = getMaseStateLabel(m.mase);
+    const maseVal = m.mase != null && isFinite(m.mase) ? m.mase : null;
+    const bar = getMaseBarStyle(maseVal);
+
+    const medalHtml = rank === 1
+        ? '<span class="model-medal medal-1" title="1er lugar">1</span>'
+        : rank === 2
+            ? '<span class="model-medal medal-2" title="2do lugar">2</span>'
+            : rank === 3
+                ? '<span class="model-medal medal-3" title="3er lugar">3</span>'
+                : `<span class="model-rank-num">${rank}</span>`;
+
+    const rowClasses = ['model-leaderboard-row'];
+    if (rank === 1) rowClasses.push('model-row-best');
+    if (rank % 2 === 0) rowClasses.push('model-row-alt');
+
+    const bestTag = rank === 1 ? '<span class="best-model-tag">Mejor modelo</span>' : '';
+    const modelName = cleanTechnicalTerms(m.name.replace(/_/g, ' ').toUpperCase());
+
+    return `
+        <tr class="${rowClasses.join(' ')}">
+            <td class="model-rank-cell">${medalHtml}</td>
+            <td class="metric-model-name">${modelName}${bestTag}</td>
+            <td class="mase-cell">
+                <div class="mase-cell-inner">
+                    <span class="${maseClass}">${maseVal != null ? maseVal.toFixed(3) : 'N/A'}</span>
+                    ${maseVal != null ? `<div class="mase-bar" title="MASE ${maseVal.toFixed(3)}"><div class="mase-bar-fill" data-pct="${bar.width}" style="width: 0%; background: ${bar.color};"></div></div>` : ''}
+                </div>
+            </td>
+            <td class="metric-mae">${m.mae ? m.mae.toFixed(2) : 'N/A'}</td>
+            <td class="metric-rmse">${m.rmse ? m.rmse.toFixed(2) : 'N/A'}</td>
+            <td><span class="custom-badge ${badgeClass}">${stateLabel}</span></td>
+        </tr>
+    `;
+}
+
 function renderForecastDetails(forecast, options = {}) {
     const prefix = options.prefix || '';
     const show14d = options.show14d !== false;
@@ -1047,19 +1176,14 @@ function renderForecastDetails(forecast, options = {}) {
         // Ordenar por MASE ascendente (mejor desempeño primero)
         models.sort((a, b) => (a.mase != null ? a.mase : Infinity) - (b.mase != null ? b.mase : Infinity));
 
-        modelsBody.innerHTML = models.map(m => {
-            const maseColor = m.mase < 0.85 ? 'var(--green)' : m.mase < 1.0 ? 'var(--amber)' : 'var(--red)';
-            const stateLabel = m.mase < 1.0 ? 'Aceptable' : 'Subóptimo';
-            return `
-                <tr>
-                    <td style="font-weight: 600; color: white;">${cleanTechnicalTerms(m.name.replace(/_/g, ' ').toUpperCase())}</td>
-                    <td style="text-align: right; font-family: var(--mono); color: ${maseColor}; font-weight: bold;">${m.mase.toFixed(3)}</td>
-                    <td style="text-align: right; font-family: var(--mono); color: var(--text-muted);">${m.mae ? m.mae.toFixed(2) : 'N/A'}</td>
-                    <td style="text-align: right; font-family: var(--mono); color: var(--text-dim);">${m.rmse ? m.rmse.toFixed(2) : 'N/A'}</td>
-                    <td><span class="custom-badge" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: ${maseColor}">${stateLabel}</span></td>
-                </tr>
-            `;
-        }).join('');
+        modelsBody.innerHTML = models.map((m, idx) => renderModelLeaderboardRow(m, idx + 1)).join('');
+
+        requestAnimationFrame(() => {
+            modelsBody.querySelectorAll('.mase-bar-fill').forEach(bar => {
+                const pct = bar.getAttribute('data-pct');
+                if (pct != null) bar.style.width = pct + '%';
+            });
+        });
     }
 }
 
@@ -1389,16 +1513,14 @@ function renderModelDetailPanel() {
         const pron = daily?.value != null ? Math.round(daily.value) : '—';
         const color = getModelColor(name);
         const mase = rec?.mase;
-        const maseColor = typeof mase === 'number'
-            ? (mase < 0.85 ? 'var(--green)' : mase < 1.0 ? 'var(--amber)' : 'var(--red)')
-            : 'var(--text-muted)';
+        const maseClass = getMaseMetricClass(mase);
         return `
             <tr>
                 <td style="font-weight: 600; color: ${color};">${formatModelLabel(name)}</td>
-                <td style="text-align: right; font-family: var(--mono); font-weight: 600;">${pron}</td>
-                <td style="text-align: right; font-family: var(--mono); color: ${maseColor}; font-weight: bold;">${typeof mase === 'number' ? mase.toFixed(3) : '—'}</td>
-                <td style="text-align: right; font-family: var(--mono); color: var(--text-muted);">${rec?.mae != null ? Number(rec.mae).toFixed(2) : '—'}</td>
-                <td style="text-align: right; font-family: var(--mono); color: var(--text-dim);">${rec?.rmse != null ? Number(rec.rmse).toFixed(2) : '—'}</td>
+                <td class="metric-pron">${pron}</td>
+                <td class="${maseClass}">${typeof mase === 'number' ? mase.toFixed(3) : '—'}</td>
+                <td class="metric-mae">${rec?.mae != null ? Number(rec.mae).toFixed(2) : '—'}</td>
+                <td class="metric-rmse">${rec?.rmse != null ? Number(rec.rmse).toFixed(2) : '—'}</td>
             </tr>
         `;
     }).join('');
