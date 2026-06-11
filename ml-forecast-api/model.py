@@ -7,7 +7,9 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.linear_model import Ridge
+from sklearn.neural_network import MLPRegressor
 
 from features import build_feature_matrix, build_next_features, series_to_dataframe
 
@@ -44,55 +46,109 @@ def run_forecast(
     bt = min(backtest_days, n - 15)
     bt = max(bt, 0)
 
-    preds_bt: list[float] = []
+    model_names = ["random_forest", "gradient_boosting", "ridge", "mlp_neural_network"]
+    preds_bt_dict: dict[str, list[float]] = {name: [] for name in model_names}
     acts_bt: list[float] = []
     dates_bt: list[str] = []
+
     for i in range(n - bt, n):
         train_df = df.iloc[:i].copy()
         X_train, y_train = build_feature_matrix(train_df)
         if len(X_train) < 10:
             continue
-        model = RandomForestRegressor(
-            n_estimators=80,
+        row_df = df.iloc[: i + 1]
+        X_next = build_next_features(row_df)
+        if X_next is None:
+            continue
+
+        acts_bt.append(float(values[i]))
+        dates_bt.append(str(df["date"].iloc[i]))
+
+        for name in model_names:
+            if name == "random_forest":
+                model = RandomForestRegressor(
+                    n_estimators=80,
+                    max_depth=8,
+                    min_samples_leaf=2,
+                    random_state=42,
+                    n_jobs=-1,
+                )
+            elif name == "gradient_boosting":
+                model = GradientBoostingRegressor(
+                    n_estimators=80,
+                    max_depth=5,
+                    min_samples_leaf=2,
+                    random_state=42,
+                )
+            elif name == "ridge":
+                model = Ridge(alpha=1.0)
+            elif name == "mlp_neural_network":
+                model = MLPRegressor(
+                    hidden_layer_sizes=(50, 25),
+                    max_iter=500,
+                    random_state=42,
+                )
+
+            model.fit(X_train, y_train)
+            p = float(model.predict(X_next)[0])
+            preds_bt_dict[name].append(p)
+
+    if not acts_bt:
+        return {"error": "Backtest produced no predictions", "model_name": "random_forest"}
+
+    act_a = np.array(acts_bt)
+    naive_mae = _seasonal_naive_mae(act_a, values[n - bt - 7 : n])
+
+    model_results = {}
+    for name in model_names:
+        pred_a = np.array(preds_bt_dict[name])
+        m = _metrics(act_a, pred_a)
+        mase = round(m["mae"] / naive_mae, 4) if naive_mae > 0 else 999.0
+        model_results[name] = {
+            "mae": m["mae"],
+            "rmse": m["rmse"],
+            "mase": mase,
+            "preds": pred_a,
+        }
+
+    # Select best model based on MASE
+    best_model_name = min(model_results.keys(), key=lambda k: model_results[k]["mase"])
+    best_mase = model_results[best_model_name]["mase"]
+
+    X_full, y_full = build_feature_matrix(df)
+    if best_model_name == "random_forest":
+        final_model = RandomForestRegressor(
+            n_estimators=100,
             max_depth=8,
             min_samples_leaf=2,
             random_state=42,
             n_jobs=-1,
         )
-        model.fit(X_train, y_train)
-        row_df = df.iloc[: i + 1]
-        X_next = build_next_features(row_df)
-        if X_next is None:
-            continue
-        p = float(model.predict(X_next)[0])
-        preds_bt.append(p)
-        acts_bt.append(float(values[i]))
-        dates_bt.append(str(df["date"].iloc[i]))
+    elif best_model_name == "gradient_boosting":
+        final_model = GradientBoostingRegressor(
+            n_estimators=100,
+            max_depth=5,
+            min_samples_leaf=2,
+            random_state=42,
+        )
+    elif best_model_name == "ridge":
+        final_model = Ridge(alpha=1.0)
+    elif best_model_name == "mlp_neural_network":
+        final_model = MLPRegressor(
+            hidden_layer_sizes=(50, 25),
+            max_iter=500,
+            random_state=42,
+        )
 
-    if not preds_bt:
-        return {"error": "Backtest produced no predictions", "model_name": "random_forest"}
-
-    act_a = np.array(acts_bt)
-    pred_a = np.array(preds_bt)
-    m = _metrics(act_a, pred_a)
-    naive_mae = _seasonal_naive_mae(act_a, values[n - bt - 7 : n])
-    mase = round(m["mae"] / naive_mae, 4) if naive_mae > 0 else 999.0
-
-    X_full, y_full = build_feature_matrix(df)
-    final_model = RandomForestRegressor(
-        n_estimators=100,
-        max_depth=8,
-        min_samples_leaf=2,
-        random_state=42,
-        n_jobs=-1,
-    )
     final_model.fit(X_full, y_full)
     X_next = build_next_features(df)
     if X_next is None:
-        return {"error": "Could not build next-day features", "model_name": "random_forest"}
+        return {"error": f"Could not build next-day features for {best_model_name}", "model_name": best_model_name}
 
     forecast = max(0.0, float(final_model.predict(X_next)[0]))
-    residuals = np.abs(act_a - pred_a)
+    best_preds = model_results[best_model_name]["preds"]
+    residuals = np.abs(act_a - best_preds)
+
     q50 = float(np.quantile(residuals, 0.5))
     q80 = float(np.quantile(residuals, 0.8))
 
@@ -100,16 +156,13 @@ def run_forecast(
     band_low = max(0, int(round(forecast - q80)))
     band_high = int(round(forecast + q80))
 
-    # Per-day backtest predictions (out-of-sample, one-step-ahead) so the
-    # dashboard can plot predicted-vs-actual. These reuse the exact same
-    # preds/acts already used for MASE, so the metric is unaffected.
     backtest_series = [
         {
             "date": dates_bt[k],
             "actual": round(float(acts_bt[k]), 2),
-            "predicted": round(float(preds_bt[k]), 2),
+            "predicted": round(float(preds_bt_dict[best_model_name][k]), 2),
         }
-        for k in range(len(preds_bt))
+        for k in range(len(acts_bt))
     ]
 
     last_date = pd.to_datetime(df["date"].iloc[-1])
@@ -121,54 +174,76 @@ def run_forecast(
         "band_high": band_high,
     }
 
-    if mase < 0.8:
+    if best_mase < 0.8:
         mode, confidence = "model", "alta"
-        label = f"Forecast RF favorable (MASE: {mase})"
-    elif mase < 1.0:
+        label = f"Forecast {best_model_name} favorable (MASE: {best_mase})"
+    elif best_mase < 1.0:
         mode, confidence = "weak_model", "media"
-        label = f"Forecast RF orientativo (MASE: {mase})"
+        label = f"Forecast {best_model_name} orientativo (MASE: {best_mase})"
     else:
         mode, confidence = "observed_fallback", "baja"
-        label = f"RF no supera baseline estacional (MASE: {mase})"
+        label = f"{best_model_name} no supera baseline estacional (MASE: {best_mase})"
+
+    models_list = []
+    for name in model_names:
+        series_aligned = [None] * n
+        for k in range(len(acts_bt)):
+            idx = n - bt + k
+            series_aligned[idx] = round(float(preds_bt_dict[name][k]), 2)
+
+        models_list.append({
+            "name": name,
+            "mae": model_results[name]["mae"],
+            "mase": model_results[name]["mase"],
+            "rmse": model_results[name]["rmse"],
+            "series": series_aligned,
+        })
+
+    naive_series_aligned = [None] * n
+    for k in range(len(acts_bt)):
+        idx = n - bt + k
+        naive_series_aligned[idx] = float(values[idx - 7]) if idx >= 7 else None
+
+    models_list.append({
+        "name": "seasonal_naive",
+        "mae": round(naive_mae, 2),
+        "mase": 1.0,
+        "rmse": round(naive_mae * 1.2, 2),
+        "series": naive_series_aligned,
+    })
+    models_list.sort(key=lambda x: x["mase"])
 
     return {
-        "model_name": "random_forest",
+        "model_name": best_model_name,
         "recommended_value": fc_int,
-        "mase": mase,
+        "mase": best_mase,
         "confidence": confidence,
         "mode": mode,
         "label": label,
         "backtest": {
             "window_days": bt,
             "naive_mae": round(naive_mae, 2),
-            "models": [
-                {
-                    "name": "random_forest",
-                    "mae": m["mae"],
-                    "mase": mase,
-                    "rmse": m["rmse"],
-                },
-                {
-                    "name": "seasonal_naive",
-                    "mae": round(naive_mae, 2),
-                    "mase": 1.0,
-                    "rmse": round(naive_mae * 1.2, 2),
-                },
-            ],
-            "selected": "random_forest",
+            "models": models_list,
+            "selected": best_model_name,
         },
         "forecast_horizons": {
             "next_1d": {
                 "forecast": fc_int,
                 "band_low": band_low,
                 "band_high": band_high,
-                "method": "random_forest",
+                "method": best_model_name,
             },
             "next_7d": {
                 "forecast": fc_int * 7,
                 "band_low": max(0, int(round((forecast - q80) * 7))),
                 "band_high": int(round((forecast + q80) * 7)),
-                "method": "random_forest+scale",
+                "method": f"{best_model_name}+scale",
+            },
+            "next_14d": {
+                "forecast": fc_int * 14,
+                "band_low": max(0, int(round((forecast - q80) * 14))),
+                "band_high": int(round((forecast + q80) * 14)),
+                "method": f"{best_model_name}+scale",
             },
         },
         "intervals": {
@@ -181,7 +256,7 @@ def run_forecast(
         "diagnostics": {
             "total_history_days": n,
             "backtest_days": bt,
-            "best_model": "random_forest",
-            "best_mase": mase,
+            "best_model": best_model_name,
+            "best_mase": best_mase,
         },
     }

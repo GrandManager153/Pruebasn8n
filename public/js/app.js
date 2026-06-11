@@ -850,7 +850,7 @@ function renderBOS(data) {
 
             if (maseRf <= maseLocal && data.forecast_rf && data.forecast_rf.recommended_value != null) {
                 bestModelVal = data.forecast_rf.recommended_value;
-                bestModelName = 'Random Forest';
+                bestModelName = data.forecast_rf.model_name || 'Random Forest';
                 bestConfidence = data.forecast_rf.confidence || 'Alta';
             } else if (data.forecast && data.forecast.recommended_value != null) {
                 bestModelVal = data.forecast.recommended_value;
@@ -865,10 +865,22 @@ function renderBOS(data) {
         }
         if (k.label === 'MASE') {
             let bestModelName = 'Random Forest';
-            let bestMase = 0.2724;
+            let bestMase = 999;
             if (data.forecast_rf && data.forecast_rf.mase != null) {
                 bestMase = data.forecast_rf.mase;
-                bestModelName = 'Random Forest';
+                bestModelName = data.forecast_rf.model_name || 'Random Forest';
+            }
+            if (data.forecast_rf && Array.isArray(data.forecast_rf.backtest_models)) {
+                data.forecast_rf.backtest_models.forEach(m => {
+                    if (m.mase != null && m.mase < bestMase) {
+                        bestMase = m.mase;
+                        bestModelName = m.name;
+                    }
+                });
+            }
+            if (data.forecast && data.forecast.mase != null && data.forecast.mase < bestMase) {
+                bestMase = data.forecast.mase;
+                bestModelName = data.forecast.method || 'Theta Lite';
             }
             if (data.forecast && Array.isArray(data.forecast.backtest_models)) {
                 data.forecast.backtest_models.forEach(m => {
@@ -879,7 +891,7 @@ function renderBOS(data) {
                 });
             }
             let formattedName = bestModelName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-            k.value = Number(bestMase).toFixed(2);
+            k.value = Number(bestMase).toFixed(3);
             sub = formattedName;
             k.color = 'white';
             label = 'Precisión del Modelo';
@@ -1283,14 +1295,26 @@ function renderForecastDetails(forecast, options = {}) {
     if (modelsBody && Array.isArray(forecast.backtest_models)) {
         const models = forecast.backtest_models.slice();
 
-        // Incluir Random Forest (desde forecast_rf) en la clasificación
+        // Incluir todos los modelos de forecast_rf (ML models) en la clasificación
         if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.forecast_rf && dashboardData.forecast_rf.available !== false) {
             const rf = dashboardData.forecast_rf;
-            const rfName = rf.model_name || 'random_forest';
-            let rfEntry = Array.isArray(rf.backtest_models) ? rf.backtest_models.find(x => x.name === rfName) : null;
-            if (!rfEntry && rf.mase != null) rfEntry = { name: rfName, mase: rf.mase };
-            if (rfEntry && rfEntry.mase != null && !models.some(m => m.name === rfEntry.name)) {
-                models.push(rfEntry);
+            if (Array.isArray(rf.backtest_models)) {
+                rf.backtest_models.forEach(rfModel => {
+                    if (rfModel && rfModel.mase != null && !models.some(m => m.name === rfModel.name)) {
+                        models.push({
+                            name: rfModel.name,
+                            mase: rfModel.mase,
+                            mae: rfModel.mae,
+                            rmse: rfModel.rmse
+                        });
+                    }
+                });
+            } else {
+                const rfName = rf.model_name || 'random_forest';
+                let rfEntry = { name: rfName, mase: rf.mase, mae: rf.mae, rmse: rf.rmse };
+                if (rfEntry.mase != null && !models.some(m => m.name === rfEntry.name)) {
+                    models.push(rfEntry);
+                }
             }
         }
 
@@ -1298,8 +1322,8 @@ function renderForecastDetails(forecast, options = {}) {
         models.sort((a, b) => (a.mase != null ? a.mase : Infinity) - (b.mase != null ? b.mase : Infinity));
 
         modelsBody.innerHTML = models.map(m => {
-            const maseColor = m.mase < 0.85 ? 'var(--green)' : m.mase < 1.0 ? 'var(--amber)' : 'var(--red)';
-            const stateLabel = m.mase < 1.0 ? 'Aceptable' : 'Subóptimo';
+            const maseColor = m.mase < 0.75 ? 'var(--green)' : (m.mase < 1.0 ? 'var(--amber)' : 'var(--red)');
+            const stateLabel = m.mase < 0.75 ? 'Excelente' : (m.mase < 1.0 ? 'Aceptable' : 'Subóptimo');
             return `
                 <tr>
                     <td style="font-weight: 600; color: white;">${cleanTechnicalTerms(m.name.replace(/_/g, ' ').toUpperCase())}</td>
@@ -1348,17 +1372,29 @@ function buildComparableModels(data) {
 
     const rf = data ? data.forecast_rf : null;
     if (rf && rf.available !== false) {
-        const rfName = rf.model_name || 'random_forest';
-        if (!list.some(m => m.name === rfName)) {
-            let series = Array.isArray(rf.series) ? rf.series : null;
-            if (!series && Array.isArray(rf.backtest_models)) {
-                const e = rf.backtest_models.find(x => x.name === rfName);
-                if (e && Array.isArray(e.series)) series = e.series;
+        if (Array.isArray(rf.backtest_models)) {
+            rf.backtest_models.forEach(m => {
+                if (!list.some(x => x.name === m.name)) {
+                    let series = Array.isArray(m.series) ? m.series : null;
+                    if (!series && m.name === (rf.model_name || 'random_forest')) {
+                        series = Array.isArray(rf.series) ? rf.series : buildRfAlignedSeries(data);
+                    }
+                    list.push({
+                        name: m.name,
+                        mase: m.mase,
+                        mae: m.mae,
+                        rmse: m.rmse,
+                        series: series
+                    });
+                }
+            });
+        } else {
+            const rfName = rf.model_name || 'random_forest';
+            if (!list.some(m => m.name === rfName)) {
+                let series = Array.isArray(rf.series) ? rf.series : null;
+                if (!series) series = buildRfAlignedSeries(data);
+                list.push({ name: rfName, mase: rf.mase, mae: rf.mae, rmse: rf.rmse, series: series });
             }
-            // Serie real de predicciones del backtest (predicho por día), alineada
-            // por fecha a la serie histórica que define el eje X de la gráfica.
-            if (!series) series = buildRfAlignedSeries(data);
-            list.push({ name: rfName, mase: rf.mase, series: series });
         }
     }
     return list;
