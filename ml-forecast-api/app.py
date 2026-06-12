@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from model import run_forecast
 
-API_KEY = os.environ.get("API_KEY", "dev-key-change-me")
+API_KEY = os.environ.get("API_KEY", "mkt-bi-ia-dev-key")
 
 app = FastAPI(title="ML Forecast API", version="2.0.0")
 

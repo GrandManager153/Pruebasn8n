@@ -127,6 +127,71 @@ def build_backtest_target_features(df: pd.DataFrame, target_idx: int) -> pd.Data
     return pd.DataFrame([feat])
 
 
+def _safe_series_lag(series, idx: int, k: int) -> float:
+    if idx >= k:
+        return float(series[idx - k])
+    if idx > 0:
+        return float(series[:idx].mean())
+    return float(series[0])
+
+
+def build_adaptive_row_features(
+    df: pd.DataFrame,
+    idx: int,
+    feature_cols: list[str] | None = None,
+) -> dict[str, float] | None:
+    """Features with fallbacks so ML overlays can start near the beginning of the series."""
+    if idx < 1:
+        return None
+    feature_cols = feature_cols or feature_columns()
+    values = df["value"].to_numpy()
+    spend = df["spend"].to_numpy()
+    cp_val = df["changepoint_recent"].iloc[idx] if "changepoint_recent" in df.columns else 0.0
+    if pd.isna(cp_val):
+        cp_val = 0.0
+
+    base = {
+        "dow": float(df["dow"].iloc[idx]),
+        "lag_1": _safe_series_lag(values, idx, 1),
+        "lag_7": _safe_series_lag(values, idx, 7),
+        "lag_14": _safe_series_lag(values, idx, 14),
+        "rolling_mean_7": float(values[max(0, idx - 6) : idx + 1].mean()),
+        "spend": float(spend[idx]),
+        "spend_lag_1": _safe_series_lag(spend, idx, 1),
+        "spend_lag_7": _safe_series_lag(spend, idx, 7),
+        "spend_rolling_7": float(spend[max(0, idx - 6) : idx + 1].mean()),
+        "changepoint_recent": float(cp_val),
+    }
+    return {k: base[k] for k in feature_cols if k in base}
+
+
+def build_adaptive_train_matrix(
+    df: pd.DataFrame,
+    end_idx: int,
+    min_idx: int = 1,
+) -> tuple[pd.DataFrame, pd.Series]:
+    feature_cols = feature_columns()
+    rows: list[dict[str, float]] = []
+    targets: list[float] = []
+    for t in range(min_idx, end_idx):
+        feat = build_adaptive_row_features(df, t, feature_cols)
+        if feat is None:
+            continue
+        rows.append(feat)
+        targets.append(float(df["value"].iloc[t]))
+    if not rows:
+        return pd.DataFrame(), pd.Series(dtype=float)
+    return pd.DataFrame(rows), pd.Series(targets, dtype=float)
+
+
+def build_adaptive_target_features(df: pd.DataFrame, target_idx: int) -> pd.DataFrame | None:
+    feature_cols = feature_columns()
+    feat = build_adaptive_row_features(df, target_idx, feature_cols)
+    if feat is None:
+        return None
+    return pd.DataFrame([feat])
+
+
 def build_next_features(df: pd.DataFrame) -> pd.DataFrame | None:
     if len(df) < 15:
         return None
