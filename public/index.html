@@ -164,14 +164,14 @@
 
                     <!-- Core KPIs Grid -->
                     <div class="section-header">
-                        <div class="section-title"><span class="bar"></span> KPIs (Indicadores Clave de Rendimiento)</div>
+                        <div class="section-title"><span class="bar"></span> KPIs</div>
                     </div>
                     <div class="v-grid-kpi" id="dashboard-kpis"></div>
 
                     <!-- Actions Summary Grid -->
                     <div class="v-mb-4">
                         <div class="section-header" style="margin-top: 32px;">
-                            <div class="section-title"><span class="bar"></span> Suggested Actions (Acciones Operativas Sugeridas)</div>
+                            <div class="section-title"><span class="bar"></span> Acciones Prioritarias</div>
                         </div>
                         <div class="v-grid-3" id="dashboard-actions"></div>
                     </div>
@@ -252,8 +252,8 @@
                     </div>
                     <div class="v-grid-3" id="forecast-horizons-grid"></div>
 
-                    <div class="v-grid-2-1">
-                        <div class="card card-animate" style="animation-delay: 0.08s;">
+                    <div class="v-grid-2-1 forecast-layout">
+                        <div class="card card-animate forecast-chart-panel" style="animation-delay: 0.08s;">
                             <div class="chart-title"><span class="dot" style="background: #3b82f6"></span> Historical & Projection (Histórico de Leads y Predicción Temporal)</div>
                             <div class="model-compare-row">
                                 <label for="model-compare-select">Comparar modelo:</label>
@@ -274,14 +274,14 @@
                                 <canvas id="chart-timeseries"></canvas>
                             </div>
                         </div>
-                        <div class="card card-animate" style="animation-delay: 0.10s;">
-                            <div class="chart-title"><span class="dot" style="background: var(--gold)"></span> Weekly Seasonality (Comportamiento Estacional Semanal)</div>
-                            <div class="chart-wrapper"><canvas id="chart-seasonal"></canvas></div>
+                        <div class="card card-animate forecast-detail-panel model-detail-card" style="animation-delay: 0.10s;">
+                            <div class="chart-title"><span class="dot" style="background: var(--violet)"></span> Modelos en Gráfica</div>
+                            <div id="model-detail-panel" class="model-detail-panel v-mt-3"></div>
+                            <p id="model-detail-sub" class="model-detail-sub" style="font-size: 11px; color: var(--text-muted); margin-top: 8px;"></p>
                         </div>
                     </div>
 
                     <div class="v-mb-4">
-                        <!-- Model Leaderboard -->
                         <div class="card card-animate" style="animation-delay: 0.12s;">
                             <div class="chart-title"><span class="dot" style="background: var(--gold)"></span> Model Leaderboard (Clasificación de Modelos Predictivos)</div>
                             <div class="custom-table-container v-mt-3">
@@ -373,8 +373,13 @@
                         </div>
                     </div>
 
-                    <!-- Hourly Chart & Contact Distribution row -->
+                    <!-- Seasonality & Hourly row -->
                     <div class="v-grid-1-1">
+                        <div class="card card-animate" style="animation-delay: 0.06s;">
+                            <div class="chart-title"><span class="dot" style="background: var(--gold)"></span> Weekly Seasonality (Comportamiento Estacional Semanal)</div>
+                            <p class="text-muted v-mb-3" style="font-size: 11.5px;">Índice por día de la semana vs. promedio histórico</p>
+                            <div class="chart-wrapper"><canvas id="chart-seasonal"></canvas></div>
+                        </div>
                         <div class="card card-animate" style="animation-delay: 0.08s;">
                             <div class="chart-title"><span class="dot" style="background: #ef4444"></span> Hourly Distribution (Distribución Horaria)</div>
                             <p class="text-muted v-mb-3" style="font-size: 11.5px;" id="hourly-chart-sub">Distribución Horaria de Contactos Telefónicos</p>
@@ -382,15 +387,17 @@
                                 <canvas id="chart-hourly"></canvas>
                             </div>
                         </div>
-                        <div class="card card-animate" style="animation-delay: 0.10s;">
-                            <div class="chart-title"><span class="dot" style="background: var(--gold)"></span> Contact Distribution (Distribución de Contacto)</div>
-                            <p class="text-muted v-mb-3" style="font-size: 11.5px;" id="contact-total-calls">0 llamadas totales</p>
-                            <div class="v-flex-col" id="contact-distribution-bars" style="gap: 16px;">
-                                <!-- Will be populated dynamically from JS -->
-                            </div>
-                            <div style="margin-top: 24px; font-size: 12px; font-weight: 700; color: var(--red); display: flex; align-items: center; gap: 8px;" id="contact-overcontact-warning">
-                                <span>⚠️</span> <span id="contact-overcontact-warning-text">0% de llamadas exceden el sweet spot</span>
-                            </div>
+                    </div>
+
+                    <!-- Contact Distribution -->
+                    <div class="card card-animate v-mb-4" style="animation-delay: 0.10s;">
+                        <div class="chart-title"><span class="dot" style="background: var(--gold)"></span> Contact Distribution (Distribución de Contacto)</div>
+                        <p class="text-muted v-mb-3" style="font-size: 11.5px;" id="contact-total-calls">0 llamadas totales</p>
+                        <div class="v-flex-col" id="contact-distribution-bars" style="gap: 16px;">
+                            <!-- Will be populated dynamically from JS -->
+                        </div>
+                        <div style="margin-top: 24px; font-size: 12px; font-weight: 700; color: var(--red); display: flex; align-items: center; gap: 8px;" id="contact-overcontact-warning">
+                            <span>⚠️</span> <span id="contact-overcontact-warning-text">0% de llamadas exceden el sweet spot</span>
                         </div>
                     </div>
                 </section>
@@ -542,7 +549,7 @@
     </div>
 
     <!-- Application Script Logic Linked Externally -->
-    <script src="/js/app.js?v=2" defer></script>
+    <script src="/js/app.js?v=6" defer></script>
 </body>
 
 </html>

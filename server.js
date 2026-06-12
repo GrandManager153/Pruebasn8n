@@ -7,7 +7,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const { enrichPayloadComplete } = require('./scripts/ml-enrich-payload');
+const { enrichPayloadComplete, needsMlEnrichment } = require('./scripts/ml-enrich-payload');
+const { enrichLinearForecastModels } = require('./scripts/linear-backtest');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -460,13 +461,22 @@ app.get('/api/dashboard', async (req, res) => {
   const payloadPath = path.join(DATA_DIR, 'dashboard_payload.json');
   try {
     if (fs.existsSync(payloadPath)) {
-      const data = JSON.parse(fs.readFileSync(payloadPath, 'utf-8'));
-      
-      // Inject the series for statistical models dynamically
-      if (data && data.forecast && Array.isArray(data.forecast.time_series) && Array.isArray(data.forecast.backtest_models)) {
-        injectStatisticalModelSeries(data.forecast);
+      let data = JSON.parse(fs.readFileSync(payloadPath, 'utf-8'));
+
+      if (needsMlEnrichment(data)) {
+        try {
+          data = await enrichPayloadComplete(data);
+          fs.writeFileSync(payloadPath, JSON.stringify(data, null, 2), 'utf-8');
+        } catch (enrichErr) {
+          console.warn('[Dashboard] ML enrich falló:', enrichErr.message);
+        }
       }
-      
+
+      // Rebuild full-length statistical model series (replaces truncated n8n payloads)
+      if (data?.forecast?.time_series?.length && Array.isArray(data.forecast.backtest_models)) {
+        enrichLinearForecastModels(data, { force: true });
+      }
+
       res.json({ success: true, data });
     } else {
       res.status(404).json({ success: false, message: 'No hay datos de dashboard disponibles aún. Ejecuta el workflow de n8n.' });
@@ -508,50 +518,12 @@ app.post('/api/webhook', async (req, res) => {
           try {
             let payload = typeof file.content === 'string' ? JSON.parse(file.content) : file.content;
 
-            // Check if forecast_rf needs patching (either not available or missing)
-            if (payload && (!payload.forecast_rf || payload.forecast_rf.available === false)) {
-              console.log("  [BOS Patch] Internally generating Random Forest forecast from local ML API...");
-              const timeSeries = (payload.forecast && payload.forecast.time_series) || (payload.forecast_rf && payload.forecast_rf.time_series) || [];
-              if (timeSeries.length > 0) {
-                try {
-                  const mlResponse = await fetch("http://127.0.0.1:8000/predict", {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                      "X-API-Key": "mkt-bi-ia-dev-key"
-                    },
-                    body: JSON.stringify({
-                      series: timeSeries,
-                      backtest_days: 28,
-                      model: "random_forest"
-                    })
-                  });
-
-                  if (mlResponse.ok) {
-                    const resData = await mlResponse.json();
-                    payload.forecast_rf = {
-                      available: true,
-                      model_name: "random_forest",
-                      recommended_value: resData.recommended_value,
-                      mase: resData.mase,
-                      confidence: resData.confidence,
-                      backtest_series: resData.backtest_series,
-                      time_series: timeSeries,
-                      horizons: resData.forecast_horizons,
-                      intervals: resData.intervals,
-                      backtest_models: (resData.backtest && resData.backtest.models) || []
-                    };
-                    file.content = JSON.stringify(payload, null, 2);
-                    console.log("  [BOS Patch] Success: Patched Random Forest data on the fly!");
-                  } else {
-                    console.warn(`  [BOS Patch] Local ML API returned status: ${mlResponse.status}`);
-                  }
-                } catch (mlErr) {
-                  console.error("  [BOS Patch] Failed to call local ML API:", mlErr.message);
-                }
-              } else {
-                console.warn("  [BOS Patch] No historical time_series found to forecast.");
-              }
+            try {
+              payload = await enrichPayloadComplete(payload);
+              file.content = JSON.stringify(payload, null, 2);
+              console.log('  [Enrich] Payload enriquecido con modelos ML y series lineales');
+            } catch (enrichErr) {
+              console.warn('  [Enrich] Falló enriquecimiento ML:', enrichErr.message);
             }
 
             const payloadPath = path.join(DATA_DIR, 'dashboard_payload.json');

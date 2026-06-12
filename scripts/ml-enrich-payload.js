@@ -18,7 +18,7 @@ function postPredict(series) {
     const body = JSON.stringify({
       series,
       backtest_days: resolveBacktestDays(series.length),
-      model: 'random_forest',
+      model: 'compare',
     });
     const req = http.request(
       url,
@@ -52,12 +52,23 @@ function postPredict(series) {
   });
 }
 
+function modelSeriesCoverage(series) {
+  if (!Array.isArray(series)) return 0;
+  return series.filter((v) => v != null && isFinite(v)).length;
+}
+
 function needsMlEnrichment(payload) {
   const rf = payload && payload.forecast_rf;
   if (!rf) return true;
   if (rf.available === false) return true;
   if (rf.mase == null || !Array.isArray(rf.backtest_series) || !rf.backtest_series.length) return true;
   const tsLen = resolveTimeSeries(payload).length;
+  const minExpected = Math.max(7, tsLen - 2);
+  const mlModels = rf.backtest_models || [];
+  if (mlModels.length) {
+    const minMlCov = Math.min(...mlModels.map((m) => modelSeriesCoverage(m.series)));
+    if (minMlCov < minExpected) return true;
+  }
   const rfName = rf.model_name || 'random_forest';
   const rfEntry = (payload.forecast?.backtest_models || []).find(
     (m) => String(m.name).toLowerCase() === String(rfName).toLowerCase()
@@ -138,8 +149,16 @@ async function enrichPayloadWithMlApi(payload) {
     payload.forecast_rf.horizons = pred.forecast_horizons || payload.forecast_rf.horizons || {};
     payload.forecast_rf.backtest_models = (pred.backtest && pred.backtest.models) || payload.forecast_rf.backtest_models || [];
     payload.forecast_rf.backtest_series = pred.backtest_series || [];
-    payload.forecast_rf.series = buildRfAlignedSeries(baseTs, pred.backtest_series || []);
+    const primaryModel = payload.forecast_rf.backtest_models.find(
+      (m) => String(m.name).toLowerCase() === String(payload.forecast_rf.model_name || 'random_forest').toLowerCase()
+    );
+    payload.forecast_rf.series = (primaryModel && Array.isArray(primaryModel.series) && primaryModel.series.length)
+      ? primaryModel.series
+      : buildRfAlignedSeries(baseTs, pred.backtest_series || []);
     payload.forecast_rf.next_point = pred.next_point || null;
+    if (payload.forecast) {
+      payload.forecast.next_point = pred.next_point || payload.forecast.next_point || null;
+    }
     payload.forecast_rf.time_series = baseTs;
     delete payload.forecast_rf.reason;
     console.log(`  🤖 ML enrich OK — MASE ${pred.mase}, modelo ${payload.forecast_rf.model_name}`);

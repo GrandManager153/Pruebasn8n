@@ -157,11 +157,6 @@ body.light-mode .custom-table td:not([class*="metric-"]) {
     color: var(--text-main);
 }
 
-body.light-mode .list-group-item.active {
-    color: #080c14 !important;
-    /* Active item keeps dark text on lime background */
-}
-
 body.light-mode .card {
     box-shadow: 0 8px 32px rgba(15, 23, 42, 0.06), inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
 }
@@ -736,6 +731,40 @@ body.light-mode .metric-badge-bad {
 .custom-table td.metric-rmse,
 .custom-table td.metric-pron {
     text-align: right;
+}
+
+/* === Forecast layout: chart + models sidebar === */
+.forecast-layout {
+    align-items: stretch;
+}
+
+.forecast-chart-panel .chart-wrapper {
+    min-height: 340px;
+}
+
+.forecast-detail-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
+.forecast-detail-panel .model-detail-panel {
+    flex: 1;
+    max-height: none;
+    min-height: 340px;
+}
+
+.forecast-detail-panel .model-detail-panel .custom-table-container {
+    max-height: 480px;
+    overflow: auto;
+}
+
+.forecast-detail-panel .model-detail-table th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bg-card);
 }
 
 /* === Forecast model leaderboard === */
@@ -1586,6 +1615,12 @@ body.light-mode .list-group-item.active .nav-icon {
     min-height: 20px;
 }
 
+.card-stat-top .card-stat-label {
+    flex: 1;
+    min-width: 0;
+    line-height: 1.3;
+}
+
 .kpi-trend-badge {
     font-size: 10px;
     font-weight: 800;
@@ -2322,6 +2357,7 @@ body.light-mode .model-compare-select option {
     display: flex;
     align-items: center;
     gap: 20px;
+    overflow: hidden;
     background: linear-gradient(135deg, rgba(32, 22, 6, 0.88) 0%, rgba(12, 18, 36, 0.94) 55%, rgba(6, 10, 24, 0.97) 100%);
     border: 1px solid rgba(232, 168, 56, 0.22);
     border-top: 2px solid rgba(232, 168, 56, 0.55);
@@ -2429,6 +2465,7 @@ body.light-mode .model-compare-select option {
     border-radius: 50px;
     line-height: 1.35;
     max-width: 100%;
+    word-break: break-word;
 }
 
 .health-reasons {
@@ -2548,17 +2585,18 @@ body.light-mode .model-compare-select option {
     align-items: center;
     font-size: 10.5px;
     font-weight: 700;
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text-main);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(232, 168, 56, 0.08);
+    color: var(--brand-gold-bright);
+    border: 1px solid rgba(232, 168, 56, 0.25);
     padding: 4px 12px;
     border-radius: 50px;
     margin-top: 14px;
 }
 
 body.light-mode .owner-pill {
-    background: rgba(15, 23, 42, 0.05) !important;
-    border-color: rgba(15, 23, 42, 0.1) !important;
+    background: rgba(180, 83, 9, 0.08) !important;
+    border-color: rgba(180, 83, 9, 0.22) !important;
+    color: var(--brand-gold-bright) !important;
 }
 
 .action-text {
@@ -2746,7 +2784,7 @@ body.light-mode .owner-pill {
     transition: color 0.3s ease, text-shadow 0.3s ease;
 }
 
-.card-stat-label:hover,
+.card:not([class*="stat-card-"]) .card-stat-label:hover,
 .chart-title:hover,
 .section-title:hover,
 .brand-text h1:hover,
@@ -2802,11 +2840,11 @@ body.light-mode .owner-pill {
     transition: color 0.25s ease, text-shadow 0.25s ease;
 }
 
-.custom-table tr:hover td {
+.custom-table tr:hover td:not([class*="metric-"]) {
     color: var(--text-main) !important;
 }
 
-.custom-table tr:hover td:first-child {
+.custom-table tr:hover td:first-child:not([class*="metric-"]) {
     color: var(--brand-gold-bright) !important;
     text-shadow: 0 0 8px rgba(245, 200, 66, 0.35);
 }
@@ -3121,10 +3159,11 @@ body.light-mode .list-group-item:hover {
 }
 
 body.light-mode .list-group-item.active {
-    background: #ffffff !important;
-    color: #080c14 !important;
-    box-shadow: 0 0 20px rgba(15, 23, 42, 0.1), 0 4px 14px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
-    border-left: 4px solid var(--blue) !important;
+    background: linear-gradient(135deg, rgba(180, 83, 9, 0.12) 0%, rgba(180, 83, 9, 0.04) 100%) !important;
+    color: var(--brand-gold-bright) !important;
+    box-shadow: 0 0 20px rgba(180, 83, 9, 0.1), inset 0 1px 0 rgba(180, 83, 9, 0.08) !important;
+    border: 1px solid rgba(180, 83, 9, 0.25) !important;
+    border-left: 3px solid var(--brand-gold) !important;
 }
 
 body.light-mode .status-pill {
@@ -3134,7 +3173,7 @@ body.light-mode .status-pill {
 }
 
 /* 8. Text Glow in Light Mode (Adapt chartreuse neon glow to corporate blue) */
-body.light-mode .card-stat-label:hover,
+body.light-mode .card:not([class*="stat-card-"]) .card-stat-label:hover,
 body.light-mode .chart-title:hover,
 body.light-mode .section-title:hover,
 body.light-mode .brand-text h1:hover,
@@ -3386,4 +3425,49 @@ body.light-mode .kpi-modal-source {
     background: rgba(15, 23, 42, 0.02);
     border-color: rgba(15, 23, 42, 0.06);
     color: #64748b;
+}
+
+/* =====================================================================
+   Performance-lite mode (body.perf-lite)
+   ===================================================================== */
+body.perf-lite .card-animate,
+body.perf-lite .tab-content.active .card-animate {
+    opacity: 1;
+    animation: none;
+    transform: none;
+}
+
+body.perf-lite .ambient-nebula,
+body.perf-lite .card-wave-bg,
+body.perf-lite .liquid-tank__surface {
+    animation: none !important;
+}
+
+body.perf-lite .global-flashlight,
+body.perf-lite .card::before {
+    display: none !important;
+}
+
+body.perf-lite .card,
+body.perf-lite .topbar,
+body.perf-lite .sidebar,
+body.perf-lite .kpi-modal {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+body.perf-lite .card:hover {
+    transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .card-animate,
+    .tab-content.active .card-animate,
+    .ambient-nebula,
+    .card-wave-bg,
+    .liquid-tank__surface {
+        animation: none !important;
+        opacity: 1;
+        transform: none;
+    }
 }

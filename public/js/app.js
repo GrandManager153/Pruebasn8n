@@ -5,6 +5,11 @@
 
 let dashboardData = null;
 let charts = {};
+let comparableModelsCache = null;
+const termCache = new Map();
+const renderedTabs = new Set();
+const PERF = { lite: true };
+
 let currentTab = 'dashboard';
 let currentAlertFilter = 'all';
 let timeSeriesType = 'line';
@@ -13,26 +18,156 @@ let selectedCompareModel = '';
 let showAllModels = false;
 let visibleModelNames = new Set();
 
+function clearComparableModelsCache() {
+    comparableModelsCache = null;
+}
+
+function clearTermCache() {
+    termCache.clear();
+}
+
+function shouldAnimateUI() {
+    return !PERF.lite && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function getChartAnimationOptions(heavy = false) {
+    if (PERF.lite || heavy) return false;
+    return { duration: 280, easing: 'easeOutQuart' };
+}
+
+function shouldAnimateForecastChart() {
+    return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function getForecastChartAnimationOptions(heavy = false) {
+    if (!shouldAnimateForecastChart()) return false;
+    if (heavy) {
+        return { duration: 500, easing: 'easeOutQuart' };
+    }
+    return {
+        duration: 900,
+        easing: 'easeOutQuart',
+        delay: (context) => {
+            if (context.type === 'data' && context.mode === 'default' && !context.active) {
+                return context.dataIndex * 15;
+            }
+            return 0;
+        },
+    };
+}
+
+function scheduleDeferredRender(fn) {
+    if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(() => fn(), { timeout: 1500 });
+    } else {
+        setTimeout(fn, 60);
+    }
+}
+
+function initPerformanceMode() {
+    if (PERF.lite) document.body.classList.add('perf-lite');
+}
+
+function applyProgressBars(root, animate = shouldAnimateUI()) {
+    const scope = root || document;
+    scope.querySelectorAll('.progress-bar-fill[data-pct], .mase-bar-fill[data-pct]').forEach(bar => {
+        const pct = bar.getAttribute('data-pct');
+        if (pct == null) return;
+        if (animate) {
+            bar.style.width = '0%';
+            void bar.offsetWidth;
+            bar.style.width = pct + '%';
+        } else {
+            bar.style.width = pct + '%';
+        }
+    });
+}
+
+function ensureTabRendered(tabId) {
+    if (!dashboardData) return;
+    switch (tabId) {
+        case 'funnel':
+            if (!renderedTabs.has('funnel')) {
+                renderFunnelDetails(dashboardData);
+                renderedTabs.add('funnel');
+            }
+            applyProgressBars(document.getElementById('tab-funnel'));
+            break;
+        case 'forecast': {
+            const data = dashboardData;
+            if (!renderedTabs.has('forecast-content')) {
+                renderForecastDetails(data.forecast || {}, {
+                    prefix: '',
+                    show14d: true,
+                    showChangepoint: true,
+                    horizons: getBestModelHorizons(data),
+                    bestModelName: getBestForecastRecord(data)?.modelName || data.forecast?.method,
+                });
+                populateModelCompareDropdown(data);
+                renderedTabs.add('forecast-content');
+            }
+            if (!renderedTabs.has('forecast-chart')) {
+                showBestModelOnLoad(data);
+                renderedTabs.add('forecast-chart');
+            }
+            applyProgressBars(document.getElementById('tab-forecast'));
+            break;
+        }
+        case 'investment':
+            if (!renderedTabs.has('investment-chart') && dashboardData.investment?.campaigns) {
+                renderCampaignChart(dashboardData.investment.campaigns);
+                renderedTabs.add('investment-chart');
+            }
+            break;
+        case 'operations':
+            if (!renderedTabs.has('operations-content')) {
+                renderOperationsTab(dashboardData, { charts: false });
+                renderedTabs.add('operations-content');
+            }
+            if (!renderedTabs.has('operations-charts')) {
+                const ops = dashboardData.operations;
+                if (ops) {
+                    renderDailyVolumeChart(ops);
+                    const seasonalIndices = dashboardData.operations?.seasonal_indices
+                        || dashboardData.forecast?.seasonal_indices;
+                    if (seasonalIndices) renderSeasonalChart(seasonalIndices);
+                    renderHourlyChart(ops.hourly_distribution);
+                }
+                renderedTabs.add('operations-charts');
+            }
+            break;
+        case 'alerts':
+            if (!renderedTabs.has('alerts')) {
+                renderAlertsCentre(dashboardData.system.alerts);
+                renderedTabs.add('alerts');
+            }
+            applyProgressBars(document.getElementById('tab-alerts'));
+            break;
+        default:
+            break;
+    }
+}
+
 // =====================================================================
 //  📘 INDUSTRY TERMS — English term + Spanish gloss in parentheses
 // =====================================================================
 
 /** Backend KPI label → display label (término en inglés + descripción en español). */
 const KPI_BACKEND_LABEL_MAP = {
-    'Health Score': 'SHS (Salud Operativa Consolidada)',
-    'Leads totales': 'Total Leads (Volumen Total de Leads)',
-    'Promedio diario': 'Daily Avg (Promedio Diario de Leads)',
-    'Cambio semanal': 'WoW (Cambio Semanal vs Anterior)',
-    'Hora pico': 'Peak Hour (Hora Pico de Contactos)',
-    'Prevision diaria': 'Daily Forecast (Pronóstico Diario de Demanda)',
-    'MASE': 'MASE (Precisión del Modelo)',
-    'CPL implicito': 'CPL (Costo por Lead Implícito)',
-    'Gasto total': 'Ad Spend (Inversión Publicitaria)',
-    'HHI': 'HHI (Concentración de Pauta)',
-    'Conversion global': 'Global CVR (Tasa de Conversión Global)',
-    'Revenue at Risk': 'Revenue at Risk (Ingreso en Riesgo por Fugas)',
-    'Utilizacion capacidad': 'Capacity Utilization (Uso de Capacidad Operativa)',
-    'Cambio regimen': 'Regime Shift (Cambio de Régimen)',
+    'Health Score': 'Salud del Sistema',
+    'Leads totales': 'Leads Totales',
+    'Promedio diario': 'Promedio Diario',
+    'Cambio semanal': 'Cambio Semanal',
+    'Hora pico': 'Hora Pico',
+    'Prevision diaria': 'Pronóstico Diario',
+    'MASE': 'Precisión del Modelo',
+    'CPL implicito': 'Costo por Lead',
+    'Gasto total': 'Inversión Publicitaria',
+    'HHI': 'Diversificación de Pauta',
+    'Conversion global': 'Conversión Global',
+    'Revenue at Risk': 'Ingreso en Riesgo',
+    'Utilizacion capacidad': 'Uso de Capacidad',
+    'Cambio regimen': 'Cambio de Régimen',
 };
 
 const INDUSTRY_INLINE_REPLACEMENTS = [
@@ -94,7 +229,7 @@ const KPI_EXPLANATION_ALIASES = {
     'Revenue at Risk (ingreso en riesgo)': 'Revenue at Risk',
     'Severidad Máxima': 'RPN max',
     'Regime Shift (cambio estructural de demanda)': 'Cambio de Régimen',
-    'Cambio regimen': 'Cambio de Régimen',
+    'Cambio de Régimen': 'Cambio de Régimen',
 };
 
 const KPI_EXPLANATIONS = {
@@ -455,6 +590,7 @@ const CRM_TRANSLATIONS = {
 
 function cleanTechnicalTerms(str) {
     if (!str || typeof str !== 'string') return str;
+    if (termCache.has(str)) return termCache.get(str);
     let text = applyIndustryInlineTerms(str.trim());
 
     // Check exact match in CRM translations
@@ -478,7 +614,9 @@ function cleanTechnicalTerms(str) {
     // Standardize CUSUM changepoint labels to elegant corporate terminology
     text = text.replace(/Cambio regimen/gi, 'Cambio de Régimen');
 
-    return cleanText(text);
+    text = cleanText(text);
+    termCache.set(str, text);
+    return text;
 }
 
 // =====================================================================
@@ -530,77 +668,34 @@ function switchTab(tabId) {
 
     const activeTabContent = document.getElementById(`tab-${tabId}`);
     if (activeTabContent) {
-        // Force reflow on active tab to restart all card-animate keyframe animations
-        activeTabContent.classList.remove('active');
-        void activeTabContent.offsetWidth; // Force reflow
         activeTabContent.classList.add('active');
 
-        // Restart dynamic numeric counters inside the active tab
-        const animatedNumbers = activeTabContent.querySelectorAll('[data-value]');
-        animatedNumbers.forEach(el => {
-            parseAndAnimate(el, el.getAttribute('data-value'));
-        });
+        if (shouldAnimateUI()) {
+            activeTabContent.classList.remove('active');
+            void activeTabContent.offsetWidth;
+            activeTabContent.classList.add('active');
 
-        // Restart progress bar expansions
-        const progressBars = activeTabContent.querySelectorAll('.progress-bar-fill');
-        progressBars.forEach(bar => {
-            const pct = bar.getAttribute('data-pct');
-            if (pct !== null) {
-                bar.style.width = '0%';
-                void bar.offsetWidth; // Force reflow
-                bar.style.width = pct + '%';
-            }
-        });
+            activeTabContent.querySelectorAll('[data-value]').forEach(el => {
+                parseAndAnimate(el, el.getAttribute('data-value'));
+            });
+        }
 
-        // Specialized resets for specific tabs
-        if (tabId === 'dashboard') {
+        ensureTabRendered(tabId);
+        applyProgressBars(activeTabContent);
+
+        if (tabId === 'dashboard' && shouldAnimateUI()) {
             setTimeout(restartHealthRing, 60);
-            setTimeout(() => {
-                const wave = document.querySelector('.card-wave-bg');
-                if (wave) {
-                    wave.style.transition = 'none';
-                    wave.style.height = '0%';
-                    void wave.offsetWidth; // Force reflow
-
-                    requestAnimationFrame(() => {
-                        wave.style.transition = 'height 1.5s cubic-bezier(0.16, 1, 0.3, 1)';
-                        wave.style.height = wave.getAttribute('data-target-height');
-                    });
-                }
-            }, 100);
-        } else if (tabId === 'forecast') {
-            if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.forecast) {
-                const line = getChartForecastLine();
-                renderTimeSeriesChart(dashboardData.forecast, {
-                    canvasId: 'chart-timeseries',
-                    chartKey: 'timeseries',
-                    lineLabel: line.label,
-                    lineColor: line.color,
-                    forecastValue: line.value,
-                    overlays: getActiveOverlays()
-                });
-                renderModelDetailPanel();
-            } else {
-                if (charts.timeseries) { charts.timeseries.reset(); charts.timeseries.update(); }
-            }
-            setTimeout(() => {
-                document.querySelectorAll('#forecast-models-body .mase-bar-fill').forEach(bar => {
-                    const pct = bar.getAttribute('data-pct');
-                    if (pct != null) {
-                        bar.style.width = '0%';
-                        void bar.offsetWidth;
-                        bar.style.width = pct + '%';
-                    }
-                });
-            }, 80);
-        } else if (tabId === 'investment') {
-            if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.investment && dashboardData.investment.campaigns) {
-                renderCampaignChart(dashboardData.investment.campaigns);
-            }
-        } else if (tabId === 'operations') {
-            if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.operations) {
-                renderOperationsTab(dashboardData);
-            }
+        } else if (tabId === 'forecast' && dashboardData?.forecast) {
+            const line = getChartForecastLine();
+            renderTimeSeriesChart(dashboardData.forecast, {
+                canvasId: 'chart-timeseries',
+                chartKey: 'timeseries',
+                lineLabel: line.label,
+                lineColor: line.color,
+                forecastValue: line.value,
+                overlays: getActiveOverlays()
+            });
+            renderModelDetailPanel();
         }
     }
 
@@ -621,10 +716,9 @@ function switchTab(tabId) {
 
     currentTab = tabId;
 
-    // Refresh charts on tab resize
-    setTimeout(() => {
-        window.dispatchEvent(new Event('resize'));
-    }, 80);
+    if (['forecast', 'investment', 'operations'].includes(tabId)) {
+        requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+    }
 }
 
 // =====================================================================
@@ -640,6 +734,24 @@ function animateValue(element, start, end, duration, options = {}) {
         useSeparator = false,
         isTime = false
     } = options;
+
+    if (!shouldAnimateUI() || duration <= 0) {
+        if (isTime) {
+            const totalMinutes = Math.floor(end);
+            const hrs = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+            const mins = (totalMinutes % 60).toString().padStart(2, '0');
+            element.textContent = `${prefix}${hrs}:${mins}${suffix}`;
+        } else {
+            let finalFormatted = end.toFixed(decimals);
+            if (useSeparator) {
+                const parts = finalFormatted.split('.');
+                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                finalFormatted = parts.join('.');
+            }
+            element.textContent = `${prefix}${finalFormatted}${suffix}`;
+        }
+        return;
+    }
 
     let startTimestamp = null;
     const step = (timestamp) => {
@@ -692,6 +804,7 @@ function animateValue(element, start, end, duration, options = {}) {
 // Helper to trigger parsing and animation of any numeric string
 function parseAndAnimate(element, rawValue, duration = 700) {
     if (!element) return;
+    if (!shouldAnimateUI()) duration = 0;
     const valueStr = String(rawValue).trim();
 
     // Check if it's clock format (e.g., "19:00")
@@ -762,6 +875,8 @@ async function loadBOS() {
         }
 
         dashboardData = json.data;
+        clearComparableModelsCache();
+        clearTermCache();
         document.getElementById('loading').style.display = 'none';
         renderBOS(dashboardData);
 
@@ -782,6 +897,9 @@ async function loadBOS() {
 // =====================================================================
 
 function renderBOS(data) {
+    renderedTabs.clear();
+    renderedTabs.add('dashboard');
+
     // Update main horizontal status bar dynamically
     const mainSbar = document.getElementById('main-sbar');
     const mainSbarText = document.getElementById('main-sbar-text');
@@ -815,11 +933,7 @@ function renderBOS(data) {
                 <h2 class="health-info-title">Salud Operativa</h2>
                 <span class="custom-badge ${data.system.status.color === 'amarillo' ? 'custom-badge-warning' : data.system.status.color === 'rojo' ? 'custom-badge-critical' : 'custom-badge-success'}">${cleanTechnicalTerms(data.system.status.label)}</span>
             </div>
-            <p class="text-muted" style="font-size: 13.5px; line-height: 1.6;">Auditoría integral de la pauta publicitaria, flujo operativo en centros de llamadas y proyecciones basadas en modelos predictivos matemáticos de precisión.</p>
-            <div class="health-reasons">
-                ${data.system.status.reasons.map(r => `
-                    <div class="health-reason"><span style="color: var(--text-main); font-weight: bold;">*</span> ${cleanTechnicalTerms(r)}</div>
-            <div class="health-reasons health-reasons-inline">
+            <div class="health-reasons-inline">
                 ${data.system.status.reasons.slice(0, 3).map(r => `
                     <span class="health-reason-chip">${cleanTechnicalTerms(r)}</span>
                 `).join('')}
@@ -827,22 +941,22 @@ function renderBOS(data) {
         </div>
     `;
 
-    // Trigger smooth transition and counter animation for the Health Score Ring
-    setTimeout(() => {
+    if (shouldAnimateUI()) {
+        setTimeout(() => {
+            const ring = document.getElementById('health-fg-ring');
+            if (ring) ring.style.strokeDashoffset = dashOffset;
+            const numVal = document.getElementById('health-num-val');
+            if (numVal) animateValue(numVal, 0, data.system.health_score, 700);
+        }, 50);
+    } else {
         const ring = document.getElementById('health-fg-ring');
-        if (ring) {
-            ring.style.strokeDashoffset = dashOffset;
-        }
+        if (ring) ring.style.strokeDashoffset = dashOffset;
         const numVal = document.getElementById('health-num-val');
-        if (numVal) {
-            animateValue(numVal, 0, data.system.health_score, 700);
-        }
-    }, 50);
+        if (numVal) numVal.textContent = data.system.health_score;
+    }
 
     // 2. Render KPIs in Dashboard Tab
     const kpisGrid = document.getElementById('dashboard-kpis');
-
-    const cleanedKpis = data.kpis.map(k => {
 
     const kpisWithBestForecast = applyBestForecastToKpis(data.kpis, data);
 
@@ -922,7 +1036,7 @@ function renderBOS(data) {
             k.color = 'blue';
         }
         if (k.label === 'Cambio regimen' || k.label === 'Cambio de Régimen') {
-            k.color = 'blue';
+            k.color = 'red';
         }
         if (k.label === 'Gasto total') {
             label = 'Inversión Publicitaria';
@@ -942,7 +1056,7 @@ function renderBOS(data) {
         if (data.operations.latest && data.operations.latest.leads) {
             cleanedKpis.push({
                 value: String(data.operations.latest.leads),
-                label: 'Leads Today (Leads Recibidos Hoy)',
+                label: 'Leads Hoy',
                 sub: data.operations.latest.date || 'Último día registrado',
                 color: 'blue'
             });
@@ -950,7 +1064,7 @@ function renderBOS(data) {
         if (data.operations.max_daily) {
             cleanedKpis.push({
                 value: String(data.operations.max_daily),
-                label: 'Max Daily (Máximo Diario)',
+                label: 'Máximo Diario',
                 sub: 'Pico histórico del periodo',
                 color: 'white'
             });
@@ -958,7 +1072,7 @@ function renderBOS(data) {
         if (data.operations.contact_distribution && data.operations.contact_distribution.overcontact_pct != null) {
             cleanedKpis.push({
                 value: data.operations.contact_distribution.overcontact_pct + '%',
-                label: 'Overcontact Rate (Tasa de Sobre-Contacto)',
+                label: 'Sobre-Contacto',
                 sub: 'Llamadas > 7 intentos',
                 color: 'red'
             });
@@ -966,7 +1080,7 @@ function renderBOS(data) {
         if (data.operations.call_metrics && data.operations.call_metrics.call_rank) {
             cleanedKpis.push({
                 value: String(data.operations.call_metrics.call_rank.avg),
-                label: 'Avg Dial Attempts (Intentos Promedio)',
+                label: 'Intentos Promedio',
                 sub: 'Marcaciones por lead (umbral: 7)',
                 color: 'red'
             });
@@ -995,38 +1109,37 @@ function renderBOS(data) {
                         <div class="card-stat-top">
                             <div class="card-stat-label">${kpi.label}</div>
                         </div>
-                        <div class="card-stat-value" id="kpi-val-${idx}" data-value="${kpi.value}">0</div>
+                        <div class="card-stat-value" id="kpi-val-${idx}" data-value="${kpi.value}">${shouldAnimateUI() ? '0' : kpi.value}</div>
                         <div class="card-stat-sub">${kpi.sub || '&nbsp;'}</div>
                     </div>
                 </div>
             `;
         }
         return `
-            <div class="card stat-card-${kpi.color || 'blue'} card-animate kpi-card" style="animation-delay: ${idx * 0.025}s;"
+            <div class="card stat-card-${resolveStatCardColor(kpi.color)} card-animate kpi-card" style="animation-delay: ${idx * 0.025}s;"
                 onclick="openKpiModal('${escapedLabel}', '${escapedValue}')">
                 <div class="card-stat-top">
                     <div class="card-stat-label">${kpi.label}</div>
                     ${trendBadge}
                 </div>
-                <div class="card-stat-value" id="kpi-val-${idx}" data-value="${kpi.value}">0</div>
+                <div class="card-stat-value" id="kpi-val-${idx}" data-value="${kpi.value}">${shouldAnimateUI() ? '0' : kpi.value}</div>
                 <div class="card-stat-sub">${kpi.sub || '&nbsp;'}</div>
             </div>
         `;
     }).join('');
 
-    // Trigger dynamic count animations and liquid fill rising for KPIs
-    cleanedKpis.forEach((kpi, idx) => {
-        const element = document.getElementById(`kpi-val-${idx}`);
-        parseAndAnimate(element, kpi.value);
-    });
-
-    requestAnimationFrame(() => {
+    if (shouldAnimateUI()) {
+        cleanedKpis.forEach((kpi, idx) => {
+            parseAndAnimate(document.getElementById(`kpi-val-${idx}`), kpi.value);
+        });
+        requestAnimationFrame(() => {
+            const tank = document.querySelector('.liquid-tank');
+            if (tank) tank.style.setProperty('--fill-level', Number(tank.dataset.fillTarget) || 0);
+        });
+    } else {
         const tank = document.querySelector('.liquid-tank');
-        if (tank) {
-            const target = Number(tank.dataset.fillTarget) || 0;
-            tank.style.setProperty('--fill-level', target);
-        }
-    });
+        if (tank) tank.style.setProperty('--fill-level', healthScore);
+    }
 
     // 3. Render Action Cards in Dashboard Tab
     const actionsGrid = document.getElementById('dashboard-actions');
@@ -1073,35 +1186,33 @@ function renderBOS(data) {
         `).join('');
     }
 
-    // 6. Render Funnel Page
-    renderFunnelDetails(data);
+    // 6–9. Pestañas secundarias y gráficas: diferidas para no bloquear la carga inicial
+    scheduleDeferredRender(() => {
+        renderFunnelDetails(data);
+        applyProgressBars(document.getElementById('tab-funnel'));
+        renderedTabs.add('funnel');
 
-    // 7. Render Forecast Page (incluye comparador de modelos)
-    renderForecastDetails(data.forecast || {}, {
-        prefix: '',
-        show14d: true,
-        showChangepoint: true,
-        horizons: getBestModelHorizons(data),
-        bestModelName: getBestForecastRecord(data)?.modelName || data.forecast?.method,
+        renderForecastDetails(data.forecast || {}, {
+            prefix: '',
+            show14d: true,
+            showChangepoint: true,
+            horizons: getBestModelHorizons(data),
+            bestModelName: getBestForecastRecord(data)?.modelName || data.forecast?.method,
+        });
+        populateModelCompareDropdown(data);
+        renderedTabs.add('forecast-content');
+
+        renderAlertsCentre(data.system.alerts);
+        applyProgressBars(document.getElementById('tab-alerts'));
+        renderedTabs.add('alerts');
+
+        renderOperationsTab(data, { charts: false });
+        renderedTabs.add('operations-content');
+
+        if (currentTab !== 'dashboard') {
+            ensureTabRendered(currentTab);
+        }
     });
-    populateModelCompareDropdown(data);
-    renderModelDetailPanel();
-
-    // 8. Render Interactive Alerts Centre Tab
-    renderAlertsCentre(data.system.alerts);
-
-    // 9. Initialize and render high-impact Charts
-    const tsLine = getChartForecastLine();
-    renderTimeSeriesChart(data.forecast || {}, {
-        canvasId: 'chart-timeseries',
-        chartKey: 'timeseries',
-        lineLabel: tsLine.label,
-        lineColor: tsLine.color,
-        forecastValue: tsLine.value,
-        overlays: getActiveOverlays()
-    });
-    renderCampaignChart(data.investment.campaigns);
-    renderOperationsTab(data);
 
     // 10. Update Sync Date in top header
     const genDate = new Date(data.meta.generated_at);
@@ -1250,6 +1361,8 @@ function renderFunnelDetails(data) {
             </tr>
         `).join('');
     }
+
+    applyProgressBars(document.getElementById('tab-funnel'));
 }
 
 // =====================================================================
@@ -1275,10 +1388,24 @@ function getMaseStateLabel(mase) {
 }
 
 /** Badge de tendencia ↑/↓ para tarjetas KPI del dashboard. */
-function getKpiTrendBadgeHtml(kpi, data) {
-    const backendLabel = Object.keys(KPI_BACKEND_LABEL_MAP).find(k => KPI_BACKEND_LABEL_MAP[k] === kpi.label) || kpi.label;
+function resolveKpiBackendKey(label) {
+    if (Object.prototype.hasOwnProperty.call(KPI_BACKEND_LABEL_MAP, label)) return label;
+    const mapped = Object.keys(KPI_BACKEND_LABEL_MAP).find(k => KPI_BACKEND_LABEL_MAP[k] === label);
+    if (mapped) return mapped;
+    const alias = KPI_EXPLANATION_ALIASES[label];
+    if (alias) return alias;
+    return label;
+}
 
-    if (backendLabel === 'MASE' || kpi.label.includes('MASE')) {
+function resolveStatCardColor(color) {
+    const valid = ['gold', 'blue', 'green', 'red', 'white', 'crimson'];
+    return valid.includes(color) ? color : 'blue';
+}
+
+function getKpiTrendBadgeHtml(kpi, data) {
+    const backendLabel = resolveKpiBackendKey(kpi.label);
+
+    if (backendLabel === 'MASE' || kpi.label.includes('MASE') || kpi.label.includes('Precisión')) {
         const mase = parseFloat(String(kpi.value).replace(/[^0-9.]/g, ''));
         if (isFinite(mase)) {
             if (mase < 1) {
@@ -1296,7 +1423,7 @@ function getKpiTrendBadgeHtml(kpi, data) {
     if (backendLabel === 'Cambio semanal' || kpi.label.includes('WoW')) {
         pct = data?.operations?.wow_change_pct ?? parseFloat(String(kpi.value).replace(/[^0-9.\-+]/g, ''));
         goodWhenUp = true;
-    } else if (backendLabel === 'Cambio regimen' || kpi.label.includes('Regime Shift')) {
+    } else if (backendLabel === 'Cambio regimen' || kpi.label.includes('Regime Shift') || kpi.label.includes('Régimen')) {
         pct = parseFloat(String(kpi.value).replace(/[^0-9.\-+]/g, ''));
         goodWhenUp = true;
     } else if (kpi.label.includes('Sobre-Contacto') || kpi.label.includes('Intentos')) {
@@ -1403,15 +1530,19 @@ function renderForecastDetails(forecast, options = {}) {
     if (modelsBody && Array.isArray(forecast.backtest_models)) {
         const models = forecast.backtest_models.slice();
 
-        // Incluir Random Forest (desde forecast_rf) en la clasificación
+        // Incluir todos los modelos ML (desde forecast_rf) en la clasificación
         if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.forecast_rf && dashboardData.forecast_rf.available !== false) {
             const rf = dashboardData.forecast_rf;
             const rfName = rf.model_name || 'random_forest';
-            let rfEntry = Array.isArray(rf.backtest_models) ? rf.backtest_models.find(x => x.name === rfName) : null;
-            if (!rfEntry && rf.mase != null) rfEntry = { name: rfName, mase: rf.mase };
-            if (rfEntry && rfEntry.mase != null && !models.some(m => m.name === rfEntry.name)) {
-                models.push(rfEntry);
+            const rfModels = Array.isArray(rf.backtest_models) ? rf.backtest_models : [];
+            if (!rfModels.length && rf.mase != null) {
+                rfModels.push({ name: rfName, mase: rf.mase });
             }
+            rfModels.forEach(rfEntry => {
+                if (rfEntry.mase != null && !models.some(m => normModelName(m.name) === normModelName(rfEntry.name))) {
+                    models.push(rfEntry);
+                }
+            });
         }
 
         // Ordenar por MASE ascendente (mejor desempeño primero)
@@ -1435,6 +1566,9 @@ function renderForecastDetails(forecast, options = {}) {
 // Paleta fija: todos distintos entre sí y distintos del azul de leads (#38bdf8).
 const MODEL_COLORS = {
     random_forest: '#10b981',
+    gradient_boosting: '#f97316',
+    mlp_neural_network: '#ec4899',
+    ridge: '#84cc16',
     lightgbm: '#06b6d4',
     autoets: '#a78bfa',
     theta_lite: '#d946ef',
@@ -1445,6 +1579,15 @@ const MODEL_COLORS = {
     mean_7d: '#fb923c',
     ewma: '#eab308',
 };
+
+const ML_MODEL_NAMES = [
+    'random_forest',
+    'gradient_boosting',
+    'ridge',
+    'mlp_neural_network',
+    'lightgbm',
+    'autoets',
+];
 
 function getModelColor(name) {
     if (!name) return '#f472b6';
@@ -1637,37 +1780,39 @@ function renderHorizonCards(horizons, options = {}) {
     }
 }
 
-    const modelsBody = document.getElementById(`${prefix}forecast-models-body`);
-    if (modelsBody && Array.isArray(forecast.backtest_models)) {
-        const models = forecast.backtest_models.slice();
-
-        // Incluir todos los modelos de forecast_rf (ML models) en la clasificación
-        if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.forecast_rf && dashboardData.forecast_rf.available !== false) {
-            const rf = dashboardData.forecast_rf;
-            if (Array.isArray(rf.backtest_models)) {
-                rf.backtest_models.forEach(rfModel => {
-                    if (rfModel && rfModel.mase != null && !models.some(m => m.name === rfModel.name)) {
-                        models.push({
-                            name: rfModel.name,
-                            mase: rfModel.mase,
-                            mae: rfModel.mae,
-                            rmse: rfModel.rmse
-                        });
-                    }
-                });
-            } else {
-                const rfName = rf.model_name || 'random_forest';
-                let rfEntry = { name: rfName, mase: rf.mase, mae: rf.mae, rmse: rf.rmse };
-                if (rfEntry.mase != null && !models.some(m => m.name === rfEntry.name)) {
-                    models.push(rfEntry);
-                }
 function seriesHasChartPoints(series) {
     return Array.isArray(series) && series.some((v) => v != null && isFinite(v));
+}
+
+function modelSeriesCoverage(series) {
+    if (!Array.isArray(series)) return 0;
+    return series.filter((v) => v != null && isFinite(v)).length;
+}
+
+function pickBetterModelSeries(a, b) {
+    if (!seriesHasChartPoints(a)) return b;
+    if (!seriesHasChartPoints(b)) return a;
+    const covA = modelSeriesCoverage(a);
+    const covB = modelSeriesCoverage(b);
+    if (covB > covA) return b;
+    if (covA > covB) return a;
+    const sparseA = a.some((v) => v == null);
+    const sparseB = b.some((v) => v == null);
+    if (sparseA && !sparseB) return a;
+    if (sparseB && !sparseA) return b;
+    return a.length >= b.length ? a : b;
 }
 
 function normalizeModelSeries(series, chartLen) {
     if (!Array.isArray(series) || !chartLen) return series;
     if (series.length === chartLen) return series;
+    const isSparse = series.some((v) => v == null);
+    if (isSparse) {
+        if (series.length < chartLen) {
+            return [...series, ...Array(chartLen - series.length).fill(null)];
+        }
+        return series.slice(0, chartLen);
+    }
     if (series.length < chartLen) {
         const out = Array(chartLen).fill(null);
         const start = chartLen - series.length;
@@ -1675,6 +1820,40 @@ function normalizeModelSeries(series, chartLen) {
         return out;
     }
     return series.slice(series.length - chartLen);
+}
+
+function resolveNextForecastLabel(forecast, ts) {
+    const np = forecast?.next_point?.date
+        || dashboardData?.forecast_rf?.next_point?.date;
+    let dateStr = np;
+    if (!dateStr && ts?.length) {
+        const d = new Date(ts[ts.length - 1].date);
+        if (!isNaN(d.getTime())) {
+            d.setDate(d.getDate() + 1);
+            dateStr = d.toISOString().slice(0, 10);
+        }
+    }
+    if (!dateStr) return 'Mañana';
+    const dt = new Date(dateStr);
+    return dt.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+}
+
+function buildForecastExtensionData(values, forecastVal) {
+    if (forecastVal == null || !isFinite(forecastVal) || !values?.length) return null;
+    const n = values.length;
+    const data = Array(n + 1).fill(null);
+    data[n - 1] = values[n - 1];
+    data[n] = forecastVal;
+    return data;
+}
+
+function extendSeriesForForecastDay(series, targetLen) {
+    if (!Array.isArray(series) || !targetLen) return series;
+    if (series.length === targetLen) return series;
+    if (series.length < targetLen) {
+        return [...series, ...Array(targetLen - series.length).fill(null)];
+    }
+    return series.slice(0, targetLen);
 }
 
 function modelHasChartData(m) {
@@ -1739,49 +1918,6 @@ function getChartVisibleModelNames() {
             if (ds._modelName && chart.isDatasetVisible(idx)) {
                 names.push(ds._modelName);
             }
-        }
-
-        // Ordenar por MASE ascendente (mejor desempeño primero)
-        models.sort((a, b) => (a.mase != null ? a.mase : Infinity) - (b.mase != null ? b.mase : Infinity));
-
-        modelsBody.innerHTML = models.map(m => {
-            const maseColor = m.mase < 0.75 ? 'var(--green)' : (m.mase < 1.0 ? 'var(--amber)' : 'var(--red)');
-            const stateLabel = m.mase < 0.75 ? 'Excelente' : (m.mase < 1.0 ? 'Aceptable' : 'Subóptimo');
-            return `
-                <tr>
-                    <td style="font-weight: 600; color: white;">${cleanTechnicalTerms(m.name.replace(/_/g, ' ').toUpperCase())}</td>
-                    <td style="text-align: right; font-family: var(--mono); color: ${maseColor}; font-weight: bold;">${m.mase.toFixed(3)}</td>
-                    <td style="text-align: right; font-family: var(--mono); color: var(--text-muted);">${m.mae ? m.mae.toFixed(2) : 'N/A'}</td>
-                    <td style="text-align: right; font-family: var(--mono); color: var(--text-dim);">${m.rmse ? m.rmse.toFixed(2) : 'N/A'}</td>
-                    <td><span class="custom-badge" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: ${maseColor}">${stateLabel}</span></td>
-                </tr>
-            `;
-        }).join('');
-    }
-}
-
-// =====================================================================
-//  COMPARADOR DE MODELOS (lista desplegable + overlay)
-// =====================================================================
-
-// Color consistente por modelo (mapa fijo para los conocidos + hash determinístico).
-const MODEL_COLORS = {
-    theta_lite: '#38bdf8',
-    holt_winters: '#f472b6',
-    trend_season: '#f59e0b',
-    seasonal_naive: '#a78bfa',
-    fourier_regression: '#34d399',
-    mean_7d: '#fb7185',
-    ewma: '#facc15',
-    random_forest: '#10b981',
-};
-
-function getModelColor(name) {
-    if (!name) return '#f472b6';
-    if (MODEL_COLORS[name]) return MODEL_COLORS[name];
-    let h = 0;
-    for (const c of String(name)) h = (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0;
-    return `hsl(${h % 360}, 70%, 62%)`;
         });
         if (showAllModels || selectedCompareModel || names.length) {
             return dashboardData ? sortModelNamesByMase(dashboardData, names) : names;
@@ -1790,6 +1926,10 @@ function getModelColor(name) {
     const fallback = getVisibleModelNames();
     return dashboardData ? sortModelNamesByMase(dashboardData, fallback) : fallback;
 }
+
+// =====================================================================
+//  COMPARADOR DE MODELOS (lista desplegable + overlay)
+// =====================================================================
 
 function syncModelCompareUI() {
     renderForecastBaseChart();
@@ -1854,6 +1994,9 @@ function renderModelDetailPanel() {
 // Construye la lista de modelos comparables: los del backtest estadistico
 // mas el Random Forest (desde forecast_rf), cada uno con su serie diaria si existe.
 function buildComparableModels(data) {
+    if (comparableModelsCache && comparableModelsCache.source === data) {
+        return comparableModelsCache.list;
+    }
     const list = [];
     const f = (data && data.forecast) ? data.forecast : {};
     const chartLen = Array.isArray(f.time_series) ? f.time_series.length : 0;
@@ -1875,29 +2018,6 @@ function buildComparableModels(data) {
 
     const rf = data ? data.forecast_rf : null;
     if (rf && rf.available !== false) {
-        if (Array.isArray(rf.backtest_models)) {
-            rf.backtest_models.forEach(m => {
-                if (!list.some(x => x.name === m.name)) {
-                    let series = Array.isArray(m.series) ? m.series : null;
-                    if (!series && m.name === (rf.model_name || 'random_forest')) {
-                        series = Array.isArray(rf.series) ? rf.series : buildRfAlignedSeries(data);
-                    }
-                    list.push({
-                        name: m.name,
-                        mase: m.mase,
-                        mae: m.mae,
-                        rmse: m.rmse,
-                        series: series
-                    });
-                }
-            });
-        } else {
-            const rfName = rf.model_name || 'random_forest';
-            if (!list.some(m => m.name === rfName)) {
-                let series = Array.isArray(rf.series) ? rf.series : null;
-                if (!series) series = buildRfAlignedSeries(data);
-                list.push({ name: rfName, mase: rf.mase, mae: rf.mae, rmse: rf.rmse, series: series });
-            }
         const rfName = rf.model_name || 'random_forest';
         if (!list.some(m => normModelName(m.name) === normModelName(rfName))) {
             let series = Array.isArray(rf.series) ? rf.series : null;
@@ -1921,20 +2041,67 @@ function buildComparableModels(data) {
         }
         (rf.backtest_models || []).forEach(m => {
             const key = normModelName(m.name);
-            if (['random_forest', 'lightgbm', 'autoets'].indexOf(key) < 0) return;
-            if (list.some(x => normModelName(x.name) === key)) return;
+            if (ML_MODEL_NAMES.indexOf(key) < 0) return;
+            let series = Array.isArray(m.series) ? m.series : null;
+            if (!series && normModelName(m.name) === normModelName(rfName)) {
+                series = buildRfAlignedSeries(data);
+            }
+            if (seriesHasChartPoints(series) && chartLen) {
+                series = normalizeModelSeries(series, chartLen);
+            }
+            const existing = list.find(x => normModelName(x.name) === key);
+            if (existing) {
+                existing.series = pickBetterModelSeries(existing.series, series);
+                existing.mase = m.mase ?? existing.mase;
+                existing.mae = m.mae ?? existing.mae;
+                existing.rmse = m.rmse ?? existing.rmse;
+                existing.horizons = m.horizons || existing.horizons;
+                existing.forecast_1d = m.forecast_1d ?? existing.forecast_1d;
+                return;
+            }
             list.push({
                 name: m.name,
                 mase: m.mase,
                 mae: m.mae,
                 rmse: m.rmse,
-                series: null,
-                horizons: null,
-                forecast_1d: null,
+                series: series,
+                horizons: m.horizons || null,
+                forecast_1d: m.forecast_1d || null,
             });
         });
     }
+    comparableModelsCache = { source: data, list };
     return list;
+}
+
+function showBestModelOnLoad(data) {
+    const models = buildComparableModels(data);
+    const best = getBestForecastRecord(data);
+    const bestEntry = best
+        ? models.find((m) => normModelName(m.name) === normModelName(best.modelName))
+        : null;
+
+    if (bestEntry && seriesHasChartPoints(bestEntry.series)) {
+        selectedCompareModel = bestEntry.name;
+        showAllModels = false;
+        visibleModelNames = new Set([bestEntry.name]);
+        const sel = document.getElementById('model-compare-select');
+        if (sel) {
+            sel.value = bestEntry.name;
+            sel.style.borderColor = getModelColor(bestEntry.name);
+            sel.style.color = getModelColor(bestEntry.name);
+        }
+        const meta = document.getElementById('model-compare-meta');
+        if (meta) {
+            meta.textContent = typeof bestEntry.mase === 'number' ? `MASE (comparado): ${bestEntry.mase.toFixed(3)}` : '';
+            meta.style.color = getModelColor(bestEntry.name);
+        }
+    } else {
+        selectedCompareModel = '';
+        showAllModels = false;
+        visibleModelNames = new Set();
+    }
+    syncModelCompareUI();
 }
 
 // Alinea las predicciones diarias del backtest del Random Forest (forecast_rf.backtest_series)
@@ -2195,6 +2362,8 @@ function renderAlertsTableList(filteredList) {
             </tr>
         `;
     }).join('');
+
+    applyProgressBars(tableBody);
 }
 
 // =====================================================================
@@ -2235,11 +2404,26 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
     const lineLabel = options.lineLabel || 'Pronóstico Recomendado';
     const lineColor = options.lineColor || defaultLineColor;
     const forecastVal = options.forecastValue != null ? options.forecastValue : forecast.recommended_value;
+    const overlays = Array.isArray(options.overlays)
+        ? options.overlays
+        : (options.overlay ? [options.overlay] : []);
+    const heavyChart = overlays.length > 2;
+    const isForecastChart = chartKey === 'timeseries';
+    const forecastAnimated = isForecastChart && shouldAnimateForecastChart();
+    const showForecastLine = isForecastChart && !isBar && forecastVal != null && isFinite(forecastVal);
+    const forecastExtension = showForecastLine ? buildForecastExtensionData(values, forecastVal) : null;
+
+    let chartLabels = labels;
+    let leadsData = values;
+    if (forecastExtension) {
+        chartLabels = [...labels, resolveNextForecastLabel(forecast, ts)];
+        leadsData = [...values, null];
+    }
 
     const datasets = [
         {
             label: 'Leads diarios',
-            data: values,
+            data: leadsData,
             borderColor: isLight ? '#0284c7' : '#38bdf8',
             backgroundColor: isBar
                 ? (isLight ? 'rgba(2, 132, 199, 0.55)' : 'rgba(56, 189, 248, 0.45)')
@@ -2247,43 +2431,46 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
             fill: !isBar,
             tension: 0.35,
             borderRadius: isBar ? 6 : 0,
-            pointRadius: isBar ? 0 : 3,
-            pointHoverRadius: isBar ? 0 : 8,
+            pointRadius: isBar ? 0 : (forecastAnimated ? 3 : (heavyChart ? 0 : 2)),
+            pointHoverRadius: isBar ? 0 : (forecastAnimated ? 8 : (heavyChart ? 0 : 6)),
             pointBackgroundColor: isLight ? '#0284c7' : '#38bdf8',
             pointBorderColor: isLight ? '#ffffff' : '#080c14',
             pointBorderWidth: 2,
             borderWidth: isBar ? 0 : 2.5
-        },
-        {
-            type: 'line',
-            label: lineLabel,
-            data: new Array(values.length).fill(forecastVal),
-            borderColor: lineColor,
-            borderDash: [6, 4],
-            borderWidth: 2,
-            pointRadius: 0,
-            fill: false
         }
     ];
 
-    // Overlays: una o varias curvas de modelos para comparar
-    const overlays = Array.isArray(options.overlays)
-        ? options.overlays
-        : (options.overlay ? [options.overlay] : []);
+    if (forecastExtension) {
+        datasets.push({
+            type: 'line',
+            label: lineLabel,
+            data: forecastExtension,
+            borderColor: lineColor,
+            borderDash: [6, 4],
+            borderWidth: 2,
+            pointRadius: forecastExtension.map((v, i) => i === forecastExtension.length - 1 ? 6 : 0),
+            pointHoverRadius: forecastExtension.map((v, i) => i === forecastExtension.length - 1 ? 8 : 0),
+            pointBackgroundColor: lineColor,
+            fill: false,
+            spanGaps: false,
+        });
+    }
+
+    const chartDataLen = chartLabels.length;
     overlays.forEach(ov => {
         if (!ov || !seriesHasChartPoints(ov.series)) return;
         datasets.push({
             type: 'line',
             label: ov.label || 'Modelo comparado',
-            data: ov.series,
+            data: extendSeriesForForecastDay(ov.series, chartDataLen),
             borderColor: ov.color || (isLight ? '#db2777' : '#f472b6'),
             backgroundColor: 'transparent',
-            borderWidth: 2.5,
-            tension: 0.35,
+            borderWidth: heavyChart ? 1.8 : 2.5,
+            tension: 0.25,
             pointRadius: 0,
-            pointHoverRadius: 6,
+            pointHoverRadius: heavyChart ? 0 : 4,
             fill: false,
-            spanGaps: false,
+            spanGaps: true,
             _modelName: ov.modelName || null,
         });
     });
@@ -2291,22 +2478,14 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
     charts[chartKey] = new Chart(ctx, {
         type: chartType,
         data: {
-            labels,
+            labels: chartLabels,
             datasets
         },
         options: {
-            animation: {
-                duration: 900,
-                easing: 'easeOutQuart',
-                delay: (context) => {
-                    let delay = 0;
-                    if (context.type === 'data' && context.mode === 'default' && !context.active) {
-                        delay = context.dataIndex * 15;
-                    }
-                    return delay;
-                }
-            },
-            transitions: {
+            animation: isForecastChart
+                ? getForecastChartAnimationOptions(heavyChart)
+                : getChartAnimationOptions(heavyChart),
+            transitions: forecastAnimated ? {
                 hide: {
                     animations: {
                         opacity: { duration: 380, easing: 'easeInOutQuad', to: 0 },
@@ -2317,18 +2496,24 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
                         opacity: { duration: 480, easing: 'easeOutQuart', from: 0, to: 1 },
                     },
                 },
-            },
+            } : ((PERF.lite || heavyChart) ? {
+                active: { animation: { duration: 0 } },
+            } : {
+                hide: {
+                    animations: {
+                        opacity: { duration: 200, easing: 'easeInOutQuad', to: 0 },
+                    },
+                },
+                show: {
+                    animations: {
+                        opacity: { duration: 250, easing: 'easeOutQuart', from: 0, to: 1 },
+                    },
+                },
+            }),
             responsive: true,
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: {
-                    display: true,
-                    labels: {
-                        color: isLight ? '#475569' : '#94a3b8',
-                        font: { size: 11, family: 'Inter' },
-                        boxWidth: 12
-                    }
                 legend: {
                     display: true,
                     onClick: (evt, legendItem, legend) => {
@@ -2344,10 +2529,10 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
                         }
                     },
                     labels: {
-                        color: isLight ? '#475569' : '#94a3b8', 
-                        font: { size: 11, family: 'Inter' }, 
-                        boxWidth: 12 
-                    } 
+                        color: isLight ? '#475569' : '#94a3b8',
+                        font: { size: 11, family: 'Inter' },
+                        boxWidth: 12
+                    }
                 },
                 tooltip: {
                     backgroundColor: isLight ? '#ffffff' : '#05080f',
@@ -2445,17 +2630,7 @@ function renderSeasonalChart(indices, options = {}) {
             }]
         },
         options: {
-            animation: {
-                duration: 700,
-                easing: 'easeOutBack',
-                delay: (context) => {
-                    let delay = 0;
-                    if (context.type === 'data' && context.mode === 'default' && !context.active) {
-                        delay = context.dataIndex * 60;
-                    }
-                    return delay;
-                }
-            },
+            animation: getChartAnimationOptions(),
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
@@ -2509,17 +2684,7 @@ function renderCampaignChart(campaigns) {
             }]
         },
         options: {
-            animation: {
-                duration: 900,
-                easing: 'easeOutQuart',
-                delay: (context) => {
-                    let delay = 0;
-                    if (context.type === 'data' && context.mode === 'default' && !context.active) {
-                        delay = context.dataIndex * 60;
-                    }
-                    return delay;
-                }
-            },
+            animation: getChartAnimationOptions(),
             responsive: true,
             maintainAspectRatio: false,
             cutout: '65%',
@@ -2557,46 +2722,26 @@ function renderHourlyChart(hourly) {
 
     const isLight = document.body.classList.contains('light-mode');
     const ctx = element.getContext('2d');
+    const hourlyValues = hourly.map(h => h.probability !== undefined ? (h.probability * 100) : (h.count || h.calls || h.total || 0));
+    const maxVal = Math.max(...hourlyValues);
+    const peakBg = isLight ? 'rgba(225, 29, 72, 0.85)' : 'rgba(244, 63, 94, 0.85)';
+    const peakHover = isLight ? 'rgba(225, 29, 72, 0.95)' : 'rgba(244, 63, 94, 0.95)';
+    const normalBg = isLight ? 'rgba(132, 204, 22, 0.55)' : 'rgba(163, 230, 53, 0.45)';
+    const normalHover = isLight ? 'rgba(132, 204, 22, 0.75)' : 'rgba(163, 230, 53, 0.65)';
     charts.hourly = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: hourly.map(h => h.label || `${h.hour !== undefined ? h.hour : h.hr}:00`),
             datasets: [{
                 label: 'Contactos',
-                data: hourly.map(h => h.probability !== undefined ? (h.probability * 100) : (h.count || h.calls || h.total || 0)),
-                backgroundColor: hourly.map((h, i) => {
-                    const val = h.probability !== undefined ? (h.probability * 100) : (h.count || h.calls || h.total || 0);
-                    const max = Math.max(...hourly.map(x => x.probability !== undefined ? (x.probability * 100) : (x.count || x.calls || x.total || 0)));
-                    if (val === max) {
-                        return isLight ? 'rgba(225, 29, 72, 0.85)' : 'rgba(244, 63, 94, 0.85)';
-                    } else {
-                        return isLight ? 'rgba(132, 204, 22, 0.55)' : 'rgba(163, 230, 53, 0.45)';
-                    }
-                }),
-                hoverBackgroundColor: hourly.map((h, i) => {
-                    const val = h.probability !== undefined ? (h.probability * 100) : (h.count || h.calls || h.total || 0);
-                    const max = Math.max(...hourly.map(x => x.probability !== undefined ? (x.probability * 100) : (x.count || x.calls || x.total || 0)));
-                    if (val === max) {
-                        return isLight ? 'rgba(225, 29, 72, 0.95)' : 'rgba(244, 63, 94, 0.95)';
-                    } else {
-                        return isLight ? 'rgba(132, 204, 22, 0.75)' : 'rgba(163, 230, 53, 0.65)';
-                    }
-                }),
+                data: hourlyValues,
+                backgroundColor: hourlyValues.map(v => v === maxVal ? peakBg : normalBg),
+                hoverBackgroundColor: hourlyValues.map(v => v === maxVal ? peakHover : normalHover),
                 borderRadius: 4
             }]
         },
         options: {
-            animation: {
-                duration: 600,
-                easing: 'easeOutQuart',
-                delay: (context) => {
-                    let delay = 0;
-                    if (context.type === 'data' && context.mode === 'default' && !context.active) {
-                        delay = context.dataIndex * 18;
-                    }
-                    return delay;
-                }
-            },
+            animation: getChartAnimationOptions(),
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
@@ -2695,17 +2840,7 @@ function renderDailyVolumeChart(ops) {
             ]
         },
         options: {
-            animation: {
-                duration: 700,
-                easing: 'easeOutQuart',
-                delay: (context) => {
-                    let delay = 0;
-                    if (context.type === 'data' && context.mode === 'default' && !context.active) {
-                        delay = context.dataIndex * 8;
-                    }
-                    return delay;
-                }
-            },
+            animation: getChartAnimationOptions(),
             responsive: true,
             maintainAspectRatio: false,
             interaction: {
@@ -2765,7 +2900,8 @@ function setDailyVolumeType(type, ev) {
     }
 }
 
-function renderOperationsTab(data) {
+function renderOperationsTab(data, options = {}) {
+    const renderCharts = options.charts !== false;
     if (!data || !data.operations) return;
     const ops = data.operations;
     const call = ops.call_metrics || {};
@@ -2830,12 +2966,11 @@ function renderOperationsTab(data) {
     if (volSub) {
         volSub.textContent = `${ops.total_days} días | Promedio: ${Math.round(ops.avg_daily)} leads/día`;
     }
-    renderDailyVolumeChart(ops);
-
-    const seasonalIndices = data?.operations?.seasonal_indices
-        || data?.forecast?.seasonal_indices;
-    if (seasonalIndices) {
-        renderSeasonalChart(seasonalIndices);
+    if (renderCharts) {
+        renderDailyVolumeChart(ops);
+        const seasonalIndices = data?.operations?.seasonal_indices
+            || data?.forecast?.seasonal_indices;
+        if (seasonalIndices) renderSeasonalChart(seasonalIndices);
     }
 
     // 3. Populate Contact Distribution Bars
@@ -2899,7 +3034,7 @@ function renderOperationsTab(data) {
         const valleyStr = `${String(ops.valley_hour !== undefined ? ops.valley_hour : 3).padStart(2, '0')}:00`;
         hourlySub.textContent = `Pico: ${peakStr} | Valle: ${valleyStr}`;
     }
-    renderHourlyChart(ops.hourly_distribution);
+    if (renderCharts) renderHourlyChart(ops.hourly_distribution);
 }
 
 // =====================================================================
@@ -2907,38 +3042,45 @@ function renderOperationsTab(data) {
 // =====================================================================
 
 function initSpotlight() {
+    if (PERF.lite) return;
+
     const flashlight = document.querySelector('.global-flashlight');
     const sidebar = document.querySelector('.sidebar');
     const topbar = document.querySelector('.topbar');
+    let rafId = null;
+    let lastX = 0;
+    let lastY = 0;
+    let activeCard = null;
 
-    document.addEventListener('mousemove', e => {
-        if (flashlight) {
-            flashlight.style.setProperty('--global-mouse-x', `${e.clientX}px`);
-            flashlight.style.setProperty('--global-mouse-y', `${e.clientY}px`);
-        }
-        if (sidebar) {
-            const rect = sidebar.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            sidebar.style.setProperty('--sidebar-mouse-x', `${x}px`);
-            sidebar.style.setProperty('--sidebar-mouse-y', `${y}px`);
-        }
-        if (topbar) {
-            const rect = topbar.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            topbar.style.setProperty('--topbar-mouse-x', `${x}px`);
-            topbar.style.setProperty('--topbar-mouse-y', `${y}px`);
-        }
-        const cards = document.querySelectorAll('.card');
-        cards.forEach(card => {
-            const rect = card.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            card.style.setProperty('--mouse-x', `${x}px`);
-            card.style.setProperty('--mouse-y', `${y}px`);
+    document.addEventListener('mousemove', (e) => {
+        lastX = e.clientX;
+        lastY = e.clientY;
+        if (rafId) return;
+        rafId = requestAnimationFrame(() => {
+            rafId = null;
+            if (flashlight) {
+                flashlight.style.setProperty('--global-mouse-x', `${lastX}px`);
+                flashlight.style.setProperty('--global-mouse-y', `${lastY}px`);
+            }
+            if (sidebar) {
+                const rect = sidebar.getBoundingClientRect();
+                sidebar.style.setProperty('--sidebar-mouse-x', `${lastX - rect.left}px`);
+                sidebar.style.setProperty('--sidebar-mouse-y', `${lastY - rect.top}px`);
+            }
+            if (topbar) {
+                const rect = topbar.getBoundingClientRect();
+                topbar.style.setProperty('--topbar-mouse-x', `${lastX - rect.left}px`);
+                topbar.style.setProperty('--topbar-mouse-y', `${lastY - rect.top}px`);
+            }
+            const hovered = document.elementFromPoint(lastX, lastY)?.closest('.card');
+            if (hovered !== activeCard) activeCard = hovered;
+            if (activeCard) {
+                const rect = activeCard.getBoundingClientRect();
+                activeCard.style.setProperty('--mouse-x', `${lastX - rect.left}px`);
+                activeCard.style.setProperty('--mouse-y', `${lastY - rect.top}px`);
+            }
         });
-    });
+    }, { passive: true });
 }
 
 // =====================================================================
@@ -3180,6 +3322,8 @@ window.triggerSync = async function (event) {
 // =====================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    initPerformanceMode();
+
     // Early initialisation of Light Mode to prevent transition flashes
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'light') {
