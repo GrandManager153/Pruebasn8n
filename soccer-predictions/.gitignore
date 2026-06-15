@@ -11,3 +11,11 @@ __pycache__/
 data/
 *.csv
 *.xlsx
+
+# Scripts ignorados
+neural_network_predict.py
+random_forest_predict.py
+predict_jornada1.py
+predict_markets.py
+data_loader.py
+wc2026_context.py
