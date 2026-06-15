@@ -159,7 +159,7 @@ export default function ReportsPage() {
                   cursor: 'pointer',
                 }}
               >
-                Descargar PDF / Imprimir 📥
+                Descargar PDF / Imprimir
               </button>
               <a
                 href={iframeUrl}
