@@ -3087,6 +3087,26 @@ function initSpotlight() {
 //  INTEGRATED INTERACTIVE REPORT VIEWER
 // =====================================================================
 
+function resizeReportIframe(iframe) {
+    if (!iframe || !iframe.contentWindow) return;
+    try {
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        const height = Math.max(
+            doc.body?.scrollHeight || 0,
+            doc.documentElement?.scrollHeight || 0
+        );
+        iframe.style.height = Math.max(height + 32, 420) + 'px';
+    } catch (err) {
+        iframe.style.height = '1400px';
+    }
+}
+
+window.addEventListener('message', (event) => {
+    if (event.data !== 'report-resize') return;
+    const iframe = document.getElementById('viewer-iframe') || document.getElementById('report-iframe');
+    if (iframe) resizeReportIframe(iframe);
+});
+
 function loadReportInViewer(url, title, event) {
     if (event) {
         event.preventDefault(); // Intercept and stop opening new tab
@@ -3137,6 +3157,8 @@ function loadReportInViewer(url, title, event) {
         statusDot.style.backgroundColor = "var(--green)";
         statusDot.style.animation = "none";
         statusDot.style.boxShadow = "none";
+        resizeReportIframe(iframe);
+        setTimeout(() => resizeReportIframe(iframe), 350);
     };
 }
 

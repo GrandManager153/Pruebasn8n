@@ -39,12 +39,36 @@ export default function ReportsPage() {
   const lastUpdate = useDashboardStore((state) => state.lastUpdate);
   const theme = useDashboardStore((state) => state.theme);
 
+  const resizeReportIframe = (iframe) => {
+    if (!iframe?.contentWindow) return;
+    try {
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      const height = Math.max(
+        doc.body?.scrollHeight || 0,
+        doc.documentElement?.scrollHeight || 0,
+      );
+      iframe.style.height = `${Math.max(height + 32, 420)}px`;
+    } catch {
+      iframe.style.height = '1400px';
+    }
+  };
+
   // Sync iframe URL with active report and cache buster on data updates
   useEffect(() => {
     if (activeReport) {
       setIframeUrl(`/reports/${activeReport.key}?_=${Date.now()}`);
     }
   }, [lastUpdate, activeReport]);
+
+  useEffect(() => {
+    const onReportResize = (event) => {
+      if (event.data !== 'report-resize') return;
+      const iframe = document.getElementById('report-iframe');
+      if (iframe) resizeReportIframe(iframe);
+    };
+    window.addEventListener('message', onReportResize);
+    return () => window.removeEventListener('message', onReportResize);
+  }, []);
 
   const openReport = (report) => {
     setActiveReport(report);
@@ -61,6 +85,8 @@ export default function ReportsPage() {
     const iframe = document.getElementById('report-iframe');
     if (iframe && iframe.contentWindow) {
       iframe.contentWindow.postMessage(theme === 'light' ? 'theme-light' : 'theme-dark', '*');
+      resizeReportIframe(iframe);
+      setTimeout(() => resizeReportIframe(iframe), 350);
     }
   };
 
@@ -203,7 +229,7 @@ export default function ReportsPage() {
             id="report-iframe"
             src={iframeUrl}
             onLoad={handleIframeLoad}
-            style={{ width: '100%', height: 800, border: 'none', background: '#070d19' }}
+            style={{ width: '100%', minHeight: 420, height: 800, border: 'none', background: '#070d19' }}
             title={activeReport.title}
           />
         ) : (

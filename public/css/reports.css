@@ -700,6 +700,56 @@ body.embedded .report-back-bar {
     display: none !important;
 }
 
+/* === Embedded preview: full report visible (all tabs stacked) === */
+body.embedded .tabs {
+    display: none !important;
+}
+
+body.embedded .tc {
+    display: block !important;
+    margin-bottom: 36px !important;
+    padding-top: 12px;
+    border-top: 2px solid #000000;
+}
+
+body.embedded .tc:first-of-type {
+    border-top: none;
+    padding-top: 0;
+}
+
+body.embedded #narrativa::before,
+body.embedded #alertas::before,
+body.embedded #acciones::before {
+    display: block;
+    font-family: var(--font-serif);
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 16px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #111111;
+    color: #000000;
+}
+
+body.embedded #narrativa::before {
+    content: "Narrativa";
+}
+
+body.embedded #alertas::before {
+    content: "Alertas";
+}
+
+body.embedded #acciones::before {
+    content: "Acciones";
+}
+
+body.embedded .info-section .info-body {
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
+}
+
 @media print {
     .report-back-bar {
         display: none !important;

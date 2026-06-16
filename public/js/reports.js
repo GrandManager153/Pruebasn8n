@@ -408,6 +408,14 @@
         });
     }
 
+    // ── Embedded preview: expand collapsible sections ──
+    function setupEmbeddedPreview() {
+        if (window.parent === window) return;
+        document.querySelectorAll('.info-section').forEach((section) => {
+            section.classList.add('open');
+        });
+    }
+
     // ── Inicialización ──
     function initReportAnimations() {
         initTheme();
@@ -415,9 +423,14 @@
         injectLatexAbstract();
         
         const audience = getAudience();
-        filterKpisByAudience(audience);
-        filterContentByAudience(audience);
-        filterAlertsAndActionsByAudience(audience);
+        // Analyst report is the full data audit — show all KPIs, narrative, alerts and actions
+        if (audience !== 'analyst') {
+            filterKpisByAudience(audience);
+            filterContentByAudience(audience);
+            filterAlertsAndActionsByAudience(audience);
+        }
+
+        setupEmbeddedPreview();
         
         injectChartContainers();
         injectAlertsChart();
@@ -430,6 +443,11 @@
         }
 
         renderAllCharts();
+
+        if (window.parent !== window) {
+            window.parent.postMessage('report-resize', '*');
+            setTimeout(() => window.parent.postMessage('report-resize', '*'), 400);
+        }
     }
 
     if (document.readyState === 'loading') {
