@@ -11,14 +11,18 @@
 
     // ── Standalone Theme Management ──
     function applyTheme(theme) {
-        // LaTeX reports are ALWAYS light-mode optimized (white background, black text)
-        // for print/pdf export. We force body class but adapt theme toggles for visual state if needed.
-        document.body.classList.remove('light-mode'); // Clear default class
-        document.body.classList.add('light-mode');    // Force light-mode styles in reports.css
+        if (theme === 'dark') {
+            document.body.classList.remove('light-mode');
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+            document.body.classList.add('light-mode');
+        }
     }
 
     function initTheme() {
-        applyTheme('light');
+        const cached = localStorage.getItem('theme') || 'dark';
+        applyTheme(cached);
         if (window.parent !== window) {
             document.body.classList.add('embedded');
         }
@@ -28,7 +32,7 @@
             if (e.data === 'theme-light' || e.data === 'theme-dark') {
                 const targetTheme = e.data === 'theme-light' ? 'light' : 'dark';
                 localStorage.setItem('theme', targetTheme);
-                applyTheme('light'); // Always stay light-mode in LaTeX reports!
+                applyTheme(targetTheme);
                 updateToggleIcon();
             }
         });
