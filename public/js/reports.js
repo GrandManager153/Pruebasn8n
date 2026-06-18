@@ -228,14 +228,14 @@
             targetRole = 'Dirección Ejecutiva';
             scopeText = 'Este informe presenta un análisis financiero consolidado de alto nivel. Extrae del flujo n8n el Health Score consolidado, costo por lead (CPL implícito), volumen acumulado de leads e inversión total de campañas. Proporciona directrices estratégicas de optimización de pauta comercial y mitigación de fugas para la toma de decisiones ejecutivas.';
         } else if (titleText.includes('Supervisores') || titleText.includes('Managers') || titleText.includes('Manager') || titleText.includes('Gestión')) {
-            targetRole = 'Gestión de Operaciones y Ventas (Managers)';
+            targetRole = 'Gestión de Operaciones y Ventas';
             scopeText = 'Este documento está estructurado para la dirección de equipos y supervisores de embudo. Extrae métricas clave sobre el volumen diario de leads, tasas de avance en estados críticos (Feeders de PreClosed) y anomalías operativas. Provee un plan táctico para equilibrar la carga telefónica y optimizar la conversión semanal.';
         } else if (titleText.includes('Equipo BI') || titleText.includes('Data Science') || titleText.includes('Analyst') || titleText.includes('Estadístico')) {
-            targetRole = 'Científicos de Datos y Analistas de Negocios (BI Team)';
+            targetRole = 'Científicos de Datos y Analistas de Negocios';
             scopeText = 'Este reporte de auditoría científica detalla la robustez matemática del sistema. Contiene los coeficientes de regresión del volumen de leads ($R^2$, pendientes, interceptos), la distribución de concentración de pauta publicitaria (HHI de inversiones) y la precisión de los modelos predictivos implementados (MASE del modelo theta_lite).';
         } else {
             // Default to Operations
-            targetRole = 'Supervisores de Agentes y Capacidad Operativa';
+            targetRole = 'Operaciones y Capacidad';
             scopeText = 'Este informe técnico diagnostica la eficiencia del call center y los tiempos de respuesta. Recopila desde n8n las estadísticas detalladas de llamadas por lead, demoras promedio en intentos de contacto e índice de sobre-contacto. El fin es dotar de alertas inmediatas y acciones tácticas correctivas para evitar la saturación de leads.';
         }
         
