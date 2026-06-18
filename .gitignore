@@ -56,3 +56,6 @@ desktop.ini
 *.ntvs*
 *.njsproj
 *.sln
+
+# Soccer Predictions folder
+soccer-predictions/
