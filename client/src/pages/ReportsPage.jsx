@@ -5,7 +5,7 @@ import useDashboardStore from '../stores/useDashboardStore';
 const reports = [
   {
     key: 'executive',
-    title: 'Dirección / C-Level',
+    title: 'Dirección',
     audience: 'Executive / Directores Corporativos',
     code: 'EXEC',
     gradient: 'linear-gradient(135deg, #1e3a8a, #3b82f6)',

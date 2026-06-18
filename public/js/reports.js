@@ -225,7 +225,7 @@
         let scopeText = '';
         
         if (titleText.includes('Direccion') || titleText.includes('C-Level') || titleText.includes('Executive') || titleText.includes('Dirección')) {
-            targetRole = 'Dirección Ejecutiva (C-Level)';
+            targetRole = 'Dirección Ejecutiva';
             scopeText = 'Este informe presenta un análisis financiero consolidado de alto nivel. Extrae del flujo n8n el Health Score consolidado, costo por lead (CPL implícito), volumen acumulado de leads e inversión total de campañas. Proporciona directrices estratégicas de optimización de pauta comercial y mitigación de fugas para la toma de decisiones ejecutivas.';
         } else if (titleText.includes('Supervisores') || titleText.includes('Managers') || titleText.includes('Manager') || titleText.includes('Gestión')) {
             targetRole = 'Gestión de Operaciones y Ventas (Managers)';
