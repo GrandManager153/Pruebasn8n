@@ -807,15 +807,16 @@ body.embedded .info-section .info-body {
     .kpi-row {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
-        display: flex !important;
-        justify-content: space-around !important;
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 16px 0 !important;
     }
 
     .kpi {
-        flex: 1 !important;
         border-right: 1px dashed #d0d0d0 !important;
     }
 
+    .kpi:nth-child(4n),
     .kpi:last-child {
         border-right: none !important;
     }
@@ -856,5 +857,15 @@ body.embedded .info-section .info-body {
 
     .chevron {
         display: none !important;
+    }
+
+    /* Force page break before each section heading in printed reports */
+    .content-block h2, 
+    .content-block h3, 
+    .content-block p strong, 
+    .content-block p[style*="font-weight:800"], 
+    .content-block p[style*="font-weight: 800"] {
+        page-break-before: always !important;
+        break-before: page !important;
     }
 }
