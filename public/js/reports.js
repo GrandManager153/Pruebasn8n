@@ -412,6 +412,152 @@
         });
     }
 
+    // ── KPI Tooltips Help Dictionary ──
+    const kpiContext = {
+        'HEALTH SCORE': {
+            definition: 'Métrica que mide la salud general del flujo de leads y llamadas (SHS).',
+            source: 'Calculado a partir de la tasa de sobre-contacto, demoras en intentos y volumen.',
+            purpose: 'Monitorear la presión del sistema operativo y detectar saturación.'
+        },
+        'SYSTEM HEALTH': {
+            definition: 'Métrica que mide la salud general del flujo de leads y llamadas (SHS).',
+            source: 'Calculado a partir de la tasa de sobre-contacto, demoras en intentos y volumen.',
+            purpose: 'Monitorear la presión del sistema operativo y detectar saturación.'
+        },
+        'LEADS TOTALES': {
+            definition: 'El número acumulado de registros de clientes interesados (leads) ingresados al sistema.',
+            source: 'Contador directo de la base de datos de leads procesada en n8n.',
+            purpose: 'Conocer la escala del pipeline comercial e identificar la cantidad total de prospectos.'
+        },
+        'TOTAL LEADS': {
+            definition: 'El número acumulado de registros de clientes interesados (leads) ingresados al sistema.',
+            source: 'Contador directo de la base de datos de leads procesada en n8n.',
+            purpose: 'Conocer la escala del pipeline comercial e identificar la cantidad total de prospectos.'
+        },
+        'CAMBIO SEMANAL': {
+            definition: 'La variación porcentual del volumen de leads de la semana actual contra la semana previa (Week over Week).',
+            source: 'Comparación histórica de leads del motor de analítica.',
+            purpose: 'Detectar tendencias de crecimiento o caídas drásticas en el embudo comercial.'
+        },
+        'WEEK OVER': {
+            definition: 'La variación porcentual del volumen de leads de la semana actual contra la semana previa (Week over Week).',
+            source: 'Comparación histórica de leads del motor de analítica.',
+            purpose: 'Detectar tendencias de crecimiento o caídas drásticas en el embudo comercial.'
+        },
+        'WOW': {
+            definition: 'La variación porcentual del volumen de leads de la semana actual contra la semana previa (Week over Week).',
+            source: 'Comparación histórica de leads del motor de analítica.',
+            purpose: 'Detectar tendencias de crecimiento o caídas drásticas en el embudo comercial.'
+        },
+        'CPL IMPLICITO': {
+            definition: 'Costo promedio invertido para adquirir un lead individual (Costo Por Lead).',
+            source: 'División del gasto total invertido de campañas entre el número total de leads recibidos.',
+            purpose: 'Evaluar la eficiencia financiera de la adquisición y optimizar el presupuesto publicitario.'
+        },
+        'CPL': {
+            definition: 'Costo promedio invertido para adquirir un lead individual (Costo Por Lead).',
+            source: 'División del gasto total invertido de campañas entre el número total de leads recibidos.',
+            purpose: 'Evaluar la eficiencia financiera de la adquisición y optimizar el presupuesto publicitario.'
+        },
+        'GASTO TOTAL': {
+            definition: 'La inversión publicitaria acumulada en las plataformas de anuncios para el periodo.',
+            source: 'Integración de costos de pauta (Facebook/Google Ads, etc.) en n8n.',
+            purpose: 'Controlar el presupuesto de marketing y monitorear la inversión publicitaria real.'
+        },
+        'AD SPEND': {
+            definition: 'La inversión publicitaria acumulada en las plataformas de anuncios para el periodo.',
+            source: 'Integración de costos de pauta (Facebook/Google Ads, etc.) en n8n.',
+            purpose: 'Controlar el presupuesto de marketing y monitorear la inversión publicitaria real.'
+        },
+        'PROMEDIO DIARIO': {
+            definition: 'La cantidad promedio de leads que ingresan al sistema cada día.',
+            source: 'División de los leads totales entre los días del periodo analizado.',
+            purpose: 'Planificar la capacidad del equipo de call center y dimensionar la carga operativa diaria.'
+        },
+        'DAILY AVG': {
+            definition: 'La cantidad promedio de leads que ingresan al sistema cada día.',
+            source: 'División de los leads totales entre los días del periodo analizado.',
+            purpose: 'Planificar la capacidad del equipo de call center y dimensionar la carga operativa diaria.'
+        },
+        'PREVISION DIARIA': {
+            definition: 'El volumen pronosticado de leads que ingresarán el día de mañana.',
+            source: 'Modelos predictivos de series de tiempo (ej. ensemble_weighted) en la API de ML.',
+            purpose: 'Anticipar picos o valles de leads y ajustar la asignación de agentes de venta con antelación.'
+        },
+        'DAILY FORECAST': {
+            definition: 'El volumen pronosticado de leads que ingresarán el día de mañana.',
+            source: 'Modelos predictivos de series de tiempo (ej. ensemble_weighted) en la API de ML.',
+            purpose: 'Anticipar picos o valles de leads y ajustar la asignación de agentes de venta con antelación.'
+        },
+        'PREVISION': {
+            definition: 'El volumen pronosticado de leads que ingresarán el día de mañana.',
+            source: 'Modelos predictivos de series de tiempo (ej. ensemble_weighted) en la API de ML.',
+            purpose: 'Anticipar picos o valles de leads y ajustar la asignación de agentes de venta con antelación.'
+        },
+        'MASE': {
+            definition: 'Error Absoluto Escalado Medio (Mean Absolute Scaled Error) del forecast.',
+            source: 'Comparación del error del modelo predictivo frente a un modelo ingenuo (naive baseline). Un valor < 1 supera al baseline.',
+            purpose: 'Validar científicamente la precisión y confiabilidad del pronóstico de volumen diario.'
+        },
+        'HHI': {
+            definition: 'Índice de Herfindahl-Hirschman, mide la concentración del presupuesto publicitario.',
+            source: 'Suma del cuadrado de las participaciones porcentuales de gasto de cada campaña.',
+            purpose: 'Evaluar la diversificación del presupuesto; un HHI alto indica dependencia crítica de pocas campañas.'
+        },
+        'HORA PICO': {
+            definition: 'El intervalo horario del día con mayor volumen de registro de leads.',
+            source: 'Análisis de frecuencia horaria de los leads entrantes.',
+            purpose: 'Concentrar a los agentes en los horarios clave para asegurar una respuesta inmediata.'
+        },
+        'PEAK HOUR': {
+            definition: 'El intervalo horario del día con mayor volumen de registro de leads.',
+            source: 'Análisis de frecuencia horaria de los leads entrantes.',
+            purpose: 'Concentrar a los agentes en los horarios clave para asegurar una respuesta inmediata.'
+        }
+    };
+
+    function injectKpiHelpTooltips() {
+        const kpis = document.querySelectorAll('.kpi');
+        kpis.forEach(kpi => {
+            const labelEl = kpi.querySelector('.kpi-label');
+            if (!labelEl) return;
+            const labelText = labelEl.textContent.trim().toUpperCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            
+            let info = null;
+            for (const [key, val] of Object.entries(kpiContext)) {
+                if (labelText.includes(key)) {
+                    info = val;
+                    break;
+                }
+            }
+            
+            if (!info) return;
+            
+            // Create info icon trigger in the card
+            const infoTrigger = document.createElement('span');
+            infoTrigger.className = 'kpi-info-trigger';
+            infoTrigger.innerHTML = '?';
+            kpi.appendChild(infoTrigger);
+            
+            // Create tooltip container inside the card
+            const tooltip = document.createElement('div');
+            tooltip.className = 'kpi-tooltip';
+            tooltip.innerHTML = `
+                <div class="kpi-tooltip-section">
+                    <strong>¿Qué es?:</strong> ${info.definition}
+                </div>
+                <div class="kpi-tooltip-section">
+                    <strong>¿De dónde se obtiene?:</strong> ${info.source}
+                </div>
+                <div class="kpi-tooltip-section">
+                    <strong>¿Para qué sirve?:</strong> ${info.purpose}
+                </div>
+            `;
+            kpi.appendChild(tooltip);
+        });
+    }
+
     // ── Inicialización ──
     function initReportAnimations() {
         initTheme();
@@ -419,10 +565,12 @@
         injectLatexAbstract();
         
         const audience = getAudience();
+        document.body.classList.add(`theme-${audience}`);
         filterKpisByAudience(audience);
         filterContentByAudience(audience);
         filterAlertsAndActionsByAudience(audience);
         
+        injectKpiHelpTooltips();
         injectChartContainers();
         injectAlertsChart();
 
