@@ -310,7 +310,29 @@
           225,
           254,
           273
-        ]
+        ],
+        "horizons": {
+          "next_1d": {
+            "forecast": 264,
+            "band_low": 238,
+            "band_high": 290,
+            "confidence_pct": 79,
+            "method": "theta_lite"
+          },
+          "next_7d": {
+            "forecast": 1848,
+            "band_low": 1778,
+            "band_high": 1918,
+            "method": "theta_lite+seasonal"
+          },
+          "next_14d": {
+            "forecast": 3696,
+            "band_low": 3597,
+            "band_high": 3795,
+            "method": "theta_lite+seasonal"
+          }
+        },
+        "forecast_1d": 264
       },
       {
         "name": "holt_winters",
@@ -360,7 +382,28 @@
           241,
           281,
           283
-        ]
+        ],
+        "forecast_1d": 283,
+        "horizons": {
+          "next_1d": {
+            "forecast": 283,
+            "band_low": 247,
+            "band_high": 319,
+            "method": "holt_winters"
+          },
+          "next_7d": {
+            "forecast": 1981,
+            "band_low": 1886,
+            "band_high": 2076,
+            "method": "holt_winters+seasonal"
+          },
+          "next_14d": {
+            "forecast": 3963,
+            "band_low": 3828,
+            "band_high": 4098,
+            "method": "holt_winters+seasonal"
+          }
+        }
       },
       {
         "name": "trend_season",
@@ -410,7 +453,28 @@
           251,
           268,
           293
-        ]
+        ],
+        "forecast_1d": 293,
+        "horizons": {
+          "next_1d": {
+            "forecast": 293,
+            "band_low": 256,
+            "band_high": 330,
+            "method": "trend_season"
+          },
+          "next_7d": {
+            "forecast": 2051,
+            "band_low": 1953,
+            "band_high": 2149,
+            "method": "trend_season+seasonal"
+          },
+          "next_14d": {
+            "forecast": 4103,
+            "band_low": 3965,
+            "band_high": 4241,
+            "method": "trend_season+seasonal"
+          }
+        }
       },
       {
         "name": "seasonal_naive",
@@ -460,7 +524,28 @@
           222,
           279,
           273
-        ]
+        ],
+        "forecast_1d": 273,
+        "horizons": {
+          "next_1d": {
+            "forecast": 273,
+            "band_low": 238,
+            "band_high": 308,
+            "method": "seasonal_naive"
+          },
+          "next_7d": {
+            "forecast": 1911,
+            "band_low": 1818,
+            "band_high": 2004,
+            "method": "seasonal_naive+seasonal"
+          },
+          "next_14d": {
+            "forecast": 3823,
+            "band_low": 3692,
+            "band_high": 3954,
+            "method": "seasonal_naive+seasonal"
+          }
+        }
       },
       {
         "name": "fourier_regression",
@@ -510,7 +595,28 @@
           230,
           249,
           299
-        ]
+        ],
+        "forecast_1d": 299,
+        "horizons": {
+          "next_1d": {
+            "forecast": 299,
+            "band_low": 258,
+            "band_high": 340,
+            "method": "fourier_regression"
+          },
+          "next_7d": {
+            "forecast": 2093,
+            "band_low": 1985,
+            "band_high": 2201,
+            "method": "fourier_regression+seasonal"
+          },
+          "next_14d": {
+            "forecast": 4187,
+            "band_low": 4034,
+            "band_high": 4340,
+            "method": "fourier_regression+seasonal"
+          }
+        }
       },
       {
         "name": "mean_7d",
@@ -560,7 +666,28 @@
           254,
           294,
           281
-        ]
+        ],
+        "forecast_1d": 281,
+        "horizons": {
+          "next_1d": {
+            "forecast": 281,
+            "band_low": 240,
+            "band_high": 322,
+            "method": "mean_7d"
+          },
+          "next_7d": {
+            "forecast": 1967,
+            "band_low": 1859,
+            "band_high": 2075,
+            "method": "mean_7d+seasonal"
+          },
+          "next_14d": {
+            "forecast": 3935,
+            "band_low": 3782,
+            "band_high": 4088,
+            "method": "mean_7d+seasonal"
+          }
+        }
       },
       {
         "name": "ewma",
@@ -610,7 +737,28 @@
           231,
           264,
           275
-        ]
+        ],
+        "forecast_1d": 275,
+        "horizons": {
+          "next_1d": {
+            "forecast": 275,
+            "band_low": 233,
+            "band_high": 317,
+            "method": "ewma"
+          },
+          "next_7d": {
+            "forecast": 1925,
+            "band_low": 1814,
+            "band_high": 2036,
+            "method": "ewma+seasonal"
+          },
+          "next_14d": {
+            "forecast": 3851,
+            "band_low": 3694,
+            "band_high": 4008,
+            "method": "ewma+seasonal"
+          }
+        }
       }
     ],
     "seasonal_indices": [
@@ -847,7 +995,28 @@
         "name": "random_forest",
         "mae": 2.88,
         "mase": 0.2724,
-        "rmse": 4.03
+        "rmse": 4.03,
+        "horizons": {
+          "next_1d": {
+            "forecast": 80,
+            "band_low": 75,
+            "band_high": 86,
+            "method": "random_forest"
+          },
+          "next_7d": {
+            "forecast": 560,
+            "band_low": 522,
+            "band_high": 601,
+            "method": "random_forest+scale"
+          },
+          "next_14d": {
+            "forecast": 1120,
+            "band_low": 1044,
+            "band_high": 1202,
+            "method": "random_forest+scale"
+          }
+        },
+        "forecast_1d": 80
       },
       {
         "name": "seasonal_naive",

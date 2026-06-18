@@ -17,6 +17,7 @@ function buildMockSeries(days = 42) {
     series.push({
       date: d.toISOString().split('T')[0],
       value: 80 + Math.round(Math.sin(i / 5) * 15) + Math.floor(i / 3),
+      spend: 900 + Math.round(Math.sin(i / 3) * 200),
     });
   }
   return series;
@@ -72,27 +73,51 @@ function buildLocalEngineStub(series) {
       : 1;
   const mae = Math.abs(vals[n - 1] - mean7);
   const mase = naiveMae > 0 ? mae / naiveMae : 1;
+  const fc1d = Math.round(mean7);
+  const horizons = {
+    next_1d: { forecast: fc1d, band_low: 0, band_high: Math.round(mean7 * 1.2) },
+    next_7d: { forecast: Math.round(mean7 * 7), band_low: 0, band_high: Math.round(mean7 * 7 * 1.2) },
+    next_14d: { forecast: Math.round(mean7 * 14), band_low: 0, band_high: Math.round(mean7 * 14 * 1.2) },
+  };
+  const fourierFc = Math.round(mean7 * 1.05);
   return {
     mode: mase < 1 ? 'weak_model' : 'observed_fallback',
     model_name: 'mean_7d',
-    recommended_value: Math.round(mean7),
+    recommended_value: fc1d,
     mase: Math.round(mase * 1000) / 1000,
     confidence: 'media',
     label: 'Local stub mean_7d',
-    forecast_horizons: {
-      next_1d: { forecast: Math.round(mean7), band_low: 0, band_high: Math.round(mean7 * 1.2) },
-      next_7d: { forecast: Math.round(mean7 * 7), band_low: 0, band_high: Math.round(mean7 * 7 * 1.2) },
-      next_14d: { forecast: Math.round(mean7 * 14), band_low: 0, band_high: Math.round(mean7 * 14 * 1.2) },
-    },
+    forecast_horizons: horizons,
     backtest: {
       models: [
-        { name: 'mean_7d', mae: Math.round(mae * 100) / 100, mase: Math.round(mase * 1000) / 1000, rmse: mae },
-        { name: 'fourier_regression', mae: mae * 1.1, mase: mase * 1.05, rmse: mae * 1.2 },
+        {
+          name: 'mean_7d',
+          mae: Math.round(mae * 100) / 100,
+          mase: Math.round(mase * 1000) / 1000,
+          rmse: mae,
+          series: vals.slice(-14).map((v) => Math.round(v * 0.98)),
+          forecast_1d: fc1d,
+          horizons,
+        },
+        {
+          name: 'fourier_regression',
+          mae: Math.round(mae * 1.1 * 100) / 100,
+          mase: Math.round(mase * 1.05 * 1000) / 1000,
+          rmse: mae * 1.2,
+          series: vals.slice(-14).map((v) => Math.round(v * 1.02)),
+          forecast_1d: fourierFc,
+          horizons: {
+            next_1d: { forecast: fourierFc, band_low: 0, band_high: Math.round(fourierFc * 1.2) },
+            next_7d: { forecast: fourierFc * 7, band_low: 0, band_high: Math.round(fourierFc * 7 * 1.2) },
+            next_14d: { forecast: fourierFc * 14, band_low: 0, band_high: Math.round(fourierFc * 14 * 1.2) },
+          },
+        },
       ],
     },
     diagnostics: { best_model: 'mean_7d', best_mase: Math.round(mase * 1000) / 1000 },
     seasonal_indices: [1, 1, 1, 1, 1, 0.8, 0.7],
     changepoint: { detected: false },
+    regime: 'stable',
   };
 }
 
@@ -106,6 +131,7 @@ function buildDashboardPayload(localEngine, apiPred, timeSeries) {
     backtest_models: linear.backtest?.models || [],
     seasonal_indices: linear.seasonal_indices || [],
     changepoint: linear.changepoint || { detected: false },
+    regime: linear.regime || 'stable',
     time_series: timeSeries,
   };
   let forecast_rf;
@@ -121,6 +147,9 @@ function buildDashboardPayload(localEngine, apiPred, timeSeries) {
       backtest_models: apiPred.backtest?.models || [],
       backtest_series: apiPred.backtest_series || [],
       next_point: apiPred.next_point || null,
+      confidence: apiPred.confidence || null,
+      mode: apiPred.mode || null,
+      label: apiPred.label || null,
       time_series: timeSeries,
     };
   }
@@ -129,7 +158,7 @@ function buildDashboardPayload(localEngine, apiPred, timeSeries) {
 
 async function main() {
   const series = buildMockSeries(42);
-  const payload = { series, backtest_days: 14, model: 'random_forest' };
+  const payload = { series, backtest_days: 14, model: 'compare', changepoint: { detected: false } };
 
   const healthRes = await fetch(`${API_BASE.replace(/\/$/, '')}/health`).catch(() => null);
   if (!healthRes?.ok) throw new Error(`API not reachable at ${API_BASE}`);
@@ -161,6 +190,8 @@ async function main() {
   );
 
   console.log('PASS — forecast_rf.available:', dashboard.forecast_rf.available);
+  console.log('Winner model:', apiPred.model_name, 'MASE:', apiPred.mase);
+  if (apiPred.diagnostics?.all_mase) console.log('All MASE:', apiPred.diagnostics.all_mase);
   console.log('Saved data/dashboard_payload.json for UI smoke test');
 }
 

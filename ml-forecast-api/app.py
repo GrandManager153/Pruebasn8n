@@ -10,9 +10,9 @@ from pydantic import BaseModel, Field
 
 from model import run_forecast
 
-API_KEY = os.environ.get("API_KEY", "dev-key-change-me")
+API_KEY = os.environ.get("API_KEY", "mkt-bi-ia-dev-key")
 
-app = FastAPI(title="ML Forecast API", version="1.0.0")
+app = FastAPI(title="ML Forecast API", version="2.0.0")
 
 
 class SeriesPoint(BaseModel):
@@ -20,12 +20,21 @@ class SeriesPoint(BaseModel):
     fecha: str | None = None
     value: float | None = None
     contactos: int | float | None = None
+    spend: float | None = None
+    gasto: float | None = None
+
+
+class ChangepointInfo(BaseModel):
+    detected: bool = False
+    change_date: str | None = None
+    direction: str | None = None
 
 
 class PredictRequest(BaseModel):
     series: list[SeriesPoint]
-    backtest_days: int = Field(default=14, ge=1, le=30)
-    model: str = "random_forest"
+    backtest_days: int = Field(default=14, ge=1, le=365)
+    model: str = Field(default="compare")
+    changepoint: ChangepointInfo | None = None
 
 
 def _check_api_key(x_api_key: str | None) -> None:
@@ -45,7 +54,13 @@ def predict(
 ) -> dict[str, Any]:
     _check_api_key(x_api_key)
     raw = [p.model_dump() for p in body.series]
-    result = run_forecast(raw, backtest_days=body.backtest_days)
+    cp = body.changepoint.model_dump() if body.changepoint else None
+    result = run_forecast(
+        raw,
+        backtest_days=body.backtest_days,
+        model=body.model,
+        changepoint=cp,
+    )
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result)
     return result

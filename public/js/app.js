@@ -5,12 +5,148 @@
 
 let dashboardData = null;
 let charts = {};
+let comparableModelsCache = null;
+const termCache = new Map();
+const renderedTabs = new Set();
+const PERF = { lite: true };
+
 let currentTab = 'dashboard';
 let currentAlertFilter = 'all';
 let timeSeriesType = 'line';
 let dailyVolumeType = 'bar';
 let selectedCompareModel = '';
 let showAllModels = false;
+let visibleModelNames = new Set();
+
+function clearComparableModelsCache() {
+    comparableModelsCache = null;
+}
+
+function clearTermCache() {
+    termCache.clear();
+}
+
+function shouldAnimateUI() {
+    return !PERF.lite && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function getChartAnimationOptions(heavy = false) {
+    if (PERF.lite || heavy) return false;
+    return { duration: 280, easing: 'easeOutQuart' };
+}
+
+function shouldAnimateForecastChart() {
+    return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function getForecastChartAnimationOptions(heavy = false) {
+    if (!shouldAnimateForecastChart()) return false;
+    if (heavy) {
+        return { duration: 500, easing: 'easeOutQuart' };
+    }
+    return {
+        duration: 900,
+        easing: 'easeOutQuart',
+        delay: (context) => {
+            if (context.type === 'data' && context.mode === 'default' && !context.active) {
+                return context.dataIndex * 15;
+            }
+            return 0;
+        },
+    };
+}
+
+function scheduleDeferredRender(fn) {
+    if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(() => fn(), { timeout: 1500 });
+    } else {
+        setTimeout(fn, 60);
+    }
+}
+
+function initPerformanceMode() {
+    if (PERF.lite) document.body.classList.add('perf-lite');
+}
+
+function applyProgressBars(root, animate = shouldAnimateUI()) {
+    const scope = root || document;
+    scope.querySelectorAll('.progress-bar-fill[data-pct], .mase-bar-fill[data-pct]').forEach(bar => {
+        const pct = bar.getAttribute('data-pct');
+        if (pct == null) return;
+        if (animate) {
+            bar.style.width = '0%';
+            void bar.offsetWidth;
+            bar.style.width = pct + '%';
+        } else {
+            bar.style.width = pct + '%';
+        }
+    });
+}
+
+function ensureTabRendered(tabId) {
+    if (!dashboardData) return;
+    switch (tabId) {
+        case 'funnel':
+            if (!renderedTabs.has('funnel')) {
+                renderFunnelDetails(dashboardData);
+                renderedTabs.add('funnel');
+            }
+            applyProgressBars(document.getElementById('tab-funnel'));
+            break;
+        case 'forecast': {
+            const data = dashboardData;
+            if (!renderedTabs.has('forecast-content')) {
+                renderForecastDetails(data.forecast || {}, {
+                    prefix: '',
+                    show14d: true,
+                    showChangepoint: true,
+                    horizons: getBestModelHorizons(data),
+                    bestModelName: getBestForecastRecord(data)?.modelName || data.forecast?.method,
+                });
+                populateModelCompareDropdown(data);
+                renderedTabs.add('forecast-content');
+            }
+            if (!renderedTabs.has('forecast-chart')) {
+                showBestModelOnLoad(data);
+                renderedTabs.add('forecast-chart');
+            }
+            applyProgressBars(document.getElementById('tab-forecast'));
+            break;
+        }
+        case 'investment':
+            if (!renderedTabs.has('investment-chart') && dashboardData.investment?.campaigns) {
+                renderCampaignChart(dashboardData.investment.campaigns);
+                renderedTabs.add('investment-chart');
+            }
+            break;
+        case 'operations':
+            if (!renderedTabs.has('operations-content')) {
+                renderOperationsTab(dashboardData, { charts: false });
+                renderedTabs.add('operations-content');
+            }
+            if (!renderedTabs.has('operations-charts')) {
+                const ops = dashboardData.operations;
+                if (ops) {
+                    renderDailyVolumeChart(ops);
+                    const seasonalIndices = dashboardData.operations?.seasonal_indices
+                        || dashboardData.forecast?.seasonal_indices;
+                    if (seasonalIndices) renderSeasonalChart(seasonalIndices);
+                    renderHourlyChart(ops.hourly_distribution);
+                }
+                renderedTabs.add('operations-charts');
+            }
+            break;
+        case 'alerts':
+            if (!renderedTabs.has('alerts')) {
+                renderAlertsCentre(dashboardData.system.alerts);
+                renderedTabs.add('alerts');
+            }
+            applyProgressBars(document.getElementById('tab-alerts'));
+            break;
+        default:
+            break;
+    }
+}
 
 // =====================================================================
 //  📘 INDUSTRY TERMS — English term + Spanish gloss in parentheses
@@ -18,20 +154,20 @@ let showAllModels = false;
 
 /** Backend KPI label → display label (término en inglés + descripción en español). */
 const KPI_BACKEND_LABEL_MAP = {
-    'Health Score': 'SHS (salud operativa consolidada)',
-    'Leads totales': 'Total Leads (volumen total del periodo)',
-    'Promedio diario': 'Daily Avg (promedio diario de leads)',
-    'Cambio semanal': 'WoW (cambio vs semana anterior)',
-    'Hora pico': 'Peak Hour (hora pico de contactos)',
-    'Prevision diaria': 'Daily Forecast (pronóstico diario de demanda)',
-    'MASE': 'MASE (error medio absoluto escalado)',
-    'CPL implicito': 'CPL (costo por lead implícito)',
-    'Gasto total': 'Ad Spend (gasto total en pauta)',
-    'HHI': 'HHI (concentración del gasto en campañas)',
-    'Conversion global': 'Global CVR (tasa de conversión entrada a cierre)',
-    'Revenue at Risk': 'Revenue at Risk (ingreso en riesgo por fugas)',
-    'Utilizacion capacidad': 'Capacity Utilization (uso de capacidad operativa)',
-    'Cambio regimen': 'Regime Shift (cambio estructural de demanda)',
+    'Health Score': 'Salud del Sistema',
+    'Leads totales': 'Leads Totales',
+    'Promedio diario': 'Promedio Diario',
+    'Cambio semanal': 'Cambio Semanal',
+    'Hora pico': 'Hora Pico',
+    'Prevision diaria': 'Pronóstico Diario',
+    'MASE': 'Precisión del Modelo',
+    'CPL implicito': 'Costo por Lead',
+    'Gasto total': 'Inversión Publicitaria',
+    'HHI': 'Diversificación de Pauta',
+    'Conversion global': 'Conversión Global',
+    'Revenue at Risk': 'Ingreso en Riesgo',
+    'Utilizacion capacidad': 'Uso de Capacidad',
+    'Cambio regimen': 'Cambio de Régimen',
 };
 
 const INDUSTRY_INLINE_REPLACEMENTS = [
@@ -93,7 +229,7 @@ const KPI_EXPLANATION_ALIASES = {
     'Revenue at Risk (ingreso en riesgo)': 'Revenue at Risk',
     'Severidad Máxima': 'RPN max',
     'Regime Shift (cambio estructural de demanda)': 'Cambio de Régimen',
-    'Cambio regimen': 'Cambio de Régimen',
+    'Cambio de Régimen': 'Cambio de Régimen',
 };
 
 const KPI_EXPLANATIONS = {
@@ -125,13 +261,13 @@ const KPI_EXPLANATIONS = {
         icon: '🔮',
         definition: 'Daily Forecast: predicción del modelo sobre cuántos leads se recibirán mañana. Se calcula con time-series models (p. ej. theta_lite) que capturan patrones históricos y estacionalidad.',
         interpretation: 'El símbolo "~" indica aproximación. Con intervalos de confianza (p. ej. 80%), útil para staffing del call center al día siguiente.',
-        source: 'forecast.recommended_value — modelo recomendado por backtest'
+        source: 'Mejor modelo por MASE en forecast + forecast_rf — recommended_value / next_1d'
     },
     'MASE': {
         icon: '🎯',
         definition: 'MASE (error medio absoluto escalado): mide el error promedio del pronóstico ajustado por una línea base estacional. Si el valor es menor a 1.0, el modelo predice mejor que repetir el dato de la semana pasada.',
         interpretation: 'Referencia del área: < 0.75 excelente; 0.75–1.0 aceptable; ≥ 1.0 no supera la línea base (usar con cautela).',
-        source: 'Backtest rolling — forecast.diagnostics.best_mase'
+        source: 'Menor MASE entre todos los modelos en backtest_models, forecast y forecast_rf'
     },
     'CPL implicito': {
         icon: '💰',
@@ -454,6 +590,7 @@ const CRM_TRANSLATIONS = {
 
 function cleanTechnicalTerms(str) {
     if (!str || typeof str !== 'string') return str;
+    if (termCache.has(str)) return termCache.get(str);
     let text = applyIndustryInlineTerms(str.trim());
 
     // Check exact match in CRM translations
@@ -477,7 +614,9 @@ function cleanTechnicalTerms(str) {
     // Standardize CUSUM changepoint labels to elegant corporate terminology
     text = text.replace(/Cambio regimen/gi, 'Cambio de Régimen');
 
-    return cleanText(text);
+    text = cleanText(text);
+    termCache.set(str, text);
+    return text;
 }
 
 // =====================================================================
@@ -529,67 +668,34 @@ function switchTab(tabId) {
 
     const activeTabContent = document.getElementById(`tab-${tabId}`);
     if (activeTabContent) {
-        // Force reflow on active tab to restart all card-animate keyframe animations
-        activeTabContent.classList.remove('active');
-        void activeTabContent.offsetWidth; // Force reflow
         activeTabContent.classList.add('active');
 
-        // Restart dynamic numeric counters inside the active tab
-        const animatedNumbers = activeTabContent.querySelectorAll('[data-value]');
-        animatedNumbers.forEach(el => {
-            parseAndAnimate(el, el.getAttribute('data-value'));
-        });
+        if (shouldAnimateUI()) {
+            activeTabContent.classList.remove('active');
+            void activeTabContent.offsetWidth;
+            activeTabContent.classList.add('active');
 
-        // Restart progress bar expansions
-        const progressBars = activeTabContent.querySelectorAll('.progress-bar-fill');
-        progressBars.forEach(bar => {
-            const pct = bar.getAttribute('data-pct');
-            if (pct !== null) {
-                bar.style.width = '0%';
-                void bar.offsetWidth; // Force reflow
-                bar.style.width = pct + '%';
-            }
-        });
+            activeTabContent.querySelectorAll('[data-value]').forEach(el => {
+                parseAndAnimate(el, el.getAttribute('data-value'));
+            });
+        }
 
-        // Specialized resets for specific tabs
-        if (tabId === 'dashboard') {
+        ensureTabRendered(tabId);
+        applyProgressBars(activeTabContent);
+
+        if (tabId === 'dashboard' && shouldAnimateUI()) {
             setTimeout(restartHealthRing, 60);
-            setTimeout(() => {
-                const wave = document.querySelector('.card-wave-bg');
-                if (wave) {
-                    wave.style.transition = 'none';
-                    wave.style.height = '0%';
-                    void wave.offsetWidth; // Force reflow
-
-                    requestAnimationFrame(() => {
-                        wave.style.transition = 'height 1.5s cubic-bezier(0.16, 1, 0.3, 1)';
-                        wave.style.height = wave.getAttribute('data-target-height');
-                    });
-                }
-            }, 100);
-        } else if (tabId === 'forecast') {
-            if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.forecast) {
-                renderTimeSeriesChart(dashboardData.forecast, {
-                    canvasId: 'chart-timeseries',
-                    chartKey: 'timeseries',
-                    lineLabel: 'Pronóstico Recomendado',
-                    overlays: getActiveOverlays()
-                });
-                if (dashboardData.forecast.seasonal_indices) {
-                    renderSeasonalChart(dashboardData.forecast.seasonal_indices);
-                }
-            } else {
-                if (charts.timeseries) { charts.timeseries.reset(); charts.timeseries.update(); }
-                if (charts.seasonal) { charts.seasonal.reset(); charts.seasonal.update(); }
-            }
-        } else if (tabId === 'investment') {
-            if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.investment && dashboardData.investment.campaigns) {
-                renderCampaignChart(dashboardData.investment.campaigns);
-            }
-        } else if (tabId === 'operations') {
-            if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.operations) {
-                renderOperationsTab(dashboardData);
-            }
+        } else if (tabId === 'forecast' && dashboardData?.forecast) {
+            const line = getChartForecastLine();
+            renderTimeSeriesChart(dashboardData.forecast, {
+                canvasId: 'chart-timeseries',
+                chartKey: 'timeseries',
+                lineLabel: line.label,
+                lineColor: line.color,
+                forecastValue: line.value,
+                overlays: getActiveOverlays()
+            });
+            renderModelDetailPanel();
         }
     }
 
@@ -610,10 +716,9 @@ function switchTab(tabId) {
 
     currentTab = tabId;
 
-    // Refresh charts on tab resize
-    setTimeout(() => {
-        window.dispatchEvent(new Event('resize'));
-    }, 80);
+    if (['forecast', 'investment', 'operations'].includes(tabId)) {
+        requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+    }
 }
 
 // =====================================================================
@@ -629,6 +734,24 @@ function animateValue(element, start, end, duration, options = {}) {
         useSeparator = false,
         isTime = false
     } = options;
+
+    if (!shouldAnimateUI() || duration <= 0) {
+        if (isTime) {
+            const totalMinutes = Math.floor(end);
+            const hrs = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+            const mins = (totalMinutes % 60).toString().padStart(2, '0');
+            element.textContent = `${prefix}${hrs}:${mins}${suffix}`;
+        } else {
+            let finalFormatted = end.toFixed(decimals);
+            if (useSeparator) {
+                const parts = finalFormatted.split('.');
+                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                finalFormatted = parts.join('.');
+            }
+            element.textContent = `${prefix}${finalFormatted}${suffix}`;
+        }
+        return;
+    }
 
     let startTimestamp = null;
     const step = (timestamp) => {
@@ -681,6 +804,7 @@ function animateValue(element, start, end, duration, options = {}) {
 // Helper to trigger parsing and animation of any numeric string
 function parseAndAnimate(element, rawValue, duration = 700) {
     if (!element) return;
+    if (!shouldAnimateUI()) duration = 0;
     const valueStr = String(rawValue).trim();
 
     // Check if it's clock format (e.g., "19:00")
@@ -751,6 +875,8 @@ async function loadBOS() {
         }
 
         dashboardData = json.data;
+        clearComparableModelsCache();
+        clearTermCache();
         document.getElementById('loading').style.display = 'none';
         renderBOS(dashboardData);
 
@@ -771,12 +897,15 @@ async function loadBOS() {
 // =====================================================================
 
 function renderBOS(data) {
+    renderedTabs.clear();
+    renderedTabs.add('dashboard');
+
     // Update main horizontal status bar dynamically
     const mainSbar = document.getElementById('main-sbar');
     const mainSbarText = document.getElementById('main-sbar-text');
     if (mainSbar && mainSbarText) {
         const severityClass = data.system.status.color === 'rojo' ? 'status-red' : data.system.status.color === 'amarillo' ? 'status-yellow' : 'status-green';
-        mainSbar.className = `sbar main-sbar ${severityClass}`;
+        mainSbar.className = `sbar topbar-status ${severityClass}`;
         mainSbarText.innerHTML = `ESTADO: ${cleanTechnicalTerms(data.system.status.label).toUpperCase()} &mdash; ${cleanTechnicalTerms(data.system.status.reasons[0] || 'Operación en curso.')}`;
     }
 
@@ -800,35 +929,38 @@ function renderBOS(data) {
             </div>
         </div>
         <div class="health-info">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px; flex-wrap: wrap;">
-                <h2 class="text-white" style="font-size: 16px; font-weight: 800; margin: 0;">Salud de la Operación Comercial</h2>
+            <div class="health-info-head">
+                <h2 class="health-info-title">Salud Operativa</h2>
                 <span class="custom-badge ${data.system.status.color === 'amarillo' ? 'custom-badge-warning' : data.system.status.color === 'rojo' ? 'custom-badge-critical' : 'custom-badge-success'}">${cleanTechnicalTerms(data.system.status.label)}</span>
             </div>
-            <p class="text-muted" style="font-size: 13.5px; line-height: 1.6;">Auditoría integral de la pauta publicitaria, flujo operativo en centros de llamadas y proyecciones basadas en modelos predictivos matemáticos de precisión.</p>
-            <div class="health-reasons">
-                ${data.system.status.reasons.map(r => `
-                    <div class="health-reason"><span style="color: var(--text-main); font-weight: bold;">*</span> ${cleanTechnicalTerms(r)}</div>
+            <div class="health-reasons-inline">
+                ${data.system.status.reasons.slice(0, 3).map(r => `
+                    <span class="health-reason-chip">${cleanTechnicalTerms(r)}</span>
                 `).join('')}
             </div>
         </div>
     `;
 
-    // Trigger smooth transition and counter animation for the Health Score Ring
-    setTimeout(() => {
+    if (shouldAnimateUI()) {
+        setTimeout(() => {
+            const ring = document.getElementById('health-fg-ring');
+            if (ring) ring.style.strokeDashoffset = dashOffset;
+            const numVal = document.getElementById('health-num-val');
+            if (numVal) animateValue(numVal, 0, data.system.health_score, 700);
+        }, 50);
+    } else {
         const ring = document.getElementById('health-fg-ring');
-        if (ring) {
-            ring.style.strokeDashoffset = dashOffset;
-        }
+        if (ring) ring.style.strokeDashoffset = dashOffset;
         const numVal = document.getElementById('health-num-val');
-        if (numVal) {
-            animateValue(numVal, 0, data.system.health_score, 700);
-        }
-    }, 50);
+        if (numVal) numVal.textContent = data.system.health_score;
+    }
 
     // 2. Render KPIs in Dashboard Tab
     const kpisGrid = document.getElementById('dashboard-kpis');
 
-    const cleanedKpis = data.kpis.map(k => {
+    const kpisWithBestForecast = applyBestForecastToKpis(data.kpis, data);
+
+    const cleanedKpis = kpisWithBestForecast.map(k => {
         let label = formatKpiLabel(k.label);
         let sub = applyIndustryInlineTerms(k.sub || '');
 
@@ -850,7 +982,7 @@ function renderBOS(data) {
 
             if (maseRf <= maseLocal && data.forecast_rf && data.forecast_rf.recommended_value != null) {
                 bestModelVal = data.forecast_rf.recommended_value;
-                bestModelName = 'Random Forest';
+                bestModelName = data.forecast_rf.model_name || 'Random Forest';
                 bestConfidence = data.forecast_rf.confidence || 'Alta';
             } else if (data.forecast && data.forecast.recommended_value != null) {
                 bestModelVal = data.forecast.recommended_value;
@@ -865,10 +997,22 @@ function renderBOS(data) {
         }
         if (k.label === 'MASE') {
             let bestModelName = 'Random Forest';
-            let bestMase = 0.2724;
+            let bestMase = 999;
             if (data.forecast_rf && data.forecast_rf.mase != null) {
                 bestMase = data.forecast_rf.mase;
-                bestModelName = 'Random Forest';
+                bestModelName = data.forecast_rf.model_name || 'Random Forest';
+            }
+            if (data.forecast_rf && Array.isArray(data.forecast_rf.backtest_models)) {
+                data.forecast_rf.backtest_models.forEach(m => {
+                    if (m.mase != null && m.mase < bestMase) {
+                        bestMase = m.mase;
+                        bestModelName = m.name;
+                    }
+                });
+            }
+            if (data.forecast && data.forecast.mase != null && data.forecast.mase < bestMase) {
+                bestMase = data.forecast.mase;
+                bestModelName = data.forecast.method || 'Theta Lite';
             }
             if (data.forecast && Array.isArray(data.forecast.backtest_models)) {
                 data.forecast.backtest_models.forEach(m => {
@@ -879,10 +1023,12 @@ function renderBOS(data) {
                 });
             }
             let formattedName = bestModelName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-            k.value = Number(bestMase).toFixed(2);
+            k.value = Number(bestMase).toFixed(3);
             sub = formattedName;
             k.color = 'white';
             label = 'Precisión del Modelo';
+            sub = applyIndustryInlineTerms(k.sub || '') || 'vs línea base naive';
+            if (!k.color) k.color = 'white';
         }
         if (k.label === 'CPL implicito') {
             label = 'Costo Promedio por Lead';
@@ -890,7 +1036,7 @@ function renderBOS(data) {
             k.color = 'blue';
         }
         if (k.label === 'Cambio regimen' || k.label === 'Cambio de Régimen') {
-            k.color = 'blue';
+            k.color = 'red';
         }
         if (k.label === 'Gasto total') {
             label = 'Inversión Publicitaria';
@@ -926,7 +1072,7 @@ function renderBOS(data) {
         if (data.operations.contact_distribution && data.operations.contact_distribution.overcontact_pct != null) {
             cleanedKpis.push({
                 value: data.operations.contact_distribution.overcontact_pct + '%',
-                label: 'Tasa de Sobre-Contacto',
+                label: 'Sobre-Contacto',
                 sub: 'Llamadas > 7 intentos',
                 color: 'red'
             });
@@ -934,7 +1080,7 @@ function renderBOS(data) {
         if (data.operations.call_metrics && data.operations.call_metrics.call_rank) {
             cleanedKpis.push({
                 value: String(data.operations.call_metrics.call_rank.avg),
-                label: 'Promedio Intentos',
+                label: 'Intentos Promedio',
                 sub: 'Marcaciones por lead (umbral: 7)',
                 color: 'red'
             });
@@ -948,6 +1094,7 @@ function renderBOS(data) {
         const isHealth = idx === 0;
         const escapedLabel = kpi.label.replace(/'/g, "\\'");
         const escapedValue = String(kpi.value).replace(/'/g, "\\'");
+        const trendBadge = isHealth ? '' : getKpiTrendBadgeHtml(kpi, data);
         if (isHealth) {
             return `
                 <div class="card liquid-tank liquid-tone-${liquidTone} card-animate"
@@ -959,49 +1106,56 @@ function renderBOS(data) {
                         <div class="liquid-tank__surface liquid-tank__surface--2"></div>
                     </div>
                     <div class="liquid-tank__content">
-                        <div class="card-stat-label">${kpi.label}</div>
-                        <div class="card-stat-value" id="kpi-val-${idx}" data-value="${kpi.value}">0</div>
+                        <div class="card-stat-top">
+                            <div class="card-stat-label">${kpi.label}</div>
+                        </div>
+                        <div class="card-stat-value" id="kpi-val-${idx}" data-value="${kpi.value}">${shouldAnimateUI() ? '0' : kpi.value}</div>
                         <div class="card-stat-sub">${kpi.sub || '&nbsp;'}</div>
                     </div>
                 </div>
             `;
         }
         return `
-            <div class="card stat-card-${kpi.color || 'blue'} card-animate" style="animation-delay: ${idx * 0.025}s;"
+            <div class="card stat-card-${resolveStatCardColor(kpi.color)} card-animate kpi-card" style="animation-delay: ${idx * 0.025}s;"
                 onclick="openKpiModal('${escapedLabel}', '${escapedValue}')">
-                <div class="card-stat-label">${kpi.label}</div>
-                <div class="card-stat-value" id="kpi-val-${idx}" data-value="${kpi.value}">0</div>
+                <div class="card-stat-top">
+                    <div class="card-stat-label">${kpi.label}</div>
+                    ${trendBadge}
+                </div>
+                <div class="card-stat-value" id="kpi-val-${idx}" data-value="${kpi.value}">${shouldAnimateUI() ? '0' : kpi.value}</div>
                 <div class="card-stat-sub">${kpi.sub || '&nbsp;'}</div>
             </div>
         `;
     }).join('');
 
-    // Trigger dynamic count animations and liquid fill rising for KPIs
-    cleanedKpis.forEach((kpi, idx) => {
-        const element = document.getElementById(`kpi-val-${idx}`);
-        parseAndAnimate(element, kpi.value);
-    });
-
-    requestAnimationFrame(() => {
+    if (shouldAnimateUI()) {
+        cleanedKpis.forEach((kpi, idx) => {
+            parseAndAnimate(document.getElementById(`kpi-val-${idx}`), kpi.value);
+        });
+        requestAnimationFrame(() => {
+            const tank = document.querySelector('.liquid-tank');
+            if (tank) tank.style.setProperty('--fill-level', Number(tank.dataset.fillTarget) || 0);
+        });
+    } else {
         const tank = document.querySelector('.liquid-tank');
-        if (tank) {
-            const target = Number(tank.dataset.fillTarget) || 0;
-            tank.style.setProperty('--fill-level', target);
-        }
-    });
+        if (tank) tank.style.setProperty('--fill-level', healthScore);
+    }
 
     // 3. Render Action Cards in Dashboard Tab
     const actionsGrid = document.getElementById('dashboard-actions');
     actionsGrid.innerHTML = data.system.actions.map((a, idx) => `
         <div class="card card-animate" style="animation-delay: ${(idx + cleanedKpis.length) * 0.025 + 0.08}s;">
             <div class="urgency-badge ${a.urgency}">${a.urgency === 'today' ? 'Acción Inmediata' : 'Plan Semanal'}</div>
-            <div class="action-text" style="font-size: 14.5px; font-weight: 600; line-height: 1.4; color: white; margin-bottom: 12px;">${cleanTechnicalTerms(a.action)}</div>
-            <div class="action-meta" style="font-size: 12px; color: var(--text-muted); line-height: 1.6; display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px;">
-                <div><strong>Motivo:</strong> ${cleanTechnicalTerms(a.reason)}</div>
-                <div><strong>Evidencia:</strong> ${cleanTechnicalTerms(a.evidence)}</div>
-                <div><strong>Impacto Estimado:</strong> ${cleanTechnicalTerms(a.impact_est)}</div>
-            </div>
-            <div>
+            <div class="action-text">${cleanTechnicalTerms(a.action)}</div>
+            <details class="action-details">
+                <summary>Ver contexto</summary>
+                <div class="action-meta">
+                    <div><strong>Motivo:</strong> ${cleanTechnicalTerms(a.reason)}</div>
+                    <div><strong>Evidencia:</strong> ${cleanTechnicalTerms(a.evidence)}</div>
+                    <div><strong>Impacto Estimado:</strong> ${cleanTechnicalTerms(a.impact_est)}</div>
+                </div>
+            </details>
+            <div class="action-card-footer">
                 <span class="owner-pill">Responsable: ${cleanTechnicalTerms(a.owner)}</span>
             </div>
         </div>
@@ -1032,31 +1186,33 @@ function renderBOS(data) {
         `).join('');
     }
 
-    // 6. Render Funnel Page
-    renderFunnelDetails(data);
+    // 6–9. Pestañas secundarias y gráficas: diferidas para no bloquear la carga inicial
+    scheduleDeferredRender(() => {
+        renderFunnelDetails(data);
+        applyProgressBars(document.getElementById('tab-funnel'));
+        renderedTabs.add('funnel');
 
-    // 7. Render Forecast Page (incluye comparador de modelos)
-    renderForecastDetails(data.forecast || {}, {
-        prefix: '',
-        show14d: true,
-        showChangepoint: true,
+        renderForecastDetails(data.forecast || {}, {
+            prefix: '',
+            show14d: true,
+            showChangepoint: true,
+            horizons: getBestModelHorizons(data),
+            bestModelName: getBestForecastRecord(data)?.modelName || data.forecast?.method,
+        });
+        populateModelCompareDropdown(data);
+        renderedTabs.add('forecast-content');
+
+        renderAlertsCentre(data.system.alerts);
+        applyProgressBars(document.getElementById('tab-alerts'));
+        renderedTabs.add('alerts');
+
+        renderOperationsTab(data, { charts: false });
+        renderedTabs.add('operations-content');
+
+        if (currentTab !== 'dashboard') {
+            ensureTabRendered(currentTab);
+        }
     });
-    populateModelCompareDropdown(data);
-    updateHorizonComparison();
-
-    // 8. Render Interactive Alerts Centre Tab
-    renderAlertsCentre(data.system.alerts);
-
-    // 9. Initialize and render high-impact Charts
-    renderTimeSeriesChart(data.forecast || {}, {
-        canvasId: 'chart-timeseries',
-        chartKey: 'timeseries',
-        lineLabel: 'Pronóstico Recomendado',
-        overlays: getActiveOverlays()
-    });
-    renderSeasonalChart(data.forecast ? data.forecast.seasonal_indices : []);
-    renderCampaignChart(data.investment.campaigns);
-    renderHourlyChart(data.operations.hourly_distribution);
 
     // 10. Update Sync Date in top header
     const genDate = new Date(data.meta.generated_at);
@@ -1160,13 +1316,38 @@ function renderFunnelDetails(data) {
         }).join('');
     }
 
-    const statesData = [
-        { state: "Abierto", conversion: 2.14, loss: 97.86, steps: 14.2, stddev: 4.5 },
-        { state: "Conectado - Interesado", conversion: 35.24, loss: 64.76, steps: 5.4, stddev: 1.8 },
-        { state: "Reactivación", conversion: 20.00, loss: 80.00, steps: 7.2, stddev: 2.1 },
-        { state: "En Llamada", conversion: 14.15, loss: 85.85, steps: 8.9, stddev: 3.2 },
-        { state: "Pre-Cerrado (Sin tarjeta)", conversion: 13.01, loss: 86.99, steps: 11.5, stddev: 3.9 }
-    ];
+    let statesData = [];
+    if (data.funnel && Array.isArray(data.funnel.absorption_probabilities) && data.funnel.absorption_probabilities.length > 0) {
+        statesData = data.funnel.absorption_probabilities
+            .filter(ap => (ap.prob_conversion || 0) > 0.0001) // Filter out practically 0% conversion states to keep the table clean
+            .map(ap => ({
+                state: cleanTechnicalTerms(ap.state),
+                conversion: (ap.prob_conversion || 0) * 100,
+                loss: (ap.prob_loss || 0) * 100,
+                steps: ap.expected_steps || 0,
+                stddev: ap.step_stddev || 0
+            }));
+        if (statesData.length === 0) {
+            statesData = data.funnel.absorption_probabilities
+                .map(ap => ({
+                    state: cleanTechnicalTerms(ap.state),
+                    conversion: (ap.prob_conversion || 0) * 100,
+                    loss: (ap.prob_loss || 0) * 100,
+                    steps: ap.expected_steps || 0,
+                    stddev: ap.step_stddev || 0
+                }))
+                .sort((a, b) => b.conversion - a.conversion)
+                .slice(0, 5);
+        }
+    } else {
+        statesData = [
+            { state: "Abierto", conversion: 2.14, loss: 97.86, steps: 14.2, stddev: 4.5 },
+            { state: "Conectado - Interesado", conversion: 35.24, loss: 64.76, steps: 5.4, stddev: 1.8 },
+            { state: "Reactivación", conversion: 20.00, loss: 80.00, steps: 7.2, stddev: 2.1 },
+            { state: "En Llamada", conversion: 14.15, loss: 85.85, steps: 8.9, stddev: 3.2 },
+            { state: "Pre-Cerrado (Sin tarjeta)", conversion: 13.01, loss: 86.99, steps: 11.5, stddev: 3.9 }
+        ];
+    }
 
     const probBody = document.getElementById('funnel-probabilities-body');
     if (probBody) {
@@ -1175,16 +1356,143 @@ function renderFunnelDetails(data) {
                 <td style="font-weight: 600; color: white;">${s.state}</td>
                 <td style="text-align: right; color: var(--green); font-weight: bold;">${s.conversion.toFixed(2)}%</td>
                 <td style="text-align: right; color: var(--text-muted);">${s.loss.toFixed(2)}%</td>
-                <td style="text-align: right; font-family: var(--mono); color: white;">${s.steps}</td>
-                <td style="text-align: right; font-family: var(--mono); color: var(--text-dim);">${s.stddev}</td>
+                <td style="text-align: right; font-family: var(--mono); color: white;">${s.steps.toFixed(1)}</td>
+                <td style="text-align: right; font-family: var(--mono); color: var(--text-dim);">${s.stddev.toFixed(1)}</td>
             </tr>
         `).join('');
     }
+
+    applyProgressBars(document.getElementById('tab-funnel'));
 }
 
 // =====================================================================
 //  RENDER FORECAST TAB DETAILS
 // =====================================================================
+
+function getMaseMetricClass(mase) {
+    if (typeof mase !== 'number' || !isFinite(mase)) return 'metric-mase-warn';
+    if (mase < 0.85) return 'metric-mase-good';
+    if (mase < 1.0) return 'metric-mase-warn';
+    return 'metric-mase-bad';
+}
+
+function getMaseBadgeClass(mase) {
+    if (typeof mase !== 'number' || !isFinite(mase)) return 'metric-badge-warn';
+    if (mase < 0.85) return 'metric-badge-good';
+    if (mase < 1.0) return 'metric-badge-warn';
+    return 'metric-badge-bad';
+}
+
+function getMaseStateLabel(mase) {
+    return (typeof mase === 'number' && isFinite(mase) && mase < 1.0) ? 'Aceptable' : 'Subóptimo';
+}
+
+/** Badge de tendencia ↑/↓ para tarjetas KPI del dashboard. */
+function resolveKpiBackendKey(label) {
+    if (Object.prototype.hasOwnProperty.call(KPI_BACKEND_LABEL_MAP, label)) return label;
+    const mapped = Object.keys(KPI_BACKEND_LABEL_MAP).find(k => KPI_BACKEND_LABEL_MAP[k] === label);
+    if (mapped) return mapped;
+    const alias = KPI_EXPLANATION_ALIASES[label];
+    if (alias) return alias;
+    return label;
+}
+
+function resolveStatCardColor(color) {
+    const valid = ['gold', 'blue', 'green', 'red', 'white', 'crimson'];
+    return valid.includes(color) ? color : 'blue';
+}
+
+function getKpiTrendBadgeHtml(kpi, data) {
+    const backendLabel = resolveKpiBackendKey(kpi.label);
+
+    if (backendLabel === 'MASE' || kpi.label.includes('MASE') || kpi.label.includes('Precisión')) {
+        const mase = parseFloat(String(kpi.value).replace(/[^0-9.]/g, ''));
+        if (isFinite(mase)) {
+            if (mase < 1) {
+                const pct = ((1 - mase) * 100).toFixed(1);
+                return `<span class="kpi-trend-badge kpi-trend-up">↓ ${pct}% base</span>`;
+            }
+            const pct = ((mase - 1) * 100).toFixed(1);
+            return `<span class="kpi-trend-badge kpi-trend-down">↑ ${pct}% base</span>`;
+        }
+    }
+
+    let pct = null;
+    let goodWhenUp = true;
+
+    if (backendLabel === 'Cambio semanal' || kpi.label.includes('WoW')) {
+        pct = data?.operations?.wow_change_pct ?? parseFloat(String(kpi.value).replace(/[^0-9.\-+]/g, ''));
+        goodWhenUp = true;
+    } else if (backendLabel === 'Cambio regimen' || kpi.label.includes('Regime Shift') || kpi.label.includes('Régimen')) {
+        pct = parseFloat(String(kpi.value).replace(/[^0-9.\-+]/g, ''));
+        goodWhenUp = true;
+    } else if (kpi.label.includes('Sobre-Contacto') || kpi.label.includes('Intentos')) {
+        pct = parseFloat(String(kpi.value).replace(/[^0-9.\-+]/g, ''));
+        goodWhenUp = false;
+    } else if (String(kpi.value).includes('%')) {
+        pct = parseFloat(String(kpi.value).replace(/[^0-9.\-+]/g, ''));
+        goodWhenUp = true;
+    }
+
+    if (pct == null || !isFinite(pct)) return '';
+
+    const absPct = Math.abs(pct).toFixed(1);
+    if (Math.abs(pct) < 0.05) {
+        return `<span class="kpi-trend-badge kpi-trend-neutral">→ ${absPct}%</span>`;
+    }
+
+    const isUp = pct > 0;
+    const isGood = goodWhenUp ? isUp : !isUp;
+    const arrow = isUp ? '↑' : '↓';
+    const cls = isGood ? 'kpi-trend-up' : 'kpi-trend-down';
+    return `<span class="kpi-trend-badge ${cls}">${arrow} ${absPct}%</span>`;
+}
+
+function getMaseBarStyle(mase) {
+    if (mase == null || !isFinite(mase)) return { width: 0, color: 'var(--text-dim)' };
+    const width = Math.min((mase / 1.5) * 100, 100);
+    const color = mase < 0.85 ? 'var(--green)' : mase < 1.0 ? 'var(--amber)' : 'var(--red)';
+    return { width, color };
+}
+
+function renderModelLeaderboardRow(m, rank) {
+    const maseClass = getMaseMetricClass(m.mase);
+    const badgeClass = getMaseBadgeClass(m.mase);
+    const stateLabel = getMaseStateLabel(m.mase);
+    const maseVal = m.mase != null && isFinite(m.mase) ? m.mase : null;
+    const bar = getMaseBarStyle(maseVal);
+
+    const medalHtml = rank === 1
+        ? '<span class="model-medal medal-1" title="1er lugar">1</span>'
+        : rank === 2
+            ? '<span class="model-medal medal-2" title="2do lugar">2</span>'
+            : rank === 3
+                ? '<span class="model-medal medal-3" title="3er lugar">3</span>'
+                : `<span class="model-rank-num">${rank}</span>`;
+
+    const rowClasses = ['model-leaderboard-row'];
+    if (rank === 1) rowClasses.push('model-row-best');
+    if (rank % 2 === 0) rowClasses.push('model-row-alt');
+
+    const bestTag = rank === 1 ? '<span class="best-model-tag">Mejor modelo</span>' : '';
+    const modelName = cleanTechnicalTerms(m.name.replace(/_/g, ' ').toUpperCase());
+
+    return `
+        <tr class="${rowClasses.join(' ')}">
+            <td class="model-rank-cell">${medalHtml}</td>
+            <td class="metric-model-name">${modelName}${bestTag}</td>
+            <td class="mase-cell">
+                <div class="mase-cell-inner">
+                    <span class="${maseClass}">${maseVal != null ? maseVal.toFixed(3) : 'N/A'}</span>
+                    ${maseVal != null ? `<div class="mase-bar" title="MASE ${maseVal.toFixed(3)}"><div class="mase-bar-fill" data-pct="${bar.width}" style="width: 0%; background: ${bar.color};"></div></div>` : ''}
+                </div>
+            </td>
+            <td class="metric-mae">${m.mae ? m.mae.toFixed(2) : 'N/A'}</td>
+            <td class="metric-rmse">${m.rmse ? m.rmse.toFixed(2) : 'N/A'}</td>
+            <td><span class="custom-badge ${badgeClass}">${stateLabel}</span></td>
+        </tr>
+    `;
+}
 
 function renderForecastDetails(forecast, options = {}) {
     const prefix = options.prefix || '';
@@ -1212,79 +1520,42 @@ function renderForecastDetails(forecast, options = {}) {
     }
 
     const horizonsGrid = document.getElementById(`${prefix}forecast-horizons-grid`);
-    if (horizonsGrid && forecast.horizons) {
-        const horizons = forecast.horizons;
-        const h1d = horizons.next_1d || {};
-        const h7d = horizons.next_7d || {};
-        const h14d = horizons.next_14d || {};
-
-        let cardsHtml = `
-            <div class="card stat-card-blue card-animate" style="animation-delay: 0.03s;"
-                onclick="openKpiModal('Pronóstico Mañana', '${h1d.forecast ?? 0}')">
-                <div class="card-stat-label">Pronóstico Mañana</div>
-                <div class="card-stat-value" id="${prefix}forecast-1d-val" data-value="${h1d.forecast ?? 0}">0</div>
-                <div class="card-stat-sub">Rango: ${h1d.band_low ?? 0} a ${h1d.band_high ?? 0} leads</div>
-                <div class="card-stat-compare" id="${prefix}forecast-1d-compare"></div>
-            </div>
-            <div class="card stat-card-gold card-animate" style="animation-delay: 0.06s;"
-                onclick="openKpiModal('Pronóstico 7 Días', '${h7d.forecast ?? 0}')">
-                <div class="card-stat-label">Pronóstico 7 Días</div>
-                <div class="card-stat-value" id="${prefix}forecast-7d-val" data-value="${h7d.forecast ?? 0}">0</div>
-                <div class="card-stat-sub">Rango: ${h7d.band_low ?? 0} a ${h7d.band_high ?? 0} leads</div>
-                <div class="card-stat-compare" id="${prefix}forecast-7d-compare"></div>
-            </div>`;
-
-        if (show14d && horizons.next_14d) {
-            cardsHtml += `
-            <div class="card stat-card-green card-animate" style="animation-delay: 0.09s;"
-                onclick="openKpiModal('Pronóstico 14 Días', '${h14d.forecast ?? 0}')">
-                <div class="card-stat-label">Pronóstico 14 Días</div>
-                <div class="card-stat-value" id="${prefix}forecast-14d-val" data-value="${h14d.forecast ?? 0}">0</div>
-                <div class="card-stat-sub">Rango: ${h14d.band_low ?? 0} a ${h14d.band_high ?? 0} leads</div>
-                <div class="card-stat-compare" id="${prefix}forecast-14d-compare"></div>
-            </div>`;
-        }
-
-        horizonsGrid.innerHTML = cardsHtml;
-
-        parseAndAnimate(document.getElementById(`${prefix}forecast-1d-val`), h1d.forecast ?? 0);
-        parseAndAnimate(document.getElementById(`${prefix}forecast-7d-val`), h7d.forecast ?? 0);
-        if (show14d && horizons.next_14d) {
-            parseAndAnimate(document.getElementById(`${prefix}forecast-14d-val`), h14d.forecast ?? 0);
-        }
+    const cardHorizons = options.horizons || forecast.horizons;
+    const bestLabel = options.bestModelName || forecast.method;
+    if (horizonsGrid && cardHorizons) {
+        renderHorizonCards(cardHorizons, { prefix, show14d, bestModelName: bestLabel });
     }
 
     const modelsBody = document.getElementById(`${prefix}forecast-models-body`);
     if (modelsBody && Array.isArray(forecast.backtest_models)) {
         const models = forecast.backtest_models.slice();
 
-        // Incluir Random Forest (desde forecast_rf) en la clasificación
+        // Incluir todos los modelos ML (desde forecast_rf) en la clasificación
         if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.forecast_rf && dashboardData.forecast_rf.available !== false) {
             const rf = dashboardData.forecast_rf;
             const rfName = rf.model_name || 'random_forest';
-            let rfEntry = Array.isArray(rf.backtest_models) ? rf.backtest_models.find(x => x.name === rfName) : null;
-            if (!rfEntry && rf.mase != null) rfEntry = { name: rfName, mase: rf.mase };
-            if (rfEntry && rfEntry.mase != null && !models.some(m => m.name === rfEntry.name)) {
-                models.push(rfEntry);
+            const rfModels = Array.isArray(rf.backtest_models) ? rf.backtest_models : [];
+            if (!rfModels.length && rf.mase != null) {
+                rfModels.push({ name: rfName, mase: rf.mase });
             }
+            rfModels.forEach(rfEntry => {
+                if (rfEntry.mase != null && !models.some(m => normModelName(m.name) === normModelName(rfEntry.name))) {
+                    models.push(rfEntry);
+                }
+            });
         }
 
         // Ordenar por MASE ascendente (mejor desempeño primero)
         models.sort((a, b) => (a.mase != null ? a.mase : Infinity) - (b.mase != null ? b.mase : Infinity));
 
-        modelsBody.innerHTML = models.map(m => {
-            const maseColor = m.mase < 0.85 ? 'var(--green)' : m.mase < 1.0 ? 'var(--amber)' : 'var(--red)';
-            const stateLabel = m.mase < 1.0 ? 'Aceptable' : 'Subóptimo';
-            return `
-                <tr>
-                    <td style="font-weight: 600; color: white;">${cleanTechnicalTerms(m.name.replace(/_/g, ' ').toUpperCase())}</td>
-                    <td style="text-align: right; font-family: var(--mono); color: ${maseColor}; font-weight: bold;">${m.mase.toFixed(3)}</td>
-                    <td style="text-align: right; font-family: var(--mono); color: var(--text-muted);">${m.mae ? m.mae.toFixed(2) : 'N/A'}</td>
-                    <td style="text-align: right; font-family: var(--mono); color: var(--text-dim);">${m.rmse ? m.rmse.toFixed(2) : 'N/A'}</td>
-                    <td><span class="custom-badge" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: ${maseColor}">${stateLabel}</span></td>
-                </tr>
-            `;
-        }).join('');
+        modelsBody.innerHTML = models.map((m, idx) => renderModelLeaderboardRow(m, idx + 1)).join('');
+
+        requestAnimationFrame(() => {
+            modelsBody.querySelectorAll('.mase-bar-fill').forEach(bar => {
+                const pct = bar.getAttribute('data-pct');
+                if (pct != null) bar.style.width = pct + '%';
+            });
+        });
     }
 }
 
@@ -1292,51 +1563,545 @@ function renderForecastDetails(forecast, options = {}) {
 //  COMPARADOR DE MODELOS (lista desplegable + overlay)
 // =====================================================================
 
-// Color consistente por modelo (mapa fijo para los conocidos + hash determinístico).
+// Paleta fija: todos distintos entre sí y distintos del azul de leads (#38bdf8).
 const MODEL_COLORS = {
-    theta_lite: '#38bdf8',
-    holt_winters: '#f472b6',
-    trend_season: '#f59e0b',
-    seasonal_naive: '#a78bfa',
-    fourier_regression: '#34d399',
-    mean_7d: '#fb7185',
-    ewma: '#facc15',
     random_forest: '#10b981',
+    gradient_boosting: '#f97316',
+    mlp_neural_network: '#ec4899',
+    ridge: '#84cc16',
+    lightgbm: '#06b6d4',
+    autoets: '#a78bfa',
+    theta_lite: '#d946ef',
+    holt_winters: '#f43f5e',
+    trend_season: '#f59e0b',
+    seasonal_naive: '#818cf8',
+    fourier_regression: '#22d3ee',
+    mean_7d: '#fb923c',
+    ewma: '#eab308',
 };
+
+const ML_MODEL_NAMES = [
+    'random_forest',
+    'gradient_boosting',
+    'ridge',
+    'mlp_neural_network',
+    'lightgbm',
+    'autoets',
+];
 
 function getModelColor(name) {
     if (!name) return '#f472b6';
-    if (MODEL_COLORS[name]) return MODEL_COLORS[name];
+    const key = normModelName(name);
+    const entry = Object.entries(MODEL_COLORS).find(([k]) => normModelName(k) === key);
+    if (entry) return entry[1];
     let h = 0;
     for (const c of String(name)) h = (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0;
-    return `hsl(${h % 360}, 70%, 62%)`;
+    return `hsl(${h % 360}, 72%, 58%)`;
+}
+
+function sortModelsByMase(models) {
+    return [...models].sort((a, b) => {
+        const ma = a.mase != null && isFinite(a.mase) ? a.mase : Infinity;
+        const mb = b.mase != null && isFinite(b.mase) ? b.mase : Infinity;
+        return ma - mb;
+    });
+}
+
+function sortModelNamesByMase(data, names) {
+    const byName = new Map(buildComparableModels(data).map(m => [m.name, m]));
+    return [...names].sort((a, b) => {
+        const ma = byName.get(a)?.mase ?? Infinity;
+        const mb = byName.get(b)?.mase ?? Infinity;
+        return ma - mb;
+    });
+}
+
+function normModelName(name) {
+    return String(name || '').trim().toLowerCase();
+}
+
+/** Pronóstico 1d y confianza del bloque forecast o forecast_rf que corresponde al modelo. */
+function resolveDailyForecastForModel(data, modelName) {
+    const key = normModelName(modelName);
+    const f = data.forecast || {};
+    const rf = data.forecast_rf;
+
+    if (rf && rf.available !== false && normModelName(rf.model_name || 'random_forest') === key) {
+        const v = rf.recommended_value ?? rf.horizons?.next_1d?.forecast;
+        if (v != null && isFinite(v)) return { value: v, confidence: rf.confidence };
+    }
+    const mlEntry = (rf?.backtest_models || []).find(m => normModelName(m.name) === key);
+    if (mlEntry?.forecast_1d != null && isFinite(mlEntry.forecast_1d)) {
+        return { value: mlEntry.forecast_1d, confidence: rf.confidence };
+    }
+    if (normModelName(f.method) === key) {
+        const v = f.recommended_value ?? f.horizons?.next_1d?.forecast;
+        if (v != null && isFinite(v)) return { value: v, confidence: f.confidence };
+    }
+    const entry = (f.backtest_models || []).find(m => normModelName(m.name) === key);
+    if (entry?.horizons?.next_1d?.forecast != null) {
+        return { value: entry.horizons.next_1d.forecast, confidence: f.confidence };
+    }
+    if (entry?.forecast_1d != null && isFinite(entry.forecast_1d)) {
+        return { value: entry.forecast_1d, confidence: f.confidence };
+    }
+    if (entry && Array.isArray(entry.series) && entry.series.length) {
+        const last = entry.series[entry.series.length - 1];
+        if (typeof last === 'number' && isFinite(last)) {
+            console.warn(`[forecast] ${modelName}: usando último backtest como fallback; falta forecast_1d/horizons`);
+            return { value: last, confidence: f.confidence };
+        }
+    }
+    return null;
+}
+
+/** Menor MASE entre forecast.backtest_models, forecast (recomendado) y forecast_rf. */
+function getBestForecastRecord(data) {
+    if (!data) return null;
+    const byName = new Map();
+
+    const register = (name, mase) => {
+        if (name == null || mase == null || !isFinite(mase)) return;
+        const key = normModelName(name);
+        const prev = byName.get(key);
+        if (!prev || mase < prev.mase) byName.set(key, { name: String(name), mase });
+    };
+
+    const f = data.forecast || {};
+    (f.backtest_models || []).forEach(m => register(m.name, m.mase));
+    if (f.method != null && f.mase != null) register(f.method, f.mase);
+
+    const rf = data.forecast_rf;
+    if (rf && rf.available !== false) {
+        register(rf.model_name || 'random_forest', rf.mase);
+        (rf.backtest_models || []).forEach(m => register(m.name, m.mase));
+    }
+
+    let best = null;
+    byName.forEach(rec => {
+        if (!best || rec.mase < best.mase) best = rec;
+    });
+    if (!best) return null;
+
+    const daily = resolveDailyForecastForModel(data, best.name);
+    return {
+        modelName: best.name,
+        mase: best.mase,
+        dailyValue: daily?.value ?? null,
+        confidence: daily?.confidence || f.confidence || (rf && rf.confidence) || 'media'
+    };
+}
+
+function applyBestForecastToKpis(kpis, data) {
+    const best = getBestForecastRecord(data);
+    if (!best || !Array.isArray(kpis)) return kpis;
+
+    const maseSub = best.mase < 1.0 ? 'supera línea base (<1)' : 'no supera línea base (≥1)';
+    const maseColor = best.mase < 0.75 ? 'green' : best.mase < 1.0 ? '' : 'red';
+    const modelSub = best.modelName.replace(/_/g, ' ');
+    const conf = best.confidence ? String(best.confidence) : 'media';
+    const dailySub = `${modelSub} | ${conf}`;
+    const dailyVal = best.dailyValue != null ? `~${Math.round(best.dailyValue)}` : null;
+
+    const forecastLabels = new Set(['Prevision diaria', 'Pronóstico Diario']);
+    const maseLabels = new Set(['MASE', 'Precisión del Modelo']);
+
+    return kpis.map(k => {
+        if (forecastLabels.has(k.label) && dailyVal) {
+            return { ...k, value: dailyVal, sub: dailySub };
+        }
+        if (maseLabels.has(k.label)) {
+            return { ...k, value: best.mase.toFixed(3), sub: maseSub, color: maseColor };
+        }
+        return k;
+    });
+}
+
+/** Horizontes del mejor modelo global (menor MASE). */
+function getBestModelHorizons(data) {
+    if (!data) return null;
+    const best = getBestForecastRecord(data);
+    if (best) {
+        const h = getModelHorizons(best.modelName);
+        if (h) return h;
+    }
+    const rf = data.forecast_rf;
+    if (rf && rf.available !== false && rf.horizons) return rf.horizons;
+    return data.forecast?.horizons || null;
+}
+
+function formatModelLabel(name) {
+    return cleanTechnicalTerms(String(name || '').replace(/_/g, ' ').toUpperCase());
+}
+
+function renderHorizonCards(horizons, options = {}) {
+    const prefix = options.prefix || '';
+    const show14d = options.show14d !== false;
+    const bestName = options.bestModelName;
+    const grid = document.getElementById(`${prefix}forecast-horizons-grid`);
+    if (!grid || !horizons) return;
+
+    const h1d = horizons.next_1d || {};
+    const h7d = horizons.next_7d || {};
+    const h14d = horizons.next_14d || {};
+    const modelSub = bestName
+        ? `Mejor modelo: ${formatModelLabel(bestName)}`
+        : 'Mejor modelo por MASE';
+
+    let cardsHtml = `
+        <div class="card stat-card-blue card-animate" style="animation-delay: 0.03s;"
+            onclick="openKpiModal('Pronóstico Mañana', '${h1d.forecast ?? 0}')">
+            <div class="card-stat-label">Pronóstico Mañana</div>
+            <div class="card-stat-value" id="${prefix}forecast-1d-val" data-value="${h1d.forecast ?? 0}">0</div>
+            <div class="card-stat-sub">Rango: ${h1d.band_low ?? 0} a ${h1d.band_high ?? 0} leads · ${modelSub}</div>
+        </div>
+        <div class="card stat-card-gold card-animate" style="animation-delay: 0.06s;"
+            onclick="openKpiModal('Pronóstico 7 Días', '${h7d.forecast ?? 0}')">
+            <div class="card-stat-label">Pronóstico 7 Días</div>
+            <div class="card-stat-value" id="${prefix}forecast-7d-val" data-value="${h7d.forecast ?? 0}">0</div>
+            <div class="card-stat-sub">Rango: ${h7d.band_low ?? 0} a ${h7d.band_high ?? 0} leads · ${modelSub}</div>
+        </div>`;
+
+    if (show14d && horizons.next_14d) {
+        cardsHtml += `
+        <div class="card stat-card-green card-animate" style="animation-delay: 0.09s;"
+            onclick="openKpiModal('Pronóstico 14 Días', '${h14d.forecast ?? 0}')">
+            <div class="card-stat-label">Pronóstico 14 Días</div>
+            <div class="card-stat-value" id="${prefix}forecast-14d-val" data-value="${h14d.forecast ?? 0}">0</div>
+            <div class="card-stat-sub">Rango: ${h14d.band_low ?? 0} a ${h14d.band_high ?? 0} leads · ${modelSub}</div>
+        </div>`;
+    }
+
+    grid.innerHTML = cardsHtml;
+    parseAndAnimate(document.getElementById(`${prefix}forecast-1d-val`), h1d.forecast ?? 0);
+    parseAndAnimate(document.getElementById(`${prefix}forecast-7d-val`), h7d.forecast ?? 0);
+    if (show14d && horizons.next_14d) {
+        parseAndAnimate(document.getElementById(`${prefix}forecast-14d-val`), h14d.forecast ?? 0);
+    }
+}
+
+function seriesHasChartPoints(series) {
+    return Array.isArray(series) && series.some((v) => v != null && isFinite(v));
+}
+
+function modelSeriesCoverage(series) {
+    if (!Array.isArray(series)) return 0;
+    return series.filter((v) => v != null && isFinite(v)).length;
+}
+
+function pickBetterModelSeries(a, b) {
+    if (!seriesHasChartPoints(a)) return b;
+    if (!seriesHasChartPoints(b)) return a;
+    const covA = modelSeriesCoverage(a);
+    const covB = modelSeriesCoverage(b);
+    if (covB > covA) return b;
+    if (covA > covB) return a;
+    const sparseA = a.some((v) => v == null);
+    const sparseB = b.some((v) => v == null);
+    if (sparseA && !sparseB) return a;
+    if (sparseB && !sparseA) return b;
+    return a.length >= b.length ? a : b;
+}
+
+function normalizeModelSeries(series, chartLen) {
+    if (!Array.isArray(series) || !chartLen) return series;
+    if (series.length === chartLen) return series;
+    const isSparse = series.some((v) => v == null);
+    if (isSparse) {
+        if (series.length < chartLen) {
+            return [...series, ...Array(chartLen - series.length).fill(null)];
+        }
+        return series.slice(0, chartLen);
+    }
+    if (series.length < chartLen) {
+        const out = Array(chartLen).fill(null);
+        const start = chartLen - series.length;
+        series.forEach((v, i) => { out[start + i] = v; });
+        return out;
+    }
+    return series.slice(series.length - chartLen);
+}
+
+function resolveNextForecastLabel(forecast, ts) {
+    const np = forecast?.next_point?.date
+        || dashboardData?.forecast_rf?.next_point?.date;
+    let dateStr = np;
+    if (!dateStr && ts?.length) {
+        const d = new Date(ts[ts.length - 1].date);
+        if (!isNaN(d.getTime())) {
+            d.setDate(d.getDate() + 1);
+            dateStr = d.toISOString().slice(0, 10);
+        }
+    }
+    if (!dateStr) return 'Mañana';
+    const dt = new Date(dateStr);
+    return dt.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+}
+
+function buildForecastExtensionData(values, forecastVal) {
+    if (forecastVal == null || !isFinite(forecastVal) || !values?.length) return null;
+    const n = values.length;
+    const data = Array(n + 1).fill(null);
+    data[n - 1] = values[n - 1];
+    data[n] = forecastVal;
+    return data;
+}
+
+function extendSeriesForForecastDay(series, targetLen) {
+    if (!Array.isArray(series) || !targetLen) return series;
+    if (series.length === targetLen) return series;
+    if (series.length < targetLen) {
+        return [...series, ...Array(targetLen - series.length).fill(null)];
+    }
+    return series.slice(0, targetLen);
+}
+
+function modelHasChartData(m) {
+    return seriesHasChartPoints(m.series) || !!getModelHorizons(m.name);
+}
+
+function getAllComparableModelNames(data) {
+    return buildComparableModels(data).filter(modelHasChartData).map(m => m.name);
+}
+
+function getVisibleModelNames() {
+    if (showAllModels) return [...visibleModelNames];
+    if (selectedCompareModel) return [selectedCompareModel];
+    return [];
+}
+
+function getModelRecord(data, modelName) {
+    if (!data || !modelName) return null;
+    const key = normModelName(modelName);
+    const rf = data.forecast_rf;
+    if (rf && rf.available !== false && normModelName(rf.model_name || 'random_forest') === key) {
+        return {
+            name: rf.model_name || 'random_forest',
+            mase: rf.mase,
+            mae: (rf.backtest_models || []).find(x => x.name === (rf.model_name || 'random_forest'))?.mae,
+            rmse: (rf.backtest_models || []).find(x => x.name === (rf.model_name || 'random_forest'))?.rmse,
+            series: buildRfAlignedSeries(data),
+            horizons: rf.horizons,
+            forecast_1d: rf.recommended_value ?? rf.horizons?.next_1d?.forecast,
+        };
+    }
+    const entry = (data.forecast?.backtest_models || []).find(m => normModelName(m.name) === key);
+    if (entry) return entry;
+    return buildComparableModels(data).find(m => normModelName(m.name) === key) || null;
+}
+
+function getChartForecastLine() {
+    const f = dashboardData?.forecast || {};
+    const visible = getVisibleModelNames();
+    if (visible.length === 1) {
+        const name = visible[0];
+        const daily = resolveDailyForecastForModel(dashboardData, name);
+        return {
+            value: daily?.value ?? f.recommended_value,
+            label: `Pronóstico ${formatModelLabel(name)}`,
+            color: getModelColor(name),
+        };
+    }
+    const method = f.method || 'recomendado';
+    return {
+        value: f.recommended_value,
+        label: `Pronóstico ${formatModelLabel(method)}`,
+        color: getModelColor(method),
+    };
+}
+
+function getChartVisibleModelNames() {
+    const chart = charts.timeseries;
+    if (chart && chart.data && Array.isArray(chart.data.datasets)) {
+        const names = [];
+        chart.data.datasets.forEach((ds, idx) => {
+            if (ds._modelName && chart.isDatasetVisible(idx)) {
+                names.push(ds._modelName);
+            }
+        });
+        if (showAllModels || selectedCompareModel || names.length) {
+            return dashboardData ? sortModelNamesByMase(dashboardData, names) : names;
+        }
+    }
+    const fallback = getVisibleModelNames();
+    return dashboardData ? sortModelNamesByMase(dashboardData, fallback) : fallback;
+}
+
+// =====================================================================
+//  COMPARADOR DE MODELOS (lista desplegable + overlay)
+// =====================================================================
+
+function syncModelCompareUI() {
+    renderForecastBaseChart();
+    renderModelDetailPanel();
+}
+
+function renderModelDetailPanel() {
+    const panel = document.getElementById('model-detail-panel');
+    const sub = document.getElementById('model-detail-sub');
+    if (!panel) return;
+
+    const visible = getChartVisibleModelNames();
+
+    if (!visible.length || !dashboardData) {
+        panel.innerHTML = '<div class="model-detail-empty">Selecciona un modelo en el desplegable o usa «Mostrar todas».</div>';
+        if (sub) sub.textContent = 'Selecciona un modelo o pulsa «Mostrar todas». Clic en la leyenda para ocultar o mostrar filas.';
+        return;
+    }
+
+    if (sub) {
+        sub.textContent = visible.length === 1
+            ? `1 modelo visible · pronóstico diario (1d)`
+            : `${visible.length} modelos visibles · clic en la leyenda para ocultar o mostrar`;
+    }
+
+    const rows = visible.map(name => {
+        const rec = getModelRecord(dashboardData, name);
+        const daily = resolveDailyForecastForModel(dashboardData, name);
+        const pron = daily?.value != null ? Math.round(daily.value) : '—';
+        const color = getModelColor(name);
+        const mase = rec?.mase;
+        const maseClass = getMaseMetricClass(mase);
+        return `
+            <tr>
+                <td style="font-weight: 600; color: ${color};">${formatModelLabel(name)}</td>
+                <td class="metric-pron">${pron}</td>
+                <td class="${maseClass}">${typeof mase === 'number' ? mase.toFixed(3) : '—'}</td>
+                <td class="metric-mae">${rec?.mae != null ? Number(rec.mae).toFixed(2) : '—'}</td>
+                <td class="metric-rmse">${rec?.rmse != null ? Number(rec.rmse).toFixed(2) : '—'}</td>
+            </tr>
+        `;
+    }).join('');
+
+    panel.innerHTML = `
+        <div class="custom-table-container">
+            <table class="custom-table model-detail-table">
+                <thead>
+                    <tr>
+                        <th>Modelo</th>
+                        <th style="text-align: right;">Pronóstico</th>
+                        <th style="text-align: right;">MASE</th>
+                        <th style="text-align: right;">MAE</th>
+                        <th style="text-align: right;">RMSE</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
 }
 
 // Construye la lista de modelos comparables: los del backtest estadistico
 // mas el Random Forest (desde forecast_rf), cada uno con su serie diaria si existe.
 function buildComparableModels(data) {
+    if (comparableModelsCache && comparableModelsCache.source === data) {
+        return comparableModelsCache.list;
+    }
     const list = [];
     const f = (data && data.forecast) ? data.forecast : {};
+    const chartLen = Array.isArray(f.time_series) ? f.time_series.length : 0;
     (f.backtest_models || []).forEach(m => {
-        list.push({ name: m.name, mase: m.mase, mae: m.mae, rmse: m.rmse, series: m.series });
+        let series = m.series;
+        if (seriesHasChartPoints(series) && chartLen) {
+            series = normalizeModelSeries(series, chartLen);
+        }
+        list.push({
+            name: m.name,
+            mase: m.mase,
+            mae: m.mae,
+            rmse: m.rmse,
+            series: series,
+            horizons: m.horizons,
+            forecast_1d: m.forecast_1d,
+        });
     });
 
     const rf = data ? data.forecast_rf : null;
     if (rf && rf.available !== false) {
         const rfName = rf.model_name || 'random_forest';
-        if (!list.some(m => m.name === rfName)) {
+        if (!list.some(m => normModelName(m.name) === normModelName(rfName))) {
             let series = Array.isArray(rf.series) ? rf.series : null;
             if (!series && Array.isArray(rf.backtest_models)) {
                 const e = rf.backtest_models.find(x => x.name === rfName);
                 if (e && Array.isArray(e.series)) series = e.series;
             }
-            // Serie real de predicciones del backtest (predicho por día), alineada
-            // por fecha a la serie histórica que define el eje X de la gráfica.
             if (!series) series = buildRfAlignedSeries(data);
-            list.push({ name: rfName, mase: rf.mase, series: series });
+            if (seriesHasChartPoints(series) && chartLen) {
+                series = normalizeModelSeries(series, chartLen);
+            }
+            list.push({
+                name: rfName,
+                mase: rf.mase,
+                mae: (rf.backtest_models || []).find(x => x.name === rfName)?.mae,
+                rmse: (rf.backtest_models || []).find(x => x.name === rfName)?.rmse,
+                series: series,
+                horizons: rf.horizons,
+                forecast_1d: rf.recommended_value ?? rf.horizons?.next_1d?.forecast,
+            });
         }
+        (rf.backtest_models || []).forEach(m => {
+            const key = normModelName(m.name);
+            if (ML_MODEL_NAMES.indexOf(key) < 0) return;
+            let series = Array.isArray(m.series) ? m.series : null;
+            if (!series && normModelName(m.name) === normModelName(rfName)) {
+                series = buildRfAlignedSeries(data);
+            }
+            if (seriesHasChartPoints(series) && chartLen) {
+                series = normalizeModelSeries(series, chartLen);
+            }
+            const existing = list.find(x => normModelName(x.name) === key);
+            if (existing) {
+                existing.series = pickBetterModelSeries(existing.series, series);
+                existing.mase = m.mase ?? existing.mase;
+                existing.mae = m.mae ?? existing.mae;
+                existing.rmse = m.rmse ?? existing.rmse;
+                existing.horizons = m.horizons || existing.horizons;
+                existing.forecast_1d = m.forecast_1d ?? existing.forecast_1d;
+                return;
+            }
+            list.push({
+                name: m.name,
+                mase: m.mase,
+                mae: m.mae,
+                rmse: m.rmse,
+                series: series,
+                horizons: m.horizons || null,
+                forecast_1d: m.forecast_1d || null,
+            });
+        });
     }
+    comparableModelsCache = { source: data, list };
     return list;
+}
+
+function showBestModelOnLoad(data) {
+    const models = buildComparableModels(data);
+    const best = getBestForecastRecord(data);
+    const bestEntry = best
+        ? models.find((m) => normModelName(m.name) === normModelName(best.modelName))
+        : null;
+
+    if (bestEntry && seriesHasChartPoints(bestEntry.series)) {
+        selectedCompareModel = bestEntry.name;
+        showAllModels = false;
+        visibleModelNames = new Set([bestEntry.name]);
+        const sel = document.getElementById('model-compare-select');
+        if (sel) {
+            sel.value = bestEntry.name;
+            sel.style.borderColor = getModelColor(bestEntry.name);
+            sel.style.color = getModelColor(bestEntry.name);
+        }
+        const meta = document.getElementById('model-compare-meta');
+        if (meta) {
+            meta.textContent = typeof bestEntry.mase === 'number' ? `MASE (comparado): ${bestEntry.mase.toFixed(3)}` : '';
+            meta.style.color = getModelColor(bestEntry.name);
+        }
+    } else {
+        selectedCompareModel = '';
+        showAllModels = false;
+        visibleModelNames = new Set();
+    }
+    syncModelCompareUI();
 }
 
 // Alinea las predicciones diarias del backtest del Random Forest (forecast_rf.backtest_series)
@@ -1363,114 +2128,107 @@ function buildRfAlignedSeries(data) {
 // La leyenda muestra solo el nombre del modelo; el MASE vive únicamente en la tabla de abajo.
 function overlayForModel(m) {
     return {
-        label: cleanTechnicalTerms(m.name.replace(/_/g, ' ').toUpperCase()),
+        label: formatModelLabel(m.name),
         series: m.series,
-        color: getModelColor(m.name)
+        color: getModelColor(m.name),
+        modelName: m.name,
     };
 }
 
-// Devuelve los overlays activos: todos los modelos, uno solo, o ninguno.
 function getActiveOverlays() {
     if (!dashboardData) return [];
-    const baseName = (dashboardData.forecast && dashboardData.forecast.method) ? dashboardData.forecast.method : null;
-    const models = buildComparableModels(dashboardData)
-        .filter(m => m.name !== baseName && Array.isArray(m.series) && m.series.length);
-
-    if (showAllModels) return models.map(overlayForModel);
-    if (selectedCompareModel) {
-        const m = models.find(x => x.name === selectedCompareModel);
-        if (m) return [overlayForModel(m)];
-    }
-    return [];
+    const visible = getVisibleModelNames();
+    if (!visible.length) return [];
+    const models = sortModelsByMase(
+        buildComparableModels(dashboardData)
+            .filter(m => visible.includes(m.name) && seriesHasChartPoints(m.series))
+    );
+    return models.map(overlayForModel);
 }
 
-// Vuelve a dibujar la gráfica base del tab forecast con los overlays activos.
 function renderForecastBaseChart() {
     if (!dashboardData || !dashboardData.forecast) return;
+    const line = getChartForecastLine();
     renderTimeSeriesChart(dashboardData.forecast, {
         canvasId: 'chart-timeseries',
         chartKey: 'timeseries',
-        lineLabel: 'Pronóstico Recomendado',
-        overlays: getActiveOverlays()
+        lineLabel: line.label,
+        lineColor: line.color,
+        forecastValue: line.value,
+        overlays: getActiveOverlays(),
     });
 }
 
-// Botón "Mostrar todas": sobrepone todas las curvas de modelos a la vez.
 function showAllModelOverlays() {
     showAllModels = true;
     selectedCompareModel = '';
+    visibleModelNames = new Set(getAllComparableModelNames(dashboardData));
     const sel = document.getElementById('model-compare-select');
     if (sel) { sel.value = ''; sel.style.borderColor = ''; sel.style.color = ''; }
     const meta = document.getElementById('model-compare-meta');
     if (meta) { meta.textContent = 'Mostrando todos los modelos'; meta.style.color = ''; }
-    renderForecastBaseChart();
-    updateHorizonComparison();
+    syncModelCompareUI();
 }
 
-// Botón "Limpiar": regresa a la gráfica original (solo modelo base).
 function clearModelOverlays() {
     showAllModels = false;
     selectedCompareModel = '';
+    visibleModelNames = new Set();
     const sel = document.getElementById('model-compare-select');
     if (sel) { sel.value = ''; sel.style.borderColor = ''; sel.style.color = ''; }
     const meta = document.getElementById('model-compare-meta');
     if (meta) { meta.textContent = ''; meta.style.color = ''; }
-    renderForecastBaseChart();
-    updateHorizonComparison();
+    syncModelCompareUI();
 }
 
-// Llena el desplegable con los modelos comparables, excluyendo el modelo base/actual.
 function populateModelCompareDropdown(data) {
     const sel = document.getElementById('model-compare-select');
     if (!sel) return;
-    const baseName = (data && data.forecast && data.forecast.method) ? data.forecast.method : null;
-    const models = buildComparableModels(data).filter(m => m.name !== baseName);
+    const models = sortModelsByMase(buildComparableModels(data));
 
-    let html = '<option value="">Ninguno (solo modelo actual)</option>';
+    let html = '<option value="">Ninguno (modelo recomendado)</option>';
     models.forEach(m => {
-        const hasSeries = Array.isArray(m.series) && m.series.length;
-        const label = cleanTechnicalTerms(m.name.replace(/_/g, ' ').toUpperCase());
+        const hasData = modelHasChartData(m);
+        const label = formatModelLabel(m.name);
         const color = getModelColor(m.name);
-        html += `<option value="${m.name}" style="color:${color}"${hasSeries ? '' : ' disabled'}>${label}${hasSeries ? '' : ' (sin serie)'}</option>`;
+        html += `<option value="${m.name}" style="color:${color}"${hasData ? '' : ' disabled'}>${label}${hasData ? '' : ' (sin datos)'}</option>`;
     });
     sel.innerHTML = html;
     selectedCompareModel = '';
+    showAllModels = false;
+    visibleModelNames = new Set();
     sel.style.borderColor = '';
     sel.style.color = '';
     const meta = document.getElementById('model-compare-meta');
     if (meta) { meta.textContent = ''; meta.style.color = ''; }
 }
 
-// Devuelve los horizontes (next_1d/7d/14d) del modelo indicado, si existen.
 function getModelHorizons(name) {
     if (!name || !dashboardData) return null;
     const rf = dashboardData.forecast_rf;
     const rfName = rf ? (rf.model_name || 'random_forest') : null;
-    if (rf && rf.available !== false && name === rfName && rf.horizons) return rf.horizons;
+    if (rf && rf.available !== false && normModelName(name) === normModelName(rfName) && rf.horizons) {
+        return rf.horizons;
+    }
     const f = dashboardData.forecast || {};
-    const m = (f.backtest_models || []).find(x => x.name === name);
+    if (normModelName(f.method) === normModelName(name) && f.horizons) return f.horizons;
+    const m = (f.backtest_models || []).find(x => normModelName(x.name) === normModelName(name));
     if (m && m.horizons) return m.horizons;
+    const daily = resolveDailyForecastForModel(dashboardData, name);
+    if (daily?.value != null) {
+        return {
+            next_1d: { forecast: daily.value, band_low: null, band_high: null, method: name },
+        };
+    }
     return null;
 }
 
-// Actualiza las tarjetas de "Pronóstico de Demanda a Mediano Plazo" con los datos
-// del modelo seleccionado para comparar (valor + variación vs modelo base).
-function updateHorizonComparison() {
-    // Las tarjetas de pronóstico muestran únicamente el modelo base/original.
-    // La comparación por tarjeta (p. ej. "RANDOM FOREST: 80 ▼ 69.7%") quedó
-    // deshabilitada a pedido; la comparación de modelos sigue disponible en la gráfica.
-    ['forecast-1d-compare', 'forecast-7d-compare', 'forecast-14d-compare'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = '';
-    });
-}
-
-// Handler del cambio en el desplegable: sobrepone (o quita) la curva del modelo elegido.
 function onModelCompareChange() {
     const sel = document.getElementById('model-compare-select');
     if (!sel) return;
     selectedCompareModel = sel.value || '';
     showAllModels = false;
+    visibleModelNames = selectedCompareModel ? new Set([selectedCompareModel]) : new Set();
 
     const color = selectedCompareModel ? getModelColor(selectedCompareModel) : '';
     sel.style.borderColor = color;
@@ -1483,8 +2241,7 @@ function onModelCompareChange() {
         meta.style.color = color;
     }
 
-    renderForecastBaseChart();
-    updateHorizonComparison();
+    syncModelCompareUI();
 }
 
 // =====================================================================
@@ -1605,6 +2362,8 @@ function renderAlertsTableList(filteredList) {
             </tr>
         `;
     }).join('');
+
+    applyProgressBars(tableBody);
 }
 
 // =====================================================================
@@ -1644,11 +2403,27 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
     const defaultLineColor = isLight ? 'rgba(132, 204, 22, 0.9)' : 'rgba(163, 230, 53, 0.8)';
     const lineLabel = options.lineLabel || 'Pronóstico Recomendado';
     const lineColor = options.lineColor || defaultLineColor;
+    const forecastVal = options.forecastValue != null ? options.forecastValue : forecast.recommended_value;
+    const overlays = Array.isArray(options.overlays)
+        ? options.overlays
+        : (options.overlay ? [options.overlay] : []);
+    const heavyChart = overlays.length > 2;
+    const isForecastChart = chartKey === 'timeseries';
+    const forecastAnimated = isForecastChart && shouldAnimateForecastChart();
+    const showForecastLine = isForecastChart && !isBar && forecastVal != null && isFinite(forecastVal);
+    const forecastExtension = showForecastLine ? buildForecastExtensionData(values, forecastVal) : null;
+
+    let chartLabels = labels;
+    let leadsData = values;
+    if (forecastExtension) {
+        chartLabels = [...labels, resolveNextForecastLabel(forecast, ts)];
+        leadsData = [...values, null];
+    }
 
     const datasets = [
         {
             label: 'Leads diarios',
-            data: values,
+            data: leadsData,
             borderColor: isLight ? '#0284c7' : '#38bdf8',
             backgroundColor: isBar
                 ? (isLight ? 'rgba(2, 132, 199, 0.55)' : 'rgba(56, 189, 248, 0.45)')
@@ -1656,69 +2431,103 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
             fill: !isBar,
             tension: 0.35,
             borderRadius: isBar ? 6 : 0,
-            pointRadius: isBar ? 0 : 3,
-            pointHoverRadius: isBar ? 0 : 8,
+            pointRadius: isBar ? 0 : (forecastAnimated ? 3 : (heavyChart ? 0 : 2)),
+            pointHoverRadius: isBar ? 0 : (forecastAnimated ? 8 : (heavyChart ? 0 : 6)),
             pointBackgroundColor: isLight ? '#0284c7' : '#38bdf8',
             pointBorderColor: isLight ? '#ffffff' : '#080c14',
             pointBorderWidth: 2,
             borderWidth: isBar ? 0 : 2.5
-        },
-        {
-            type: 'line',
-            label: lineLabel,
-            data: new Array(values.length).fill(forecast.recommended_value),
-            borderColor: lineColor,
-            borderDash: [6, 4],
-            borderWidth: 2,
-            pointRadius: 0,
-            fill: false
         }
     ];
 
-    // Overlays: una o varias curvas de modelos para comparar
-    const overlays = Array.isArray(options.overlays)
-        ? options.overlays
-        : (options.overlay ? [options.overlay] : []);
+    if (forecastExtension) {
+        datasets.push({
+            type: 'line',
+            label: lineLabel,
+            data: forecastExtension,
+            borderColor: lineColor,
+            borderDash: [6, 4],
+            borderWidth: 2,
+            pointRadius: forecastExtension.map((v, i) => i === forecastExtension.length - 1 ? 6 : 0),
+            pointHoverRadius: forecastExtension.map((v, i) => i === forecastExtension.length - 1 ? 8 : 0),
+            pointBackgroundColor: lineColor,
+            fill: false,
+            spanGaps: false,
+        });
+    }
+
+    const chartDataLen = chartLabels.length;
     overlays.forEach(ov => {
-        if (!ov || !Array.isArray(ov.series) || !ov.series.length) return;
+        if (!ov || !seriesHasChartPoints(ov.series)) return;
         datasets.push({
             type: 'line',
             label: ov.label || 'Modelo comparado',
-            data: ov.series,
+            data: extendSeriesForForecastDay(ov.series, chartDataLen),
             borderColor: ov.color || (isLight ? '#db2777' : '#f472b6'),
             backgroundColor: 'transparent',
-            borderWidth: 2.5,
-            tension: 0.35,
+            borderWidth: heavyChart ? 1.8 : 2.5,
+            tension: 0.25,
             pointRadius: 0,
-            pointHoverRadius: 6,
-            fill: false
+            pointHoverRadius: heavyChart ? 0 : 4,
+            fill: false,
+            spanGaps: true,
+            _modelName: ov.modelName || null,
         });
     });
 
     charts[chartKey] = new Chart(ctx, {
         type: chartType,
         data: {
-            labels,
+            labels: chartLabels,
             datasets
         },
         options: {
-            animation: {
-                duration: 900,
-                easing: 'easeOutQuart',
-                delay: (context) => {
-                    let delay = 0;
-                    if (context.type === 'data' && context.mode === 'default' && !context.active) {
-                        delay = context.dataIndex * 15;
-                    }
-                    return delay;
-                }
-            },
+            animation: isForecastChart
+                ? getForecastChartAnimationOptions(heavyChart)
+                : getChartAnimationOptions(heavyChart),
+            transitions: forecastAnimated ? {
+                hide: {
+                    animations: {
+                        opacity: { duration: 380, easing: 'easeInOutQuad', to: 0 },
+                    },
+                },
+                show: {
+                    animations: {
+                        opacity: { duration: 480, easing: 'easeOutQuart', from: 0, to: 1 },
+                    },
+                },
+            } : ((PERF.lite || heavyChart) ? {
+                active: { animation: { duration: 0 } },
+            } : {
+                hide: {
+                    animations: {
+                        opacity: { duration: 200, easing: 'easeInOutQuad', to: 0 },
+                    },
+                },
+                show: {
+                    animations: {
+                        opacity: { duration: 250, easing: 'easeOutQuart', from: 0, to: 1 },
+                    },
+                },
+            }),
             responsive: true,
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: {
                     display: true,
+                    onClick: (evt, legendItem, legend) => {
+                        const chart = legend.chart;
+                        const index = legendItem.datasetIndex;
+                        if (chart.isDatasetVisible(index)) {
+                            chart.hide(index);
+                        } else {
+                            chart.show(index);
+                        }
+                        if (chart.data.datasets[index]._modelName) {
+                            renderModelDetailPanel();
+                        }
+                    },
                     labels: {
                         color: isLight ? '#475569' : '#94a3b8',
                         font: { size: 11, family: 'Inter' },
@@ -1759,10 +2568,13 @@ function setTimeSeriesType(type, ev) {
         btn.classList.toggle('active', btn.dataset.tsType === type);
     });
     if (dashboardData && dashboardData.forecast) {
+        const line = getChartForecastLine();
         renderTimeSeriesChart(dashboardData.forecast, {
             canvasId: 'chart-timeseries',
             chartKey: 'timeseries',
-            lineLabel: 'Pronóstico Recomendado',
+            lineLabel: line.label,
+            lineColor: line.color,
+            forecastValue: line.value,
             overlays: getActiveOverlays()
         });
     }
@@ -1818,17 +2630,7 @@ function renderSeasonalChart(indices, options = {}) {
             }]
         },
         options: {
-            animation: {
-                duration: 700,
-                easing: 'easeOutBack',
-                delay: (context) => {
-                    let delay = 0;
-                    if (context.type === 'data' && context.mode === 'default' && !context.active) {
-                        delay = context.dataIndex * 60;
-                    }
-                    return delay;
-                }
-            },
+            animation: getChartAnimationOptions(),
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
@@ -1882,17 +2684,7 @@ function renderCampaignChart(campaigns) {
             }]
         },
         options: {
-            animation: {
-                duration: 900,
-                easing: 'easeOutQuart',
-                delay: (context) => {
-                    let delay = 0;
-                    if (context.type === 'data' && context.mode === 'default' && !context.active) {
-                        delay = context.dataIndex * 60;
-                    }
-                    return delay;
-                }
-            },
+            animation: getChartAnimationOptions(),
             responsive: true,
             maintainAspectRatio: false,
             cutout: '65%',
@@ -1930,46 +2722,26 @@ function renderHourlyChart(hourly) {
 
     const isLight = document.body.classList.contains('light-mode');
     const ctx = element.getContext('2d');
+    const hourlyValues = hourly.map(h => h.probability !== undefined ? (h.probability * 100) : (h.count || h.calls || h.total || 0));
+    const maxVal = Math.max(...hourlyValues);
+    const peakBg = isLight ? 'rgba(225, 29, 72, 0.85)' : 'rgba(244, 63, 94, 0.85)';
+    const peakHover = isLight ? 'rgba(225, 29, 72, 0.95)' : 'rgba(244, 63, 94, 0.95)';
+    const normalBg = isLight ? 'rgba(132, 204, 22, 0.55)' : 'rgba(163, 230, 53, 0.45)';
+    const normalHover = isLight ? 'rgba(132, 204, 22, 0.75)' : 'rgba(163, 230, 53, 0.65)';
     charts.hourly = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: hourly.map(h => h.label || `${h.hour !== undefined ? h.hour : h.hr}:00`),
             datasets: [{
                 label: 'Contactos',
-                data: hourly.map(h => h.probability !== undefined ? (h.probability * 100) : (h.count || h.calls || h.total || 0)),
-                backgroundColor: hourly.map((h, i) => {
-                    const val = h.probability !== undefined ? (h.probability * 100) : (h.count || h.calls || h.total || 0);
-                    const max = Math.max(...hourly.map(x => x.probability !== undefined ? (x.probability * 100) : (x.count || x.calls || x.total || 0)));
-                    if (val === max) {
-                        return isLight ? 'rgba(225, 29, 72, 0.85)' : 'rgba(244, 63, 94, 0.85)';
-                    } else {
-                        return isLight ? 'rgba(132, 204, 22, 0.55)' : 'rgba(163, 230, 53, 0.45)';
-                    }
-                }),
-                hoverBackgroundColor: hourly.map((h, i) => {
-                    const val = h.probability !== undefined ? (h.probability * 100) : (h.count || h.calls || h.total || 0);
-                    const max = Math.max(...hourly.map(x => x.probability !== undefined ? (x.probability * 100) : (x.count || x.calls || x.total || 0)));
-                    if (val === max) {
-                        return isLight ? 'rgba(225, 29, 72, 0.95)' : 'rgba(244, 63, 94, 0.95)';
-                    } else {
-                        return isLight ? 'rgba(132, 204, 22, 0.75)' : 'rgba(163, 230, 53, 0.65)';
-                    }
-                }),
+                data: hourlyValues,
+                backgroundColor: hourlyValues.map(v => v === maxVal ? peakBg : normalBg),
+                hoverBackgroundColor: hourlyValues.map(v => v === maxVal ? peakHover : normalHover),
                 borderRadius: 4
             }]
         },
         options: {
-            animation: {
-                duration: 600,
-                easing: 'easeOutQuart',
-                delay: (context) => {
-                    let delay = 0;
-                    if (context.type === 'data' && context.mode === 'default' && !context.active) {
-                        delay = context.dataIndex * 18;
-                    }
-                    return delay;
-                }
-            },
+            animation: getChartAnimationOptions(),
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
@@ -2068,22 +2840,12 @@ function renderDailyVolumeChart(ops) {
             ]
         },
         options: {
-            animation: {
-                duration: 700,
-                easing: 'easeOutQuart',
-                delay: (context) => {
-                    let delay = 0;
-                    if (context.type === 'data' && context.mode === 'default' && !context.active) {
-                        delay = context.dataIndex * 8;
-                    }
-                    return delay;
-                }
-            },
+            animation: getChartAnimationOptions(),
             responsive: true,
             maintainAspectRatio: false,
             interaction: {
-                mode: 'nearest',
-                intersect: true
+                mode: 'index',
+                intersect: false
             },
             plugins: {
                 legend: {
@@ -2138,7 +2900,8 @@ function setDailyVolumeType(type, ev) {
     }
 }
 
-function renderOperationsTab(data) {
+function renderOperationsTab(data, options = {}) {
+    const renderCharts = options.charts !== false;
     if (!data || !data.operations) return;
     const ops = data.operations;
     const call = ops.call_metrics || {};
@@ -2154,25 +2917,25 @@ function renderOperationsTab(data) {
 
         const kpis = [
             {
-                label: 'Registros',
+                label: 'Total Records (Registros de Llamadas)',
                 value: totalRecords.toLocaleString(),
                 sub: 'llamadas totales',
                 color: 'blue'
             },
             {
-                label: 'Contactos',
+                label: 'Unique Leads (Contactos Únicos)',
                 value: uniqueContacts.toLocaleString(),
                 sub: 'leads únicos',
                 color: 'blue'
             },
             {
-                label: 'Avg Dial Attempts (intentos promedio)',
+                label: 'Avg Dial Attempts (Intentos Promedio)',
                 value: attemptsAvg.toFixed(2),
                 sub: `rango: 1-${call.call_rank ? call.call_rank.max : 365}`,
                 color: attemptsAvg > 7 ? 'red' : 'blue'
             },
             {
-                label: 'Avg Callback Interval (min entre intentos)',
+                label: 'Avg Callback Interval (Minutos entre Intentos)',
                 value: `${Math.round(intervalAvg).toLocaleString()} min`,
                 sub: `~${Math.round(intervalAvg / 60)}h entre marcaciones`,
                 color: intervalAvg > 1440 ? 'red' : 'blue'
@@ -2203,7 +2966,12 @@ function renderOperationsTab(data) {
     if (volSub) {
         volSub.textContent = `${ops.total_days} días | Promedio: ${Math.round(ops.avg_daily)} leads/día`;
     }
-    renderDailyVolumeChart(ops);
+    if (renderCharts) {
+        renderDailyVolumeChart(ops);
+        const seasonalIndices = data?.operations?.seasonal_indices
+            || data?.forecast?.seasonal_indices;
+        if (seasonalIndices) renderSeasonalChart(seasonalIndices);
+    }
 
     // 3. Populate Contact Distribution Bars
     const totalCalls = call.total_records || 1;
@@ -2266,7 +3034,7 @@ function renderOperationsTab(data) {
         const valleyStr = `${String(ops.valley_hour !== undefined ? ops.valley_hour : 3).padStart(2, '0')}:00`;
         hourlySub.textContent = `Pico: ${peakStr} | Valle: ${valleyStr}`;
     }
-    renderHourlyChart(ops.hourly_distribution);
+    if (renderCharts) renderHourlyChart(ops.hourly_distribution);
 }
 
 // =====================================================================
@@ -2274,38 +3042,45 @@ function renderOperationsTab(data) {
 // =====================================================================
 
 function initSpotlight() {
+    if (PERF.lite) return;
+
     const flashlight = document.querySelector('.global-flashlight');
     const sidebar = document.querySelector('.sidebar');
     const topbar = document.querySelector('.topbar');
+    let rafId = null;
+    let lastX = 0;
+    let lastY = 0;
+    let activeCard = null;
 
-    document.addEventListener('mousemove', e => {
-        if (flashlight) {
-            flashlight.style.setProperty('--global-mouse-x', `${e.clientX}px`);
-            flashlight.style.setProperty('--global-mouse-y', `${e.clientY}px`);
-        }
-        if (sidebar) {
-            const rect = sidebar.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            sidebar.style.setProperty('--sidebar-mouse-x', `${x}px`);
-            sidebar.style.setProperty('--sidebar-mouse-y', `${y}px`);
-        }
-        if (topbar) {
-            const rect = topbar.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            topbar.style.setProperty('--topbar-mouse-x', `${x}px`);
-            topbar.style.setProperty('--topbar-mouse-y', `${y}px`);
-        }
-        const cards = document.querySelectorAll('.card');
-        cards.forEach(card => {
-            const rect = card.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            card.style.setProperty('--mouse-x', `${x}px`);
-            card.style.setProperty('--mouse-y', `${y}px`);
+    document.addEventListener('mousemove', (e) => {
+        lastX = e.clientX;
+        lastY = e.clientY;
+        if (rafId) return;
+        rafId = requestAnimationFrame(() => {
+            rafId = null;
+            if (flashlight) {
+                flashlight.style.setProperty('--global-mouse-x', `${lastX}px`);
+                flashlight.style.setProperty('--global-mouse-y', `${lastY}px`);
+            }
+            if (sidebar) {
+                const rect = sidebar.getBoundingClientRect();
+                sidebar.style.setProperty('--sidebar-mouse-x', `${lastX - rect.left}px`);
+                sidebar.style.setProperty('--sidebar-mouse-y', `${lastY - rect.top}px`);
+            }
+            if (topbar) {
+                const rect = topbar.getBoundingClientRect();
+                topbar.style.setProperty('--topbar-mouse-x', `${lastX - rect.left}px`);
+                topbar.style.setProperty('--topbar-mouse-y', `${lastY - rect.top}px`);
+            }
+            const hovered = document.elementFromPoint(lastX, lastY)?.closest('.card');
+            if (hovered !== activeCard) activeCard = hovered;
+            if (activeCard) {
+                const rect = activeCard.getBoundingClientRect();
+                activeCard.style.setProperty('--mouse-x', `${lastX - rect.left}px`);
+                activeCard.style.setProperty('--mouse-y', `${lastY - rect.top}px`);
+            }
         });
-    });
+    }, { passive: true });
 }
 
 // =====================================================================
@@ -2491,15 +3266,15 @@ window.toggleTheme = function (event) {
 
         // Dynamically redraw all loaded active charts with new gridlines, tooltips, and tick colors
         if (dashboardData) {
+            const line = getChartForecastLine();
             renderTimeSeriesChart(dashboardData.forecast, {
                 canvasId: 'chart-timeseries',
                 chartKey: 'timeseries',
-                lineLabel: 'Pronóstico Recomendado',
+                lineLabel: line.label,
+                lineColor: line.color,
+                forecastValue: line.value,
                 overlays: getActiveOverlays()
             });
-            if (dashboardData.forecast && dashboardData.forecast.seasonal_indices) {
-                renderSeasonalChart(dashboardData.forecast.seasonal_indices);
-            }
             if (dashboardData.investment && dashboardData.investment.campaigns) {
                 renderCampaignChart(dashboardData.investment.campaigns);
             }
@@ -2547,6 +3322,8 @@ window.triggerSync = async function (event) {
 // =====================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    initPerformanceMode();
+
     // Early initialisation of Light Mode to prevent transition flashes
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'light') {

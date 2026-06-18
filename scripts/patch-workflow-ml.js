@@ -4,11 +4,57 @@
 const fs = require('fs');
 const path = require('path');
 
-const wfPath = path.join(__dirname, '..', 'Mkt_BI_IA_v7 (2).json');
-const wf = JSON.parse(fs.readFileSync(wfPath, 'utf8'));
+const root = path.join(__dirname, '..');
 
 const prepareMLCode = `// === PREPARE ML PAYLOAD ===
 const rows = items.map(i => i.json).filter(r => r.contactos !== undefined && r.fecha);
+
+function _dateKey(v) {
+  if (!v) return null;
+  return typeof v === 'string' ? v.split('T')[0] : new Date(v).toISOString().split('T')[0];
+}
+
+function _buildSeriesFromRows(leadRows) {
+  return leadRows
+    .map(r => ({ date: _dateKey(r.fecha), value: parseInt(r.contactos) || 0 }))
+    .filter(r => r.date)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function _aggregateSpend(invRows) {
+  const map = {};
+  invRows.forEach(r => {
+    const d = _dateKey(r.fecha_gasto || r.fecha);
+    if (!d) return;
+    map[d] = (map[d] || 0) + (parseFloat(r.spend) || 0);
+  });
+  return map;
+}
+
+function _detectChangepoint(series) {
+  const vals = series.map(s => s.value);
+  const n = vals.length;
+  if (n < 14) return { detected: false };
+  const mean = vals.reduce((a, b) => a + b, 0) / n;
+  const std = Math.sqrt(vals.reduce((s, v) => s + (v - mean) ** 2, 0) / n) || 1;
+  let pos = 0, neg = 0, idx = -1, dir = '';
+  const k = 0.5 * std, h = 4 * std;
+  for (let i = 0; i < n; i++) {
+    pos = Math.max(0, pos + vals[i] - mean - k);
+    neg = Math.max(0, neg - vals[i] + mean - k);
+    if (pos > h) { idx = i; dir = 'upward'; pos = 0; }
+    if (neg > h) { idx = i; dir = 'downward'; neg = 0; }
+  }
+  if (idx >= n - 10) {
+    return { detected: true, change_date: series[idx].date, direction: dir };
+  }
+  return { detected: false };
+}
+
+let invRows = [];
+try { invRows = $('Src_Inversiones').all().map(i => i.json); } catch (e) {}
+const spendMap = _aggregateSpend(invRows);
+
 let series;
 if (rows.length === 0) {
   const today = new Date();
@@ -16,20 +62,22 @@ if (rows.length === 0) {
   for (let i = 41; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i - 1);
+    const date = d.toISOString().split('T')[0];
     series.push({
-      date: d.toISOString().split('T')[0],
-      value: 80 + Math.round(Math.sin(i / 5) * 15) + Math.floor(i / 3)
+      date,
+      value: 80 + Math.round(Math.sin(i / 5) * 15) + Math.floor(i / 3),
+      spend: 900 + Math.round(Math.sin(i / 3) * 200)
     });
   }
 } else {
-  series = rows
-    .map(r => ({
-      date: typeof r.fecha === 'string' ? r.fecha.split('T')[0] : new Date(r.fecha).toISOString().split('T')[0],
-      value: parseInt(r.contactos) || 0
-    }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+  series = _buildSeriesFromRows(rows).map(p => ({
+    ...p,
+    spend: spendMap[p.date] || 0
+  }));
 }
-return [{ json: { series, backtest_days: 14, model: 'random_forest' } }];`;
+
+const changepoint = _detectChangepoint(series);
+return [{ json: { series, backtest_days: 14, model: 'compare', changepoint } }];`;
 
 const newNodes = [
   {
@@ -66,26 +114,32 @@ const newNodes = [
   },
 ];
 
-const names = new Set(newNodes.map((n) => n.name));
-wf.nodes = wf.nodes.filter((n) => !names.has(n.name));
-wf.nodes.push(...newNodes);
+function patchWorkflow(wfPath) {
+  const wf = JSON.parse(fs.readFileSync(wfPath, 'utf8'));
 
-wf.connections.Src_Llegadas = {
-  main: [
-    [
-      { node: 'Merge_Arrivals_Hours', type: 'main', index: 0 },
-      { node: 'PrepareMLPayload', type: 'main', index: 0 },
+  const names = new Set(newNodes.map((n) => n.name));
+  wf.nodes = wf.nodes.filter((n) => !names.has(n.name));
+  wf.nodes.push(...newNodes);
+
+  const prepareNode = wf.nodes.find((n) => n.name === 'PrepareMLPayload');
+  if (prepareNode) prepareNode.parameters.jsCode = prepareMLCode;
+
+  wf.connections.Src_Llegadas = {
+    main: [
+      [
+        { node: 'Merge_Arrivals_Hours', type: 'main', index: 0 },
+        { node: 'PrepareMLPayload', type: 'main', index: 0 },
+      ],
     ],
-  ],
-};
-wf.connections.PrepareMLPayload = {
-  main: [[{ node: 'HTTP_ML_Predict', type: 'main', index: 0 }]],
-};
+  };
+  wf.connections.PrepareMLPayload = {
+    main: [[{ node: 'HTTP_ML_Predict', type: 'main', index: 0 }]],
+  };
 
-const fb = wf.nodes.find((n) => n.name === 'FactsBuilder');
-if (!fb) throw new Error('FactsBuilder not found');
+  const fb = wf.nodes.find((n) => n.name === 'FactsBuilder');
+  if (!fb) throw new Error(`FactsBuilder not found in ${wfPath}`);
 
-let code = fb.parameters.jsCode;
+  let code = fb.parameters.jsCode;
 
 const apiPredInit = `// --- API prediction (HTTP_ML_Predict) ---
 let _apiPred = null;
@@ -190,6 +244,7 @@ const newForecastBlock = `  forecast: (function() {
       backtest_models: linear.backtest ? linear.backtest.models : [],
       seasonal_indices: linear.seasonal_indices || pv2.seasonal_indices || [],
       changepoint: linear.changepoint || pv2.changepoint || { detected: false },
+      regime: linear.regime || pv2.regime || 'stable',
       time_series: facts.raw_time_series || []
     };
   })(),
@@ -220,16 +275,29 @@ const newForecastBlock = `  forecast: (function() {
   })(),`;
 
 let dpbCode = dpb.parameters.jsCode;
-if (dpbCode.includes('forecast_rf:')) {
-  console.log('DashboardPayloadBuilder already has forecast_rf');
-} else if (dpbCode.includes(oldForecastBlock)) {
-  dpbCode = dpbCode.replace(oldForecastBlock, newForecastBlock);
-  dpb.parameters.jsCode = dpbCode;
-  console.log('Patched DashboardPayloadBuilder with forecast + forecast_rf');
-} else {
-  throw new Error('DashboardPayloadBuilder forecast block not found — manual patch required');
+  if (dpbCode.includes('forecast_rf:')) {
+    if (!dpbCode.includes('regime:')) {
+      dpbCode = dpbCode.replace(
+        'changepoint: linear.changepoint || pv2.changepoint || { detected: false },',
+        "changepoint: linear.changepoint || pv2.changepoint || { detected: false },\n      regime: linear.regime || pv2.regime || 'stable',"
+      );
+      dpb.parameters.jsCode = dpbCode;
+      console.log('Added regime to DashboardPayloadBuilder forecast block');
+    }
+  } else if (dpbCode.includes(oldForecastBlock)) {
+    dpbCode = dpbCode.replace(oldForecastBlock, newForecastBlock);
+    dpb.parameters.jsCode = dpbCode;
+    console.log('Patched DashboardPayloadBuilder with forecast + forecast_rf');
+  } else {
+    throw new Error('DashboardPayloadBuilder forecast block not found — manual patch required');
+  }
+
+  fs.writeFileSync(wfPath, JSON.stringify(wf, null, 2), 'utf8');
+  console.log('Patched', wfPath);
 }
 
-fs.writeFileSync(wfPath, JSON.stringify(wf, null, 2), 'utf8');
-console.log('Patched', wfPath);
+['Mkt_BI_IA_v7 (2).json', 'Mkt_BI_IA_v7 (1).json'].forEach((name) => {
+  const fp = path.join(root, name);
+  if (fs.existsSync(fp)) patchWorkflow(fp);
+});
 console.log('Nodes:', newNodes.map((n) => n.name).join(', '));
