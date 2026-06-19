@@ -604,6 +604,10 @@
         
         const audience = getAudience();
         document.body.classList.add(`theme-${audience}`);
+<<<<<<< HEAD
+=======
+        
+>>>>>>> e00ff852f96008c6ddb9d6eefdee1dbee028df70
         // Analyst report is the full data audit — show all KPIs, narrative, alerts and actions
         if (audience !== 'analyst') {
             filterKpisByAudience(audience);
@@ -612,7 +616,11 @@
         }
 
         setupEmbeddedPreview();
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> e00ff852f96008c6ddb9d6eefdee1dbee028df70
         injectKpiHelpTooltips();
         applyPageBreaks();
         injectChartContainers();
