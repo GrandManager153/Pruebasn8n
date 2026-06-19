@@ -5,28 +5,28 @@ import useDashboardStore from '../stores/useDashboardStore';
 const reports = [
   {
     key: 'executive',
-    title: 'Dirección / C-Level',
+    title: 'Dirección',
     audience: 'Executive / Directores Corporativos',
     code: 'EXEC',
     gradient: 'linear-gradient(135deg, #1e3a8a, #3b82f6)',
   },
   {
     key: 'manager',
-    title: 'Supervisores / Managers',
+    title: 'Supervisores',
     audience: 'Manager / Gestión de Conversiones',
     code: 'MGR',
     gradient: 'linear-gradient(135deg, #065f46, #10b981)',
   },
   {
     key: 'analyst',
-    title: 'Equipo BI / Data Science',
+    title: 'Data Science',
     audience: 'Analyst / Analistas y Científicos de Datos',
     code: 'BI',
     gradient: 'linear-gradient(135deg, #581c87, #8b5cf6)',
   },
   {
     key: 'operations',
-    title: 'Agentes / Operaciones',
+    title: 'Operaciones',
     audience: 'Operations / Control de Capacidad Telefónica',
     code: 'OPS',
     gradient: 'linear-gradient(135deg, #7c2d12, #ea580c)',

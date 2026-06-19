@@ -11,14 +11,18 @@
 
     // ── Standalone Theme Management ──
     function applyTheme(theme) {
-        // LaTeX reports are ALWAYS light-mode optimized (white background, black text)
-        // for print/pdf export. We force body class but adapt theme toggles for visual state if needed.
-        document.body.classList.remove('light-mode'); // Clear default class
-        document.body.classList.add('light-mode');    // Force light-mode styles in reports.css
+        if (theme === 'dark') {
+            document.body.classList.remove('light-mode');
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+            document.body.classList.add('light-mode');
+        }
     }
 
     function initTheme() {
-        applyTheme('light');
+        const cached = localStorage.getItem('theme') || 'dark';
+        applyTheme(cached);
         if (window.parent !== window) {
             document.body.classList.add('embedded');
         }
@@ -28,7 +32,7 @@
             if (e.data === 'theme-light' || e.data === 'theme-dark') {
                 const targetTheme = e.data === 'theme-light' ? 'light' : 'dark';
                 localStorage.setItem('theme', targetTheme);
-                applyTheme('light'); // Always stay light-mode in LaTeX reports!
+                applyTheme(targetTheme);
                 updateToggleIcon();
             }
         });
@@ -225,17 +229,17 @@
         let scopeText = '';
         
         if (titleText.includes('Direccion') || titleText.includes('C-Level') || titleText.includes('Executive') || titleText.includes('Dirección')) {
-            targetRole = 'Dirección Ejecutiva (C-Level)';
+            targetRole = 'Dirección Ejecutiva';
             scopeText = 'Este informe presenta un análisis financiero consolidado de alto nivel. Extrae del flujo n8n el Health Score consolidado, costo por lead (CPL implícito), volumen acumulado de leads e inversión total de campañas. Proporciona directrices estratégicas de optimización de pauta comercial y mitigación de fugas para la toma de decisiones ejecutivas.';
         } else if (titleText.includes('Supervisores') || titleText.includes('Managers') || titleText.includes('Manager') || titleText.includes('Gestión')) {
-            targetRole = 'Gestión de Operaciones y Ventas (Managers)';
+            targetRole = 'Gestión de Operaciones y Ventas';
             scopeText = 'Este documento está estructurado para la dirección de equipos y supervisores de embudo. Extrae métricas clave sobre el volumen diario de leads, tasas de avance en estados críticos (Feeders de PreClosed) y anomalías operativas. Provee un plan táctico para equilibrar la carga telefónica y optimizar la conversión semanal.';
         } else if (titleText.includes('Equipo BI') || titleText.includes('Data Science') || titleText.includes('Analyst') || titleText.includes('Estadístico')) {
-            targetRole = 'Científicos de Datos y Analistas de Negocios (BI Team)';
+            targetRole = 'Científicos de Datos y Analistas de Negocios';
             scopeText = 'Este reporte de auditoría científica detalla la robustez matemática del sistema. Contiene los coeficientes de regresión del volumen de leads ($R^2$, pendientes, interceptos), la distribución de concentración de pauta publicitaria (HHI de inversiones) y la precisión de los modelos predictivos implementados (MASE del modelo theta_lite).';
         } else {
             // Default to Operations
-            targetRole = 'Supervisores de Agentes y Capacidad Operativa';
+            targetRole = 'Operaciones y Capacidad';
             scopeText = 'Este informe técnico diagnostica la eficiencia del call center y los tiempos de respuesta. Recopila desde n8n las estadísticas detalladas de llamadas por lead, demoras promedio en intentos de contacto e índice de sobre-contacto. El fin es dotar de alertas inmediatas y acciones tácticas correctivas para evitar la saturación de leads.';
         }
         
@@ -416,6 +420,182 @@
         });
     }
 
+    // ── KPI Tooltips Help Dictionary ──
+    const kpiContext = {
+        'HEALTH SCORE': {
+            definition: 'Métrica que mide la salud general del flujo de leads y llamadas (SHS).',
+            source: 'Calculado a partir de la tasa de sobre-contacto, demoras en intentos y volumen.',
+            purpose: 'Monitorear la presión del sistema operativo y detectar saturación.'
+        },
+        'SYSTEM HEALTH': {
+            definition: 'Métrica que mide la salud general del flujo de leads y llamadas (SHS).',
+            source: 'Calculado a partir de la tasa de sobre-contacto, demoras en intentos y volumen.',
+            purpose: 'Monitorear la presión del sistema operativo y detectar saturación.'
+        },
+        'LEADS TOTALES': {
+            definition: 'El número acumulado de registros de clientes interesados (leads) ingresados al sistema.',
+            source: 'Contador directo de la base de datos de leads procesada en n8n.',
+            purpose: 'Conocer la escala del pipeline comercial e identificar la cantidad total de prospectos.'
+        },
+        'TOTAL LEADS': {
+            definition: 'El número acumulado de registros de clientes interesados (leads) ingresados al sistema.',
+            source: 'Contador directo de la base de datos de leads procesada en n8n.',
+            purpose: 'Conocer la escala del pipeline comercial e identificar la cantidad total de prospectos.'
+        },
+        'CAMBIO SEMANAL': {
+            definition: 'La variación porcentual del volumen de leads de la semana actual contra la semana previa (Week over Week).',
+            source: 'Comparación histórica de leads del motor de analítica.',
+            purpose: 'Detectar tendencias de crecimiento o caídas drásticas en el embudo comercial.'
+        },
+        'WEEK OVER': {
+            definition: 'La variación porcentual del volumen de leads de la semana actual contra la semana previa (Week over Week).',
+            source: 'Comparación histórica de leads del motor de analítica.',
+            purpose: 'Detectar tendencias de crecimiento o caídas drásticas en el embudo comercial.'
+        },
+        'WOW': {
+            definition: 'La variación porcentual del volumen de leads de la semana actual contra la semana previa (Week over Week).',
+            source: 'Comparación histórica de leads del motor de analítica.',
+            purpose: 'Detectar tendencias de crecimiento o caídas drásticas en el embudo comercial.'
+        },
+        'CPL IMPLICITO': {
+            definition: 'Costo promedio invertido para adquirir un lead individual (Costo Por Lead).',
+            source: 'División del gasto total invertido de campañas entre el número total de leads recibidos.',
+            purpose: 'Evaluar la eficiencia financiera de la adquisición y optimizar el presupuesto publicitario.'
+        },
+        'CPL': {
+            definition: 'Costo promedio invertido para adquirir un lead individual (Costo Por Lead).',
+            source: 'División del gasto total invertido de campañas entre el número total de leads recibidos.',
+            purpose: 'Evaluar la eficiencia financiera de la adquisición y optimizar el presupuesto publicitario.'
+        },
+        'GASTO TOTAL': {
+            definition: 'La inversión publicitaria acumulada en las plataformas de anuncios para el periodo.',
+            source: 'Integración de costos de pauta (Facebook/Google Ads, etc.) en n8n.',
+            purpose: 'Controlar el presupuesto de marketing y monitorear la inversión publicitaria real.'
+        },
+        'AD SPEND': {
+            definition: 'La inversión publicitaria acumulada en las plataformas de anuncios para el periodo.',
+            source: 'Integración de costos de pauta (Facebook/Google Ads, etc.) en n8n.',
+            purpose: 'Controlar el presupuesto de marketing y monitorear la inversión publicitaria real.'
+        },
+        'PROMEDIO DIARIO': {
+            definition: 'La cantidad promedio de leads que ingresan al sistema cada día.',
+            source: 'División de los leads totales entre los días del periodo analizado.',
+            purpose: 'Planificar la capacidad del equipo de call center y dimensionar la carga operativa diaria.'
+        },
+        'DAILY AVG': {
+            definition: 'La cantidad promedio de leads que ingresan al sistema cada día.',
+            source: 'División de los leads totales entre los días del periodo analizado.',
+            purpose: 'Planificar la capacidad del equipo de call center y dimensionar la carga operativa diaria.'
+        },
+        'PREVISION DIARIA': {
+            definition: 'El volumen pronosticado de leads que ingresarán el día de mañana.',
+            source: 'Modelos predictivos de series de tiempo (ej. ensemble_weighted) en la API de ML.',
+            purpose: 'Anticipar picos o valles de leads y ajustar la asignación de agentes de venta con antelación.'
+        },
+        'DAILY FORECAST': {
+            definition: 'El volumen pronosticado de leads que ingresarán el día de mañana.',
+            source: 'Modelos predictivos de series de tiempo (ej. ensemble_weighted) en la API de ML.',
+            purpose: 'Anticipar picos o valles de leads y ajustar la asignación de agentes de venta con antelación.'
+        },
+        'PREVISION': {
+            definition: 'El volumen pronosticado de leads que ingresarán el día de mañana.',
+            source: 'Modelos predictivos de series de tiempo (ej. ensemble_weighted) en la API de ML.',
+            purpose: 'Anticipar picos o valles de leads y ajustar la asignación de agentes de venta con antelación.'
+        },
+        'MASE': {
+            definition: 'Error Absoluto Escalado Medio (Mean Absolute Scaled Error) del forecast.',
+            source: 'Comparación del error del modelo predictivo frente a un modelo ingenuo (naive baseline). Un valor < 1 supera al baseline.',
+            purpose: 'Validar científicamente la precisión y confiabilidad del pronóstico de volumen diario.'
+        },
+        'HHI': {
+            definition: 'Índice de Herfindahl-Hirschman, mide la concentración del presupuesto publicitario.',
+            source: 'Suma del cuadrado de las participaciones porcentuales de gasto de cada campaña.',
+            purpose: 'Evaluar la diversificación del presupuesto; un HHI alto indica dependencia crítica de pocas campañas.'
+        },
+        'HORA PICO': {
+            definition: 'El intervalo horario del día con mayor volumen de registro de leads.',
+            source: 'Análisis de frecuencia horaria de los leads entrantes.',
+            purpose: 'Concentrar a los agentes en los horarios clave para asegurar una respuesta inmediata.'
+        },
+        'PEAK HOUR': {
+            definition: 'El intervalo horario del día con mayor volumen de registro de leads.',
+            source: 'Análisis de frecuencia horaria de los leads entrantes.',
+            purpose: 'Concentrar a los agentes en los horarios clave para asegurar una respuesta inmediata.'
+        }
+    };
+
+    function injectKpiHelpTooltips() {
+        const kpis = document.querySelectorAll('.kpi');
+        kpis.forEach(kpi => {
+            const labelEl = kpi.querySelector('.kpi-label');
+            if (!labelEl) return;
+            const labelText = labelEl.textContent.trim().toUpperCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            
+            let info = null;
+            for (const [key, val] of Object.entries(kpiContext)) {
+                if (labelText.includes(key)) {
+                    info = val;
+                    break;
+                }
+            }
+            
+            if (!info) return;
+            
+            // Create info icon trigger in the card
+            const infoTrigger = document.createElement('span');
+            infoTrigger.className = 'kpi-info-trigger';
+            infoTrigger.innerHTML = '?';
+            kpi.appendChild(infoTrigger);
+            
+            // Create tooltip container inside the card
+            const tooltip = document.createElement('div');
+            tooltip.className = 'kpi-tooltip';
+            tooltip.innerHTML = `
+                <div class="kpi-tooltip-section">
+                    <strong>¿Qué es?:</strong> ${info.definition}
+                </div>
+                <div class="kpi-tooltip-section">
+                    <strong>¿De dónde se obtiene?:</strong> ${info.source}
+                </div>
+                <div class="kpi-tooltip-section">
+                    <strong>¿Para qué sirve?:</strong> ${info.purpose}
+                </div>
+            `;
+            kpi.appendChild(tooltip);
+        });
+    }
+
+    function applyPageBreaks() {
+        const contentBlock = document.querySelector('.content-block');
+        if (!contentBlock) return;
+        
+        // Find all heading elements inside content-block
+        const inlineHeadings = Array.from(contentBlock.children).filter(child => {
+            return child.tagName === 'H2' || 
+                   child.tagName === 'H3' || 
+                   (child.tagName === 'P' && child.querySelector('strong')) ||
+                   (child.tagName === 'P' && (child.style.fontWeight === '800' || child.style.fontWeight === 'bold' || 
+                    child.getAttribute('style')?.includes('font-weight:800') || child.getAttribute('style')?.includes('font-weight: 800')));
+        });
+        
+        // Combine them with the main sections (#alertas and #acciones) in order
+        const allSections = [...inlineHeadings];
+        
+        const alertasSec = document.getElementById('alertas');
+        if (alertasSec) allSections.push(alertasSec);
+        
+        const accionesSec = document.getElementById('acciones');
+        if (accionesSec) allSections.push(accionesSec);
+        
+        // For every 2nd heading starting from the 3rd, add the print break class
+        allSections.forEach((sec, index) => {
+            if (index > 0 && index % 2 === 0) {
+                sec.classList.add('print-page-break');
+            }
+        });
+    }
+
     // ── Inicialización ──
     function initReportAnimations() {
         initTheme();
@@ -423,6 +603,7 @@
         injectLatexAbstract();
         
         const audience = getAudience();
+        document.body.classList.add(`theme-${audience}`);
         // Analyst report is the full data audit — show all KPIs, narrative, alerts and actions
         if (audience !== 'analyst') {
             filterKpisByAudience(audience);
@@ -431,7 +612,9 @@
         }
 
         setupEmbeddedPreview();
-        
+
+        injectKpiHelpTooltips();
+        applyPageBreaks();
         injectChartContainers();
         injectAlertsChart();
 

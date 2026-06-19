@@ -208,19 +208,34 @@ app.post('/api/predict', async (req, res) => {
 function injectTheme(htmlContent) {
   if (!htmlContent || typeof htmlContent !== 'string') return htmlContent;
 
-  // Eliminar estilos y script embebidos de n8n
+  // Simplificar títulos de audiencia dinámicamente
   let output = htmlContent
+    .replace(/Direccion\s*\/\s*C-Level/g, 'Direccion')
+    .replace(/Dirección\s*\/\s*C-Level/g, 'Dirección')
+    .replace(/DIRECCION\s*\/\s*C-LEVEL/g, 'DIRECCION')
+    .replace(/DIRECCIÓN\s*\/\s*C-LEVEL/g, 'DIRECCIÓN')
+    .replace(/Equipo\s+BI\s*\/\s*Data\s+Science/g, 'Data Science')
+    .replace(/EQUIPO\s+BI\s*\/\s*DATA\s+SCIENCE/g, 'DATA SCIENCE')
+    .replace(/Supervisores\s*\/\s*Managers/g, 'Supervisores')
+    .replace(/SUPERVISORES\s*\/\s*MANAGERS/g, 'SUPERVISORES')
+    .replace(/Agentes\s*\/\s*Team\s+Leads/g, 'Operaciones')
+    .replace(/AGENTES\s*\/\s*TEAM\s+LEADS/g, 'OPERACIONES')
+    .replace(/Agentes\s*\/\s*Operaciones/g, 'Operaciones')
+    .replace(/AGENTES\s*\/\s*OPERACIONES/g, 'OPERACIONES');
+
+  // Eliminar estilos y script embebidos de n8n
+  output = output
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/<script>\s*function showTab[\s\S]*?<\/script>/gi, '');
 
   const headAssets = `
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/reports.css?v=5">
+    <link rel="stylesheet" href="/css/reports.css?v=6">
   `;
 
   const bodyScripts = `
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="/js/reports.js?v=5"></script>`;
+    <script src="/js/reports.js?v=6"></script>`;
 
   const ambientBg = `
     <div class="report-ambient" aria-hidden="true">
