@@ -64,12 +64,6 @@ export default function Topbar({ title }) {
             )}
           </svg>
         </button>
-
-        {/* Status Pill */}
-        <div className="status-pill">
-          <div className="pulse-dot" />
-          Manuel Solis
-        </div>
       </div>
     </header>
   );

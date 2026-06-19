@@ -4,6 +4,7 @@
  */
 const http = require('http');
 const { enrichLinearForecastModels } = require('./linear-backtest');
+const { computeTrainTestSplit, testZoneCoverage } = require('./train-test-split');
 
 const ML_API_BASE = process.env.ML_API_BASE_URL || 'http://127.0.0.1:8000';
 const ML_API_KEY = process.env.ML_API_KEY || process.env.API_KEY || 'mkt-bi-ia-dev-key';
@@ -136,26 +137,61 @@ function modelSeriesCoverage(series) {
 
 function needsMlEnrichment(payload) {
   const rf = payload && payload.forecast_rf;
+  const baseTs = resolveTimeSeries(payload);
+  const tsLen = baseTs.length;
+  if (!tsLen) return false;
+
+  const split = payload?.forecast?.train_test_split
+    || rf?.diagnostics?.train_test_split
+    || computeTrainTestSplit(tsLen, baseTs);
+  if (!split) return true;
+
   if (!rf) return true;
   if (rf.available === false) return true;
   if (rf.mase == null || !Array.isArray(rf.backtest_series) || !rf.backtest_series.length) return true;
-  const tsLen = resolveTimeSeries(payload).length;
-  const minExpected = Math.max(7, tsLen - 2);
-  const mlModels = rf.backtest_models || [];
-  if (mlModels.length) {
-    const minMlCov = Math.min(...mlModels.map((m) => modelSeriesCoverage(m.series)));
-    if (minMlCov < minExpected) return true;
-  }
-  const rfName = rf.model_name || 'random_forest';
-  const rfEntry = (payload.forecast?.backtest_models || []).find(
-    (m) => String(m.name).toLowerCase() === String(rfName).toLowerCase()
+
+  const expectedTest = Math.max(1, split.test_count - 1);
+  const mlModels = (rf.backtest_models || []).filter(
+    (m) => SKLEARN_MODEL_NAMES.includes(String(m.name).toLowerCase())
   );
-  const target = rfEntry ? expectedModelPoints(rfEntry.name, tsLen) : tsLen;
-  return rfAlignedCoverage(payload) < target;
+
+  if (mlModels.length) {
+    const minTestCov = Math.min(...mlModels.map((m) => testZoneCoverage(m.series, split.split_index)));
+    if (minTestCov < expectedTest) return true;
+    const minTrainCov = Math.min(
+      ...mlModels.map((m) => {
+        if (!Array.isArray(m.series)) return 0;
+        return m.series.slice(0, split.split_index).filter((v) => v != null && isFinite(v)).length;
+      })
+    );
+    if (minTrainCov < Math.max(1, split.split_index - 2)) return true;
+  }
+
+  if (!payload.forecast?.train_test_split) return true;
+
+  return false;
 }
 
-function expectedModelPoints(_modelName, seriesLength) {
-  return seriesLength;
+function expectedModelPoints(_modelName, seriesLength, splitIndex) {
+  if (splitIndex == null) return seriesLength;
+  return Math.max(0, seriesLength - splitIndex);
+}
+
+function ensureTrainTestSplit(payload) {
+  if (!payload?.forecast) return payload;
+  const ts = resolveTimeSeries(payload);
+  if (!ts.length) return payload;
+  if (!payload.forecast.train_test_split) {
+    const split = computeTrainTestSplit(ts.length, ts);
+    if (split) payload.forecast.train_test_split = split;
+  }
+  if (payload.forecast_rf) {
+    payload.forecast_rf.diagnostics = payload.forecast_rf.diagnostics || {};
+    if (!payload.forecast_rf.diagnostics.train_test_split && payload.forecast.train_test_split) {
+      payload.forecast_rf.diagnostics.train_test_split = payload.forecast.train_test_split;
+    }
+  }
+  return payload;
 }
 
 function resolveTimeSeries(payload) {
@@ -235,7 +271,19 @@ async function enrichPayloadWithMlApi(payload) {
     payload.forecast_rf.next_point = pred.next_point || null;
     if (payload.forecast) {
       payload.forecast.next_point = pred.next_point || payload.forecast.next_point || null;
+      if (pred.train_test_split) {
+        payload.forecast.train_test_split = pred.train_test_split;
+      } else if (pred.backtest?.train_test_split) {
+        payload.forecast.train_test_split = pred.backtest.train_test_split;
+      } else if (pred.diagnostics?.train_test_split) {
+        payload.forecast.train_test_split = pred.diagnostics.train_test_split;
+      }
     }
+    payload.forecast_rf.diagnostics = {
+      ...(payload.forecast_rf.diagnostics || {}),
+      ...(pred.diagnostics || {}),
+      train_test_split: payload.forecast?.train_test_split || pred.train_test_split || pred.diagnostics?.train_test_split,
+    };
     payload.forecast_rf.time_series = baseTs;
     delete payload.forecast_rf.reason;
     console.log(`  🤖 ML enrich OK — MASE ${pred.mase}, modelo ${payload.forecast_rf.model_name}`);
@@ -248,12 +296,13 @@ async function enrichPayloadWithMlApi(payload) {
 
 async function enrichPayloadComplete(payload) {
   if (!payload) return payload;
-  payload = enrichLinearForecastModels(payload);
+  payload = enrichLinearForecastModels(payload, { force: true });
   payload = await enrichPayloadWithMlApi(payload);
   if (needsMlModelForecastEnrichment(payload)) {
     payload = await enrichMlModelForecasts(payload);
   }
   payload = attachForecastFieldsToPayload(payload);
+  payload = ensureTrainTestSplit(payload);
   return syncRfAlignedSeries(payload);
 }
 
@@ -281,7 +330,9 @@ module.exports = {
   needsMlModelForecastEnrichment,
   enrichMlModelForecasts,
   attachForecastFieldsToPayload,
+  ensureTrainTestSplit,
   resolveBacktestDays,
   buildRfAlignedSeries,
   rfAlignedCoverage,
+  computeTrainTestSplit,
 };

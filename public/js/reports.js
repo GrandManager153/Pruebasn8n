@@ -381,10 +381,10 @@
         const alerts = document.querySelectorAll('#alertas .alert-card');
         const actions = document.querySelectorAll('#acciones .action-card');
         const keywords = {
-            executive: ['cpl', 'gasto', 'inversion', 'concentracion', 'hhi', 'sobre-contacto', 'mase', 'prevision', 'health score'],
-            manager: ['feeder', 'conversion', 'intentos', 'intervalo', 'llamadas', 'sobre-contacto'],
-            analyst: ['mase', 'ensemble', 'theta_lite', 'hhi', 'regresion', 'prevision', 'sweet spot', 'diversificacion'],
-            operations: ['intentos', 'intervalo', 'demoras', 'sobre-contacto', 'marcacion', 'llamadas']
+            executive: ['cpl', 'gasto', 'inversion', 'concentracion', 'hhi', 'sobre-contacto', 'mase', 'prevision', 'health score', 'regimen', 'cusum', 'volatilidad', 'volumen', 'saturacion', 'wip', 'capacidad', 'conversion'],
+            manager: ['feeder', 'conversion', 'intentos', 'intervalo', 'llamadas', 'sobre-contacto', 'regimen', 'cusum', 'volatilidad', 'volumen', 'saturacion', 'wip', 'capacidad', 'caida'],
+            analyst: ['mase', 'ensemble', 'theta_lite', 'hhi', 'regresion', 'prevision', 'sweet spot', 'diversificacion', 'cusum', 'volatilidad', 'sobre-contacto', 'cpl', 'wip'],
+            operations: ['intentos', 'intervalo', 'demoras', 'sobre-contacto', 'marcacion', 'llamadas', 'saturacion', 'wip', 'capacidad', 'volatilidad', 'volumen']
         };
         const allowedKeywords = keywords[audience] || [];
         
@@ -412,12 +412,507 @@
         });
     }
 
+    // ── Payload helpers: hydrate narrative gaps from dashboard_payload.json ──
+    function getPayload() {
+        return window.__BOS_PAYLOAD__ || null;
+    }
+
+    function escapeHtml(text) {
+        return String(text ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function normalizeText(text) {
+        return String(text || '').toUpperCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function severityLabel(severity) {
+        if (severity === 'critical') return 'CRITICAL';
+        if (severity === 'warning') return 'WARNING';
+        return 'INFO';
+    }
+
+    function severityClass(severity) {
+        if (severity === 'critical') return 'sev-critical';
+        if (severity === 'warning') return 'sev-warning';
+        return 'sev-info';
+    }
+
+    function formatNumber(value, decimals = 2) {
+        const num = Number(value);
+        if (!Number.isFinite(num)) return null;
+        return num.toLocaleString('es-MX', { maximumFractionDigits: decimals });
+    }
+
+    function computeDailyCV(dailyVolumes) {
+        if (!Array.isArray(dailyVolumes) || dailyVolumes.length < 2) return null;
+        const vals = dailyVolumes.map((row) => Number(row.leads)).filter((n) => Number.isFinite(n));
+        if (vals.length < 2) return null;
+        const mean = vals.reduce((sum, val) => sum + val, 0) / vals.length;
+        if (!mean) return null;
+        const variance = vals.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / vals.length;
+        return (Math.sqrt(variance) / mean) * 100;
+    }
+
+    function formatSupportValue(alert, payload) {
+        if (alert.evidence) return alert.evidence;
+
+        const ops = payload?.operations || {};
+        const metric = alert.metric || '';
+
+        if (metric === 'overcontact_pct') {
+            const calls = ops.contact_distribution?.overcontact_calls;
+            const pct = alert.actual ?? ops.contact_distribution?.overcontact_pct;
+            if (calls != null && pct != null) {
+                return `${formatNumber(calls, 0)} llamadas (${formatNumber(pct, 2)}%)`;
+            }
+        }
+
+        if (metric === 'cusum_change' || metric === 'changepoint') {
+            const cp = payload?.forecast?.changepoint;
+            if (cp?.detected) {
+                return `Media pre = ${cp.pre_mean}, post = ${cp.post_mean} leads/día (+${cp.shift_pct}%)`;
+            }
+        }
+
+        if (metric === 'wow_change_pct') {
+            if (ops.last_7d_avg != null && ops.prev_7d_avg != null) {
+                return `Promedio 7 d = ${ops.last_7d_avg} vs ${ops.prev_7d_avg}`;
+            }
+        }
+
+        if (metric === 'cv_pct') {
+            return `Umbral = ${alert.threshold ?? 30}%`;
+        }
+
+        if (metric === 'call_rank_avg') {
+            return `Umbral = ${alert.threshold ?? 7}`;
+        }
+
+        if (alert.actual != null && alert.threshold != null && alert.threshold !== 0) {
+            return `${alert.actual} (umbral: ${alert.threshold})`;
+        }
+
+        if (alert.impact) return alert.impact;
+        if (alert.actual != null) return String(alert.actual);
+        return '—';
+    }
+
+    function isAlertsTable(table) {
+        const header = table.querySelector('tr');
+        if (!header) return false;
+        const text = normalizeText(header.textContent);
+        return text.includes('SEVERIDAD') && (text.includes('RPN') || text.includes('CODIGO'));
+    }
+
+    function isMetricsTable(table) {
+        const header = table.querySelector('tr');
+        if (!header) return false;
+        const text = normalizeText(header.textContent);
+        return text.includes('METRICA') && text.includes('VALOR');
+    }
+
+    function hydrateAlertsTable(payload) {
+        const alerts = payload?.system?.alerts;
+        if (!alerts?.length) return;
+
+        document.querySelectorAll('.content-block table').forEach((table) => {
+            if (!isAlertsTable(table)) return;
+
+            const rows = Array.from(table.querySelectorAll('tr')).slice(1);
+            if (rows.length === 0) {
+                alerts.forEach((alert) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="${severityClass(alert.severity)}">${severityLabel(alert.severity)}</td>
+                        <td>RPN ${alert.rpn_score ?? '—'}</td>
+                        <td>${escapeHtml(alert.title || '')}</td>
+                        <td>${escapeHtml(formatSupportValue(alert, payload))}</td>
+                    `;
+                    table.appendChild(tr);
+                });
+                return;
+            }
+
+            rows.forEach((row, index) => {
+                const cells = row.querySelectorAll('td');
+                if (!cells.length) return;
+                const alert = alerts[index];
+                if (!alert) return;
+
+                const sevCell = cells[0];
+                sevCell.classList.add(severityClass(alert.severity));
+                sevCell.textContent = severityLabel(alert.severity);
+
+                const supportCell = cells[cells.length - 1];
+                const supportText = supportCell.textContent.trim();
+                if (!supportText || supportText === '-' || supportText === '—') {
+                    supportCell.textContent = formatSupportValue(alert, payload);
+                }
+            });
+        });
+    }
+
+    function buildKeyMetrics(payload) {
+        const forecast = payload.forecast || {};
+        const ops = payload.operations || {};
+        const inv = payload.investment || {};
+        const bestModel = (forecast.backtest_models || []).find((m) => m.mase === forecast.mase)
+            || (forecast.backtest_models || [])[0];
+        const seasonal = (forecast.seasonal_indices || [])
+            .map((row) => row.index)
+            .join(', ');
+        const cv = computeDailyCV(ops.daily_volumes)
+            || payload.system?.alerts?.find((a) => a.metric === 'cv_pct')?.actual;
+
+        const rows = [
+            ['R²', forecast.r2],
+            ['Pendiente', forecast.slope],
+            ['MASE (ensemble_weighted)', forecast.mase],
+            ['RMSE (trend_season)', bestModel?.rmse],
+            ['MAE (trend_season)', bestModel?.mae],
+            ['CV del volumen diario', cv != null ? `${formatNumber(cv, 2)} %` : null],
+            ['Índices estacionales (Dom-Sáb)', seasonal || null],
+            ['Health Score', payload.system?.health_score != null ? `${payload.system.health_score}/100` : null],
+            ['HHI (inversión)', inv.hhi?.index ?? inv.mmm?.hhi_index],
+            ['CPL implícito global', inv.cpl?.global_cpl != null ? `$${formatNumber(inv.cpl.global_cpl, 2)}` : null],
+            ['Total leads', ops.total_leads != null ? formatNumber(ops.total_leads, 0) : null],
+            ['Total gasto (USD)', inv.total_spend != null ? `$${formatNumber(inv.total_spend, 0)}` : null],
+            ['Número de campañas (inversión)', inv.campaign_count],
+            ['Cambio de régimen (Δ % leads/día)', forecast.changepoint?.detected
+                ? `+${forecast.changepoint.shift_pct} % (${forecast.changepoint.pre_mean} → ${forecast.changepoint.post_mean})`
+                : null],
+            ['Registros de llamadas (originales)', ops.call_metrics?.total_records],
+            ['Sobre-contacto (>7 intentos)', ops.contact_distribution
+                ? `${formatNumber(ops.contact_distribution.overcontact_calls, 0)} (${formatNumber(ops.contact_distribution.overcontact_pct, 2)} %)`
+                : null],
+            ['Intentos promedio', ops.call_metrics?.call_rank?.avg],
+            ['Intervalo medio entre intentos (min)', ops.call_metrics?.minutes_since_prev?.avg],
+        ];
+
+        return rows.filter(([, value]) => value != null && value !== '');
+    }
+
+    function buildMetricsTableHtml(rows) {
+        const body = rows.map(([metric, value]) =>
+            `<tr><td>${escapeHtml(metric)}</td><td>${escapeHtml(value)}</td></tr>`
+        ).join('');
+        return `<div class="tbl-wrap"><table>
+            <tr><th>Métrica</th><th>Valor (precisión completa)</th></tr>
+            ${body}
+        </table></div>`;
+    }
+
+    function buildSuggestedAnalysesHtml(payload) {
+        const inv = payload.investment || {};
+        const ops = payload.operations || {};
+        const blocks = [];
+
+        if (inv.campaigns?.length) {
+            blocks.push(`
+                <p><strong>1. Eficiencia de CPL por campaña</strong></p>
+                <p>Hipótesis: mayor gasto no implica menor CPL. Cruza <code>inversiones_campanas</code> (gasto) con <code>leads_por_campana</code> (volumen por fecha) para comparar ${inv.campaign_count} campañas activas y detectar saturación de pauta.</p>
+            `);
+        }
+
+        if (ops.contact_distribution?.overcontact_pct != null) {
+            blocks.push(`
+                <p><strong>2. Impacto de intentos &gt; 7 en conversión</strong></p>
+                <p>Hipótesis: leads con más de 7 intentos convierten peor. Segmenta <code>llamadas_agregadas</code> por rango de intentos usando el sobre-contacto actual (${formatNumber(ops.contact_distribution.overcontact_pct, 2)}%).</p>
+            `);
+        }
+
+        if (payload.forecast?.seasonal_indices?.length && ops.daily_volumes?.length) {
+            blocks.push(`
+                <p><strong>3. Correlación estacional vs volumen diario</strong></p>
+                <p>Hipótesis: días con índice &gt; 1.0 concentran más leads. Une <code>llegadas</code> con <code>indices_estacionales</code> por día de semana y valida con correlación de Pearson.</p>
+            `);
+        }
+
+        if (!blocks.length) return '';
+        return blocks.join('<br/>');
+    }
+
+    function buildSpecialAlertHtml(payload) {
+        const alerts = (payload.system?.alerts || [])
+            .filter((a) => a.severity === 'critical' || a.severity === 'warning');
+        if (!alerts.length) return '';
+
+        const items = alerts.map((alert) =>
+            `<li>${escapeHtml(alert.title)}</li>`
+        ).join('');
+        return `<ol>${items}</ol>`;
+    }
+
+    function isEmptyOrBrokenNarrative(contentBlock) {
+        if (!contentBlock) return true;
+        const text = contentBlock.textContent.trim();
+        if (!text || text.length < 120) return true;
+        if (/\{\s*"output"\s*:\s*""\s*\}/.test(text)) return true;
+        if (/^sin contenido disponible\.?$/i.test(text)) return true;
+        return false;
+    }
+
+    function buildSourcesSummaryHtml(payload) {
+        const meta = payload.meta || {};
+        const ops = payload.operations || {};
+        const generated = meta.generated_at
+            ? new Date(meta.generated_at).toLocaleString('es-MX')
+            : 'fecha no disponible';
+        return `
+            <p>Auditoría generada el <strong>${escapeHtml(generated)}</strong> con datos del motor <strong>n8n Analytics Engine</strong> (versión ${escapeHtml(meta.version || '7.0')}).</p>
+            <ul>
+                <li><strong>Leads:</strong> ${formatNumber(ops.total_leads, 0) || '—'} registros en ${ops.total_days || '—'} días.</li>
+                <li><strong>Llamadas:</strong> ${formatNumber(ops.call_metrics?.total_records, 0) || '—'} registros agregados.</li>
+                <li><strong>Campañas:</strong> ${payload.investment?.campaign_count || '—'} con gasto total de $${formatNumber(payload.investment?.total_spend, 0) || '—'}.</li>
+                <li><strong>Forecast:</strong> método ${escapeHtml(payload.forecast?.method || 'N/A')} con MASE ${formatNumber(payload.forecast?.mase, 3) || 'N/A'}.</li>
+            </ul>
+        `;
+    }
+
+    function buildKeyFindingsHtml(payload) {
+        const forecast = payload.forecast || {};
+        const ops = payload.operations || {};
+        const inv = payload.investment || {};
+        const funnel = payload.funnel || {};
+        const ll = ops.littles_law || {};
+        const items = [];
+
+        if (forecast.mase != null) {
+            items.push(`MASE del ensemble: <strong>${formatNumber(forecast.mase, 3)}</strong> (${forecast.mase < 1 ? 'supera baseline' : 'no supera baseline'}).`);
+        }
+        if (forecast.r2 != null) {
+            items.push(`R² de la regresión de volumen: <strong>${formatNumber(forecast.r2, 4)}</strong> (${forecast.r2 < 0.5 ? 'ajuste débil' : 'ajuste moderado'}).`);
+        }
+        if (forecast.changepoint?.detected) {
+            const cp = forecast.changepoint;
+            items.push(`Cambio de régimen (${cp.change_date || 'fecha N/D'}): volumen de ~${cp.pre_mean} a ~${cp.post_mean} leads/día (${cp.shift_pct >= 0 ? '+' : ''}${cp.shift_pct}%).`);
+        }
+        if (ops.contact_distribution?.overcontact_pct != null) {
+            items.push(`Sobre-contacto: <strong>${formatNumber(ops.contact_distribution.overcontact_pct, 2)}%</strong> de llamadas superan 7 intentos.`);
+        }
+        if (ll.available && ll.saturated) {
+            items.push(`Saturación operativa (Little's Law): WIP ${ll.L_wip}/${ll.max_capacity} (${formatNumber(ll.capacity_utilization_pct, 2)}% utilización).`);
+        }
+        if (funnel.conversion_pct != null) {
+            items.push(`Conversión global del embudo: <strong>${formatNumber(funnel.conversion_pct, 2)}%</strong>.`);
+        }
+        if (inv.hhi?.index != null || inv.mmm?.hhi_index != null) {
+            const hhi = inv.hhi?.index ?? inv.mmm?.hhi_index;
+            items.push(`Concentración de inversión (HHI): <strong>${formatNumber(hhi, 4)}</strong> (${escapeHtml(inv.hhi?.label || inv.mmm?.hhi_label || 'moderada')}).`);
+        }
+        if (ops.wow_change_pct != null) {
+            items.push(`Variación semanal de volumen: <strong>${ops.wow_change_pct >= 0 ? '+' : ''}${formatNumber(ops.wow_change_pct, 2)}%</strong>.`);
+        }
+
+        if (!items.length) return '';
+        return `<ul>${items.map((item) => `<li>${item}</li>`).join('')}</ul>`;
+    }
+
+    function buildAssumptionsHtml(payload) {
+        const forecast = payload.forecast || {};
+        const r2 = forecast.r2;
+        const mase = forecast.mase;
+        const r2Note = r2 != null && r2 < 0.5
+            ? 'El R² bajo indica que la tendencia lineal explica poca varianza; usar el forecast con precaución.'
+            : 'El R² sugiere tendencia explicativa parcial; validar con backtest.';
+        const maseNote = mase != null && mase < 1
+            ? 'MASE < 1 confirma que el ensemble supera al baseline estacional.'
+            : 'MASE ≥ 1 implica que el modelo no supera al baseline ingenuo.';
+
+        return `
+            <ul>
+                <li>Ventana de análisis acotada a ${payload.operations?.total_days || 'N'} días; extrapolaciones largas aumentan incertidumbre.</li>
+                <li>${r2Note}</li>
+                <li>${maseNote}</li>
+                <li>Los índices estacionales asumen patrón semanal estable; cambios de régimen recientes pueden invalidarlos.</li>
+                <li>CPL implícito usa gasto total / leads totales; no atribuye conversión por campaña individual sin cruce adicional.</li>
+            </ul>
+        `;
+    }
+
+    function buildAlertsTechnicalTableHtml(payload) {
+        const alerts = (payload.system?.alerts || []).filter((a) => a.severity !== 'info');
+        if (!alerts.length) return '';
+
+        const rows = alerts.map((alert) => `
+            <tr>
+                <td class="${severityClass(alert.severity)}">${severityLabel(alert.severity)}</td>
+                <td>${alert.rpn_score ?? '—'}</td>
+                <td>${escapeHtml(alert.title || '')}</td>
+                <td>${escapeHtml(formatSupportValue(alert, payload))}</td>
+            </tr>
+        `).join('');
+
+        return `<div class="tbl-wrap"><table>
+            <tr><th>Severidad</th><th>RPN</th><th>Alerta</th><th>Evidencia / soporte</th></tr>
+            ${rows}
+        </table></div>`;
+    }
+
+    function buildConclusionHtml(payload) {
+        const status = payload.system?.status || {};
+        const health = payload.system?.health_score;
+        const topAlerts = (payload.system?.alerts || [])
+            .filter((a) => a.severity === 'critical' || a.severity === 'warning')
+            .slice(0, 3)
+            .map((a) => a.title);
+
+        const alertList = topAlerts.length
+            ? `<ul>${topAlerts.map((t) => `<li>${escapeHtml(t)}</li>`).join('')}</ul>`
+            : '<p>No hay alertas críticas o de advertencia activas.</p>';
+
+        return `
+            <p>El sistema opera con Health Score <strong>${health ?? 'N/D'}/100</strong> (${escapeHtml(status.label || 'sin etiqueta')}).</p>
+            <p>Prioridades técnicas inmediatas:</p>
+            ${alertList}
+            <p>Se recomienda monitorear MASE, HHI y sobre-contacto en el próximo ciclo de auditoría para validar si las acciones correctivas reducen la presión operativa.</p>
+        `;
+    }
+
+    function rebuildAnalystNarrative(contentBlock, payload) {
+        const sections = [
+            { title: 'Resumen de fuentes y calidad', html: buildSourcesSummaryHtml(payload) },
+            { title: 'Hallazgos clave', html: buildKeyFindingsHtml(payload) },
+            { title: 'Supuestos y limitaciones', html: buildAssumptionsHtml(payload) },
+            { title: 'Alertas técnicas', html: buildAlertsTechnicalTableHtml(payload) },
+            { title: 'Análisis sugeridos', html: buildSuggestedAnalysesHtml(payload) },
+            { title: 'Datos clave en tabla', html: (() => {
+                const metrics = buildKeyMetrics(payload);
+                return metrics.length ? buildMetricsTableHtml(metrics) : '';
+            })() },
+            { title: 'Conclusión', html: buildConclusionHtml(payload) },
+        ].filter((section) => section.html);
+
+        contentBlock.innerHTML = '';
+        sections.forEach((section, index) => {
+            appendReportSection(contentBlock, section.title, section.html, { isFirst: index === 0 });
+        });
+    }
+
+    function sectionExists(contentBlock, keys) {
+        const text = normalizeText(contentBlock.textContent);
+        return keys.some((key) => text.includes(normalizeText(key)));
+    }
+
+    function appendReportSection(contentBlock, title, html, options = {}) {
+        if (!html) return;
+
+        const isFirst = options.isFirst || contentBlock.children.length === 0;
+
+        const br = document.createElement('br');
+        const hr = document.createElement('hr');
+        hr.style.cssText = 'border:none;border-top:1px solid var(--border);margin:16px 0';
+
+        const heading = document.createElement('p');
+        heading.style.cssText = 'font-size:16px;font-weight:800;margin:20px 0 10px;color:var(--brand-gold)';
+        heading.textContent = title;
+
+        const container = document.createElement('div');
+        container.innerHTML = html;
+
+        if (!isFirst) {
+            contentBlock.appendChild(br);
+            contentBlock.appendChild(hr);
+            contentBlock.appendChild(document.createElement('br'));
+        }
+        contentBlock.appendChild(heading);
+        contentBlock.appendChild(document.createElement('br'));
+        Array.from(container.childNodes).forEach((node) => contentBlock.appendChild(node));
+    }
+
+    function hydrateMissingSections(audience, payload) {
+        const contentBlock = document.querySelector('.content-block');
+        if (!contentBlock) return;
+
+        if (audience === 'analyst') {
+            if (isEmptyOrBrokenNarrative(contentBlock)) {
+                rebuildAnalystNarrative(contentBlock, payload);
+                return;
+            }
+
+            if (!sectionExists(contentBlock, ['DATOS CLAVE EN TABLA'])) {
+                const metrics = buildKeyMetrics(payload);
+                if (metrics.length) {
+                    appendReportSection(contentBlock, 'Datos clave en tabla', buildMetricsTableHtml(metrics));
+                }
+            } else {
+                document.querySelectorAll('.content-block table').forEach((table) => {
+                    if (!isMetricsTable(table)) return;
+                    const metricMap = Object.fromEntries(buildKeyMetrics(payload));
+                    table.querySelectorAll('tr').forEach((row, index) => {
+                        if (index === 0) return;
+                        const cells = row.querySelectorAll('td');
+                        if (cells.length < 2) return;
+                        const label = normalizeText(cells[0].textContent);
+                        const match = Object.entries(metricMap).find(([key]) =>
+                            label.includes(normalizeText(key)) || normalizeText(key).includes(label)
+                        );
+                        if (!match) return;
+                        const value = cells[1].textContent.trim();
+                        if (!value || value === '-' || value === '—') {
+                            cells[1].textContent = match[1];
+                        }
+                    });
+                });
+            }
+
+            if (!sectionExists(contentBlock, ['ANALISIS SUGERIDOS', 'ANÁLISIS SUGERIDOS'])) {
+                const analyses = buildSuggestedAnalysesHtml(payload);
+                if (analyses) {
+                    appendReportSection(contentBlock, 'Análisis sugeridos', analyses);
+                }
+            }
+        }
+
+        if (audience === 'manager' || audience === 'operations') {
+            if (!sectionExists(contentBlock, ['ALERTA ESPECIAL'])) {
+                const special = buildSpecialAlertHtml(payload);
+                if (special) {
+                    appendReportSection(contentBlock, 'Alerta especial', special);
+                }
+            }
+        }
+    }
+
+    function colorizeSeverityCells() {
+        document.querySelectorAll('.content-block table tr').forEach((row) => {
+            const cells = row.querySelectorAll('td');
+            if (!cells.length) return;
+            const sevText = normalizeText(cells[0].textContent);
+            if (sevText.includes('CRITICAL') || sevText.includes('CRITICO')) {
+                cells[0].classList.add('sev-critical');
+            } else if (sevText.includes('WARNING') || sevText.includes('ALERTA')) {
+                cells[0].classList.add('sev-warning');
+            } else if (sevText.includes('INFO')) {
+                cells[0].classList.add('sev-info');
+            }
+        });
+    }
+
+    function enrichFromPayload(audience) {
+        const payload = getPayload();
+        if (!payload) return;
+
+        hydrateAlertsTable(payload);
+        hydrateMissingSections(audience, payload);
+        colorizeSeverityCells();
+    }
+
     // ── Embedded preview: expand collapsible sections ──
-    function setupEmbeddedPreview() {
-        if (window.parent === window) return;
+    function expandInfoSections() {
         document.querySelectorAll('.info-section').forEach((section) => {
             section.classList.add('open');
         });
+    }
+
+    function setupEmbeddedPreview() {
+        if (window.parent === window) return;
+        expandInfoSections();
     }
 
     // ── KPI Tooltips Help Dictionary ──
@@ -574,7 +1069,7 @@
         
         const audience = getAudience();
         document.body.classList.add(`theme-${audience}`);
-        
+
         // Analyst report is the full data audit — show all KPIs, narrative, alerts and actions
         if (audience !== 'analyst') {
             filterKpisByAudience(audience);
@@ -582,8 +1077,9 @@
             filterAlertsAndActionsByAudience(audience);
         }
 
+        expandInfoSections();
+        enrichFromPayload(audience);
         setupEmbeddedPreview();
-        
         injectKpiHelpTooltips();
         injectChartContainers();
         injectAlertsChart();

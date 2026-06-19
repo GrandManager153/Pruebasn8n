@@ -69,6 +69,32 @@ body.theme-operations {
     --border-hover: rgba(234, 88, 12, 0.45);
 }
 
+body.theme-executive .hero,
+body.theme-manager .hero,
+body.theme-analyst .hero,
+body.theme-operations .hero {
+    border-top: 4px solid var(--brand-gold) !important;
+    padding-top: 16px !important;
+}
+
+body.theme-executive .sbar,
+body.theme-manager .sbar,
+body.theme-analyst .sbar,
+body.theme-operations .sbar {
+    border-left: 4px solid var(--brand-gold) !important;
+}
+
+body.theme-executive #alertas::before,
+body.theme-executive #acciones::before,
+body.theme-manager #alertas::before,
+body.theme-manager #acciones::before,
+body.theme-analyst #alertas::before,
+body.theme-analyst #acciones::before,
+body.theme-operations #alertas::before,
+body.theme-operations #acciones::before {
+    color: var(--brand-gold) !important;
+}
+
 body.light-mode {
     /* Kept identical to default for clean white layout */
 }
@@ -457,8 +483,8 @@ body {
 }
 
 .content-block th {
-    background: var(--bg-elevated) !important;
-    color: var(--brand-gold) !important;
+    background: var(--brand-gold) !important;
+    color: #ffffff !important;
     padding: 10px 14px !important;
     font-size: 11.5px !important;
     font-weight: 700 !important;
@@ -466,6 +492,24 @@ body {
     letter-spacing: 0.5px !important;
     border-bottom: 1px solid var(--border) !important;
     text-align: left;
+}
+
+.content-block td.sev-critical,
+.sev-critical {
+    color: var(--red) !important;
+    font-weight: 700 !important;
+}
+
+.content-block td.sev-warning,
+.sev-warning {
+    color: var(--amber) !important;
+    font-weight: 700 !important;
+}
+
+.content-block td.sev-info,
+.sev-info {
+    color: var(--blue) !important;
+    font-weight: 700 !important;
 }
 
 .content-block td {
@@ -660,6 +704,13 @@ body {
 
 .info-header:hover {
     background: var(--bg-card-hover) !important;
+}
+
+.info-section.open .info-body,
+.info-section .info-body {
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
 }
 
 .info-item {

@@ -14,7 +14,7 @@ export default function DashboardPage() {
       <div className="loading-state">
         <div className="loading-spinner" />
         <p style={{ color: 'var(--text-muted)', fontSize: 14, fontWeight: 500 }}>
-          Cargando datos analíticos del BOS...
+          Cargando datos analíticos de PulseMkt...
         </p>
       </div>
     );

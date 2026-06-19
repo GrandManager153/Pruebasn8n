@@ -1,13 +1,19 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import useDashboardStore from '../stores/useDashboardStore';
 import KpiCard from '../components/shared/KpiCard';
 import KpiModal from '../components/shared/KpiModal';
+import {
+  filterMarkovByGroup,
+  filterVisibleMarkovRows,
+  formatMarkovStateLabel,
+  getMarkovGroupOptions,
+  resolveMarkovGroup,
+} from '../utils/funnelMarkovGroups';
 
 const FUNNEL_PREVIEW_COUNT = 3;
 
 const STATIC_PROBABILITIES = [
-  { state: "Abierto", conversion: 2.14, loss: 97.86, steps: 14.2, stddev: 4.5 },
   { state: "Conectado - Interesado", conversion: 35.24, loss: 64.76, steps: 5.4, stddev: 1.8 },
   { state: "Reactivación", conversion: 20.00, loss: 80.00, steps: 7.2, stddev: 2.1 },
   { state: "En Llamada", conversion: 14.15, loss: 85.85, steps: 8.9, stddev: 3.2 },
@@ -175,8 +181,12 @@ function formatSteps(val) {
 }
 
 function mapProbabilityRow(p) {
+  const raw = p.state || '';
+  const cleaned = cleanStateName(raw);
   return {
-    state: cleanStateName(p.state),
+    rawState: raw,
+    state: formatMarkovStateLabel(raw, cleanStateName),
+    group: resolveMarkovGroup(raw, cleaned),
     conversion: (p.prob_conversion || 0) * 100,
     loss: (p.prob_loss || 0) * 100,
     steps: p.expected_steps || 0,
@@ -238,12 +248,21 @@ function resolveFunnelLeaks(transitions) {
 function resolveFunnelMarkovStates(funnel) {
   const absorption = funnel?.absorption_probabilities;
   if (Array.isArray(absorption) && absorption.length) {
-    return absorption
-      .map(mapProbabilityRow)
-      .filter((p) => p.conversion > 0)
-      .sort((a, b) => b.conversion - a.conversion);
+    return filterVisibleMarkovRows(
+      absorption
+        .map(mapProbabilityRow)
+        .filter((p) => p.conversion > 0)
+        .sort((a, b) => b.conversion - a.conversion)
+    );
   }
-  return STATIC_PROBABILITIES;
+  return filterVisibleMarkovRows(
+    STATIC_PROBABILITIES.map((p) => ({
+      ...p,
+      rawState: p.state,
+      state: formatMarkovStateLabel(p.state, cleanStateName),
+      group: resolveMarkovGroup(p.state, cleanStateName(p.state)),
+    }))
+  );
 }
 
 function buildFunnelInsight(feeders, leaks) {
@@ -395,6 +414,7 @@ export default function FunnelPage() {
   const [leaksExpanded, setLeaksExpanded] = useState(false);
   const [markovExpanded, setMarkovExpanded] = useState(false);
   const [markovShowAdvanced, setMarkovShowAdvanced] = useState(false);
+  const [markovGroup, setMarkovGroup] = useState('all');
 
   if (loading || !data) {
     return (
@@ -428,6 +448,21 @@ export default function FunnelPage() {
 
   const feeders = resolveFunnelFeeders(funnel, data.system?.alerts);
   const finalProbabilities = resolveFunnelMarkovStates(funnel);
+  const markovGroupOptions = useMemo(
+    () => getMarkovGroupOptions(finalProbabilities),
+    [finalProbabilities],
+  );
+  const filteredMarkovRows = useMemo(
+    () => filterMarkovByGroup(finalProbabilities, markovGroup),
+    [finalProbabilities, markovGroup],
+  );
+
+  useEffect(() => {
+    if (markovGroup !== 'all' && !finalProbabilities.some((row) => row.group === markovGroup)) {
+      setMarkovGroup('all');
+    }
+  }, [finalProbabilities, markovGroup]);
+
   const insightParts = buildFunnelInsight(feeders, leaks);
 
   const kpiConvLabel = 'Tasa de conversión';
@@ -575,6 +610,20 @@ export default function FunnelPage() {
               />
               <span>Mostrar métricas avanzadas</span>
             </label>
+            {markovGroupOptions.length > 1 && (
+              <div className="funnel-markov-group-filters filter-pills">
+                {markovGroupOptions.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    className={`filter-pill funnel-markov-group-pill${markovGroup === opt.id ? ' active' : ''}`}
+                    onClick={() => setMarkovGroup(opt.id)}
+                  >
+                    {opt.label} ({opt.count})
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="custom-table-container">
               <table className="custom-table">
                 <thead>
@@ -591,9 +640,14 @@ export default function FunnelPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {finalProbabilities.length > 0 ? finalProbabilities.map((p, i) => (
-                    <tr key={i}>
-                      <td style={{ fontWeight: 600, color: 'white' }}>{p.state}</td>
+                  {filteredMarkovRows.length > 0 ? filteredMarkovRows.map((p, i) => (
+                    <tr key={`${p.rawState || p.state}-${i}`}>
+                      <td style={{ fontWeight: 600, color: 'white' }}>
+                        <div>{p.state}</div>
+                        {p.rawState && p.rawState !== p.state ? (
+                          <div className="funnel-list-item-subtitle">Estado CRM: {p.rawState}</div>
+                        ) : null}
+                      </td>
                       <td style={{ textAlign: 'right', color: 'var(--green)', fontWeight: 'bold' }}>
                         {formatProb(p.conversion)}
                       </td>
@@ -614,7 +668,9 @@ export default function FunnelPage() {
                   )) : (
                     <tr>
                       <td colSpan={markovShowAdvanced ? 5 : 2} style={{ textAlign: 'center', color: 'var(--text-dim)', padding: 24 }}>
-                        Sin estados con actividad de conversión en este periodo
+                        {finalProbabilities.length > 0
+                          ? 'Sin estados en este grupo para el periodo actual'
+                          : 'Sin estados con actividad de conversión en este periodo'}
                       </td>
                     </tr>
                   )}

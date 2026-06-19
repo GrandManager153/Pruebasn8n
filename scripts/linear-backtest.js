@@ -1,4 +1,6 @@
 /** Recomputes linear model backtest series for dashboard charts. */
+const { computeTrainTestSplit, testZoneCoverage } = require('./train-test-split');
+
 function _matInv(m) {
   const n = m.length;
   const a = m.map((r, i) => [...r, ...Array(n).fill(0).map((_, j) => (i === j ? 1 : 0))]);
@@ -189,16 +191,36 @@ function computeLinearBacktestModels(timeSeries, btWinMax = 28) {
     { name: 'holt_winters',      fn: (h, i) => _mHW(h, i) }
   ];
 
-  // ---- Rolling backtest (last 14 days, 1-step-ahead) ----
-  const _btWin = Math.min(btWinMaxRef, _n - 14);
-  const _btStart = _n - _btWin;
+  const _split = computeTrainTestSplit(_n, timeSeries);
+  if (!_split) return null;
+  const _splitIndex = _split.split_index;
+  const _trainVols = _vols.slice(0, _splitIndex);
+
+  function _predictHoldout(model, idx) {
+    if (idx < 1 || idx >= _n) return null;
+    if (idx < _splitIndex) {
+      return model.fn(_trainVols, idx);
+    }
+    return model.fn(_vols, idx);
+  }
+
+  function _buildHoldoutSeries(model) {
+    const aligned = Array(_n).fill(null);
+    for (let i = 1; i < _n; i++) {
+      const p = _predictHoldout(model, i);
+      if (p !== null && !isNaN(p)) aligned[i] = Math.round(p);
+    }
+    return aligned;
+  }
+
+  // ---- Holdout backtest (70/30 temporal split) ----
   const _mRes = _models.map(m => ({ name: m.name, errors: [], abs: [], preds: [], acts: [] }));
   const _naiveErr = [];
 
-  for (let i = _btStart; i < _n; i++) {
+  for (let i = _splitIndex; i < _n; i++) {
     if (i >= 7) _naiveErr.push(Math.abs(_vols[i] - _vols[i - 7]));
     for (let mi = 0; mi < _models.length; mi++) {
-      const p = _models[mi].fn(_vols, i);
+      const p = _predictHoldout(_models[mi], i);
       if (p !== null && !isNaN(p)) {
         const e = _vols[i] - p;
         _mRes[mi].errors.push(e);
@@ -376,39 +398,35 @@ function computeLinearBacktestModels(timeSeries, btWinMax = 28) {
     return h;
   }
 
+  predictionV2.train_test_split = _split;
   predictionV2.backtest = {
-    window_days: _btWin, naive_mae: Math.round(_naiveMAE * 100) / 100,
+    window_days: _split.test_count,
+    train_test_split: _split,
+    naive_mae: Math.round(_naiveMAE * 100) / 100,
     models: _ranked.map(m => {
       const mr = _mRes.find(x => x.name === m.name);
       const fc1d = _fcasts[m.name];
       const horizons = _buildModelHorizons(m.name, fc1d, mr);
+      const model = _models.find(x => x.name === m.name);
       return {
         name: m.name,
         mae: Math.round(m.mae * 100) / 100,
         mase: Math.round(m.mase * 1000) / 1000,
         rmse: Math.round(m.rmse * 100) / 100,
-        series: (() => {
-          const aligned = Array(_n).fill(null);
-          const model = _models.find(x => x.name === m.name);
-          if (!model) return aligned;
-          for (let i = 0; i < _n; i++) {
-            const p = model.fn(_vols, i);
-            if (p !== null && !isNaN(p)) aligned[i] = Math.round(p);
-          }
-          return aligned;
-        })(),
+        series: model ? _buildHoldoutSeries(model) : Array(_n).fill(null),
         forecast_1d: fc1d != null ? fc1d : null,
         horizons: horizons
       };
     }),
     selected: _selMethod, ensemble_weights: _useEns ? _ensW : null
   };
-  
+
   return predictionV2.backtest || null;
 }
 
-function expectedModelPoints(_modelName, seriesLength) {
-  return seriesLength;
+function expectedModelPoints(_modelName, seriesLength, splitIndex) {
+  if (splitIndex == null) return seriesLength;
+  return Math.max(0, seriesLength - splitIndex);
 }
 
 function modelSeriesCoverage(series) {
@@ -418,12 +436,21 @@ function modelSeriesCoverage(series) {
 
 function needsLinearEnrichment(payload) {
   const models = payload?.forecast?.backtest_models;
-  const n = payload?.forecast?.time_series?.length || 0;
+  const ts = payload?.forecast?.time_series || [];
+  const n = ts.length;
   if (!Array.isArray(models) || !models.length || !n) return false;
+
+  const split = payload.forecast.train_test_split || computeTrainTestSplit(n, ts);
+  if (!split) return true;
+
+  const expectedTest = expectedModelPoints(null, n, split.split_index);
+  const minTrain = Math.max(1, split.split_index - 1);
+
   return models.some((m) => {
     if (!Array.isArray(m.series) || !m.series.some((v) => v != null)) return true;
-    const expected = expectedModelPoints(m.name, n);
-    return modelSeriesCoverage(m.series) < expected;
+    const trainCov = m.series.slice(0, split.split_index).filter((v) => v != null && isFinite(v)).length;
+    const testCov = testZoneCoverage(m.series, split.split_index);
+    return trainCov < minTrain * 0.5 || testCov < Math.max(1, expectedTest - 2);
   });
 }
 
@@ -432,9 +459,18 @@ function enrichLinearForecastModels(payload, options = {}) {
   const ts = payload.forecast.time_series;
   if (!ts?.length) return payload;
   if (!needsLinearEnrichment(payload) && !options.force) return payload;
-  const bt = computeLinearBacktestModels(ts, options.btWinMax || Math.max(14, ts.length - 14));
-  if (!bt?.models?.length) return payload;
-  const byName = new Map(bt.models.map((m) => [m.name, m]));
+
+  const result = computeLinearBacktestModels(ts, options.btWinMax || Math.max(14, ts.length - 14));
+  if (!result?.models?.length) return payload;
+
+  const split = computeTrainTestSplit(ts.length, ts);
+  if (result.train_test_split) {
+    payload.forecast.train_test_split = result.train_test_split;
+  } else if (split) {
+    payload.forecast.train_test_split = split;
+  }
+
+  const byName = new Map(result.models.map((m) => [m.name, m]));
   payload.forecast.backtest_models = (payload.forecast.backtest_models || []).map((existing) => {
     const computed = byName.get(existing.name);
     if (!computed) return existing;
@@ -443,12 +479,22 @@ function enrichLinearForecastModels(payload, options = {}) {
       series: computed.series,
       forecast_1d: computed.forecast_1d ?? existing.forecast_1d,
       horizons: computed.horizons ?? existing.horizons,
-      mae: existing.mae ?? computed.mae,
-      mase: existing.mase ?? computed.mase,
-      rmse: existing.rmse ?? computed.rmse,
+      mae: computed.mae ?? existing.mae,
+      mase: computed.mase ?? existing.mase,
+      rmse: computed.rmse ?? existing.rmse,
     };
   });
+
+  if (!payload.forecast.backtest_models.length && result.models.length) {
+    payload.forecast.backtest_models = result.models;
+  }
+
   return payload;
 }
 
-module.exports = { computeLinearBacktestModels, needsLinearEnrichment, enrichLinearForecastModels };
+module.exports = {
+  computeLinearBacktestModels,
+  needsLinearEnrichment,
+  enrichLinearForecastModels,
+  computeTrainTestSplit,
+};

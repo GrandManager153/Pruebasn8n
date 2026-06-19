@@ -25,7 +25,7 @@ const TITLES = {
 
 function AppLayout() {
   const location = useLocation();
-  const title = TITLES[location.pathname] || 'BOS Panel';
+  const title = TITLES[location.pathname] || 'PulseMkt';
   const { fetchDashboard, theme, lastUpdate } = useDashboardStore();
 
   // Apply saved theme on mount
