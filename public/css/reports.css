@@ -970,12 +970,10 @@ body.embedded .report-back-bar {
         display: none !important;
     }
 
-    /* Force page break before each section heading in printed reports */
-    .content-block h2, 
-    .content-block h3, 
-    .content-block p strong, 
-    .content-block p[style*="font-weight:800"], 
-    .content-block p[style*="font-weight: 800"] {
+    /* Force page break before selected section headings dynamically */
+    .print-page-break,
+    #alertas.print-page-break,
+    #acciones.print-page-break {
         page-break-before: always !important;
         break-before: page !important;
     }
@@ -1006,8 +1004,6 @@ body.embedded .report-back-bar {
         padding-bottom: 4px !important;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        page-break-before: always !important;
-        break-before: page !important;
     }
 
     .content-block p,
