@@ -118,6 +118,13 @@ function buildComparableModels(data) {
   return list;
 }
 
+function getMaseMetricClass(mase) {
+  if (typeof mase !== 'number' || !isFinite(mase)) return 'metric-mase-warn';
+  if (mase < 0.85) return 'metric-mase-good';
+  if (mase < 1.0) return 'metric-mase-warn';
+  return 'metric-mase-bad';
+}
+
 export default function ForecastPage() {
   const { data, loading } = useDashboardStore();
   const [selectedCompareModel, setSelectedCompareModel] = useState('');
@@ -139,6 +146,15 @@ export default function ForecastPage() {
     if (!data) return [];
     return buildComparableModels(data).filter(m => m.name !== baseName);
   }, [data, baseName]);
+
+  const comparableModelsSorted = useMemo(() => {
+    if (!data) return [];
+    return buildComparableModels(data).sort((a, b) => {
+      const maseA = a.mase != null ? a.mase : 999;
+      const maseB = b.mase != null ? b.mase : 999;
+      return maseA - maseB;
+    });
+  }, [data]);
 
   const activeOverlays = useMemo(() => {
     if (!data) return [];
@@ -527,6 +543,62 @@ export default function ForecastPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* Model Leaderboard Table */}
+      <motion.div
+        className="card"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        style={{ marginTop: 'var(--gap-bento)' }}
+      >
+        <div className="chart-title">
+          <span className="dot" style={{ background: 'var(--violet)' }} />
+          Modelos en Gráfica / Comparador de Modelos
+        </div>
+        <div className="custom-table-container">
+          <table className="custom-table">
+            <thead>
+              <tr>
+                <th>Modelo</th>
+                <th style={{ textAlign: 'right' }}>Pron.</th>
+                <th style={{ textAlign: 'right' }}>MASE</th>
+                <th style={{ textAlign: 'right' }}>MAE</th>
+                <th style={{ textAlign: 'right' }}>RMSE</th>
+              </tr>
+            </thead>
+            <tbody>
+              {comparableModelsSorted.length > 0 ? (
+                comparableModelsSorted.map((m, idx) => {
+                  const maseClass = getMaseMetricClass(m.mase);
+                  const color = getModelColor(m.name);
+                  const isBest = idx === 0;
+                  return (
+                    <tr key={idx} className={isBest ? 'model-row-best' : ''}>
+                      <td style={{ fontWeight: 600, color }}>
+                        {cleanTechnicalTerms(m.name)}
+                        {isBest && <span className="best-model-tag" style={{ marginLeft: 8, fontSize: 10, padding: '2px 6px', background: 'var(--green)', color: '#080c14', borderRadius: 4, fontWeight: 800 }}>MEJOR MODELO</span>}
+                      </td>
+                      <td style={{ textAlign: 'right', fontFamily: 'var(--mono)' }}>{m.forecast_1d != null ? Math.round(m.forecast_1d) : '—'}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 'bold' }} className={maseClass}>
+                        {m.mase != null ? m.mase.toFixed(3) : '—'}
+                      </td>
+                      <td style={{ textAlign: 'right', fontFamily: 'var(--mono)' }}>{m.mae != null ? m.mae.toFixed(2) : '—'}</td>
+                      <td style={{ textAlign: 'right', fontFamily: 'var(--mono)' }}>{m.rmse != null ? m.rmse.toFixed(2) : '—'}</td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-dim)', padding: 24 }}>
+                    No hay modelos comparables disponibles
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </motion.div>
 
       {/* Explanation Modal */}
       <KpiModal

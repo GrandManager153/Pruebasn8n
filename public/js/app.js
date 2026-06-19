@@ -2309,34 +2309,46 @@ function renderModelDetailPanel() {
     const sub = document.getElementById('model-detail-sub');
     if (!panel) return;
 
-    const visible = getChartVisibleModelNames();
+    if (!dashboardData) {
+        panel.innerHTML = '<div class="model-detail-empty">Cargando modelos...</div>';
+        if (sub) sub.textContent = 'Cargando modelos...';
+        return;
+    }
 
-    if (!visible.length || !dashboardData) {
-        panel.innerHTML = '<div class="model-detail-empty">Selecciona un modelo en el desplegable o usa «Mostrar todas».</div>';
-        if (sub) sub.textContent = 'Selecciona un modelo o pulsa «Mostrar todas». Clic en la leyenda para ocultar o mostrar filas.';
+    const modelsList = buildComparableModels(dashboardData);
+    const sortedModels = [...modelsList].sort((a, b) => {
+        const maseA = a.mase != null ? a.mase : 999;
+        const maseB = b.mase != null ? b.mase : 999;
+        return maseA - maseB;
+    });
+
+    if (!sortedModels.length) {
+        panel.innerHTML = '<div class="model-detail-empty">No hay modelos comparables disponibles</div>';
+        if (sub) sub.textContent = 'Sin modelos comparables disponibles';
         return;
     }
 
     if (sub) {
-        sub.textContent = visible.length === 1
-            ? `1 modelo visible · pronóstico diario (1d)`
-            : `${visible.length} modelos visibles · clic en la leyenda para ocultar o mostrar`;
+        sub.textContent = 'Comparador de Modelos · Ordenado por MASE (menor error). Clic en la leyenda de la gráfica para sobreponer.';
     }
 
-    const rows = visible.map(name => {
-        const rec = getModelRecord(dashboardData, name);
-        const daily = resolveDailyForecastForModel(dashboardData, name);
+    const rows = sortedModels.map((m, idx) => {
+        const daily = resolveDailyForecastForModel(dashboardData, m.name);
         const pron = daily?.value != null ? Math.round(daily.value) : '—';
-        const color = getModelColor(name);
-        const mase = rec?.mase;
+        const color = getModelColor(m.name);
+        const mase = m.mase;
         const maseClass = getMaseMetricClass(mase);
+        const isBest = idx === 0;
         return `
-            <tr>
-                <td style="font-weight: 600; color: ${color};">${formatModelLabel(name)}</td>
-                <td class="metric-pron">${pron}</td>
-                <td class="${maseClass}">${typeof mase === 'number' ? mase.toFixed(3) : '—'}</td>
-                <td class="metric-mae">${rec?.mae != null ? Number(rec.mae).toFixed(2) : '—'}</td>
-                <td class="metric-rmse">${rec?.rmse != null ? Number(rec.rmse).toFixed(2) : '—'}</td>
+            <tr class="${isBest ? 'model-row-best' : ''}">
+                <td style="font-weight: 600; color: ${color};">
+                    ${formatModelLabel(m.name)}
+                    ${isBest ? '<span class="best-model-tag" style="margin-left: 5px; font-size: 8px; padding: 1px 4px; background: var(--green); color: #080c14; border-radius: 3px; font-weight: 800; display: inline-block;">MEJOR</span>' : ''}
+                </td>
+                <td class="metric-pron" style="text-align: right;">${pron}</td>
+                <td class="${maseClass}" style="text-align: right; font-weight: bold;">${typeof mase === 'number' ? mase.toFixed(3) : '—'}</td>
+                <td class="metric-mae" style="text-align: right;">${m.mae != null ? Number(m.mae).toFixed(2) : '—'}</td>
+                <td class="metric-rmse" style="text-align: right;">${m.rmse != null ? Number(m.rmse).toFixed(2) : '—'}</td>
             </tr>
         `;
     }).join('');

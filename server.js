@@ -480,28 +480,53 @@ app.get('/api/dashboard', async (req, res) => {
     if (fs.existsSync(payloadPath)) {
       let data = JSON.parse(fs.readFileSync(payloadPath, 'utf-8'));
 
-      attachForecastFieldsToPayload(data);
-
+      let runEnrichmentInBackground = false;
       if (needsMlEnrichment(data) || needsMlModelForecastEnrichment(data)) {
-        try {
-          data = await enrichPayloadComplete(data);
-          fs.writeFileSync(payloadPath, JSON.stringify(data, null, 2), 'utf-8');
-        } catch (enrichErr) {
-          console.warn('[Dashboard] ML enrich falló:', enrichErr.message);
-        }
-      } else {
-        attachForecastFieldsToPayload(data);
+        runEnrichmentInBackground = true;
       }
+      attachForecastFieldsToPayload(data);
 
       // Rebuild full-length statistical model series (replaces truncated n8n payloads)
       if (data?.forecast?.time_series?.length && Array.isArray(data.forecast.backtest_models)) {
         enrichLinearForecastModels(data, { force: true });
       }
 
+      const hadEmptyMarkov = !data?.funnel?.absorption_probabilities || data.funnel.absorption_probabilities.length === 0;
+      const hadNoStddev = data?.funnel?.absorption_probabilities && data.funnel.absorption_probabilities.length > 0 && !data.funnel.absorption_probabilities.some(row => Number(row.step_stddev) > 0);
+
       enrichOperationalAlerts(data);
       enrichFunnelMarkovStddev(data);
 
+      const hasMarkovNow = data?.funnel?.absorption_probabilities && data.funnel.absorption_probabilities.length > 0;
+      const hasStddevNow = data?.funnel?.absorption_probabilities && data.funnel.absorption_probabilities.some(row => Number(row.step_stddev) > 0);
+
+      const markovUpdated = (hadEmptyMarkov && hasMarkovNow) || (hadNoStddev && hasStddevNow);
+
+      if (markovUpdated) {
+        try {
+          fs.writeFileSync(payloadPath, JSON.stringify(data, null, 2), 'utf-8');
+          console.log(`  💾 Payload actualizado con Markov persistido en disco.`);
+        } catch (saveErr) {
+          console.error('[Dashboard] Falló al guardar el payload persistido con Markov:', saveErr.message);
+        }
+      }
+
       res.json({ success: true, data });
+
+      // Ejecutar enriquecimiento ML en segundo plano para no bloquear al usuario
+      if (runEnrichmentInBackground) {
+        const dataToEnrich = JSON.parse(JSON.stringify(data));
+        enrichPayloadComplete(dataToEnrich)
+          .then(enrichedData => {
+            enrichOperationalAlerts(enrichedData);
+            enrichFunnelMarkovStddev(enrichedData);
+            fs.writeFileSync(payloadPath, JSON.stringify(enrichedData, null, 2), 'utf-8');
+            console.log('  [Background] ML enrichment complete, saved to disk.');
+          })
+          .catch(enrichErr => {
+            console.warn('  [Background] ML enrichment failed:', enrichErr.message);
+          });
+      }
     } else {
       res.status(404).json({ success: false, message: 'No hay datos de dashboard disponibles aún. Ejecuta el workflow de n8n.' });
     }
