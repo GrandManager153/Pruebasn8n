@@ -7,7 +7,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const { enrichPayloadComplete, needsMlEnrichment, needsMlModelForecastEnrichment, attachForecastFieldsToPayload } = require('./scripts/ml-enrich-payload');
+const { enrichPayloadComplete, needsMlEnrichment, needsMlModelForecastEnrichment, attachForecastFieldsToPayload, ensureTrainTestSplit } = require('./scripts/ml-enrich-payload');
 const { enrichLinearForecastModels } = require('./scripts/linear-backtest');
 const { enrichOperationalAlerts, formatDurationMinutes } = require('./scripts/enrich-operational-alerts');
 const { enrichFunnelMarkovStddev } = require('./scripts/enrich-funnel-markov-stddev');
@@ -204,6 +204,19 @@ app.post('/api/predict', async (req, res) => {
 });
 
 
+const PAYLOAD_FILE = path.join(DATA_DIR, 'dashboard_payload.json');
+
+function loadDashboardPayload() {
+  try {
+    if (fs.existsSync(PAYLOAD_FILE)) {
+      return JSON.parse(fs.readFileSync(PAYLOAD_FILE, 'utf-8'));
+    }
+  } catch (err) {
+    console.warn('No se pudo cargar dashboard_payload.json:', err.message);
+  }
+  return null;
+}
+
 // Inyecta el design system BOS en reportes HTML generados por n8n
 function injectTheme(htmlContent) {
   if (!htmlContent || typeof htmlContent !== 'string') return htmlContent;
@@ -230,12 +243,18 @@ function injectTheme(htmlContent) {
 
   const headAssets = `
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/reports.css?v=6">
+    <link rel="stylesheet" href="/css/reports.css?v=8">
   `;
 
+  const payload = loadDashboardPayload();
+  const payloadScript = payload
+    ? `<script>window.__BOS_PAYLOAD__=${JSON.stringify(payload).replace(/</g, '\\u003c')};</script>`
+    : '';
+
   const bodyScripts = `
+    ${payloadScript}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="/js/reports.js?v=6"></script>`;
+    <script src="/js/reports.js?v=8"></script>`;
 
   const ambientBg = `
     <div class="report-ambient" aria-hidden="true">
@@ -255,10 +274,10 @@ function injectTheme(htmlContent) {
   if (output.includes('<body>')) {
     output = output.replace(
       '<body>',
-      `<body>${ambientBg}<div class="report-back-bar"><a class="report-back-btn" href="/">← Volver al BOS Panel</a></div>`
+      `<body>${ambientBg}<div class="report-back-bar"><a class="report-back-btn" href="/">← Volver a PulseMkt</a></div>`
     );
   } else if (output.includes('<body ')) {
-    output = output.replace(/<body([^>]*)>/, `<body$1>${ambientBg}<div class="report-back-bar"><a class="report-back-btn" href="/">← Volver al BOS Panel</a></div>`);
+    output = output.replace(/<body([^>]*)>/, `<body$1>${ambientBg}<div class="report-back-bar"><a class="report-back-btn" href="/">← Volver a PulseMkt</a></div>`);
   }
 
   if (output.includes('</body>')) {
@@ -493,10 +512,12 @@ app.get('/api/dashboard', async (req, res) => {
         attachForecastFieldsToPayload(data);
       }
 
-      // Rebuild full-length statistical model series (replaces truncated n8n payloads)
+      // Rebuild holdout statistical model series (70/30 split)
       if (data?.forecast?.time_series?.length && Array.isArray(data.forecast.backtest_models)) {
         enrichLinearForecastModels(data, { force: true });
       }
+
+      ensureTrainTestSplit(data);
 
       enrichOperationalAlerts(data);
       enrichFunnelMarkovStddev(data);

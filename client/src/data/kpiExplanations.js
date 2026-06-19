@@ -4,7 +4,7 @@ export const KPI_EXPLANATIONS = {
     icon: '💓',
     definition: 'SHS (System Health Score): indicador compuesto de 0 a 100 que resume el estado general de toda la operación comercial. Combina eficiencia del call center, calidad del contacto, velocidad de respuesta y balance de inversión publicitaria.',
     interpretation: 'Un valor de 80+ indica un sistema saludable. Entre 60-79, el sistema está bajo presión y requiere atención. Por debajo de 60 indica estado crítico con problemas que afectan directamente los ingresos.',
-    source: 'Calculado por el Motor BOS — combina métricas de operaciones, embudo y finanzas',
+    source: 'Calculado por el Motor PulseMkt — combina métricas de operaciones, embudo y finanzas',
   },
   'Leads totales': {
     icon: '👥',
@@ -94,7 +94,7 @@ export const KPI_EXPLANATIONS = {
     icon: '📉',
     definition: 'Cambio estructural significativo en el volumen diario, detectado mediante CUSUM.',
     interpretation: 'Un valor negativo = reducción persistente de volumen. Valor positivo = incremento sostenido.',
-    source: 'Algoritmo CUSUM integrado en el motor de predicción BOS',
+    source: 'Algoritmo CUSUM integrado en el motor de predicción PulseMkt',
   },
   'Leads Hoy': {
     icon: '📈',
@@ -154,7 +154,7 @@ export const KPI_EXPLANATIONS = {
     icon: '🔔',
     definition: 'Total Alerts: cantidad total de anomalías o desviaciones operativas detectadas en tiempo real.',
     interpretation: 'Un volumen creciente indica inestabilidad o desvíos severos de los procesos estándar.',
-    source: 'Motor de alertas del BOS',
+    source: 'Motor de alertas de PulseMkt',
   },
   'Alertas Críticas': {
     icon: '🚨',
@@ -172,7 +172,7 @@ export const KPI_EXPLANATIONS = {
     icon: 'ℹ️',
     definition: 'Warnings & Info: alertas de severidad media y baja para seguimiento preventivo o informativo.',
     interpretation: 'Útiles para planificar mejoras proactivas antes de que se conviertan en incidentes críticos.',
-    source: 'Motor de alertas del BOS',
+    source: 'Motor de alertas de PulseMkt',
   },
 };
 

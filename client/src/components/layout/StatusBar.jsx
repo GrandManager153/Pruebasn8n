@@ -3,14 +3,14 @@ import useDashboardStore from '../../stores/useDashboardStore';
 export default function StatusBar() {
   const { data, loading, error } = useDashboardStore();
 
-  let message = 'Auditoría del BOS en curso...';
+  let message = 'Auditoría PulseMkt en curso...';
   let color = 'var(--green)';
 
   if (error) {
     message = `Error de conexión: ${error}`;
     color = 'var(--red)';
   } else if (loading) {
-    message = 'Cargando datos analíticos del BOS...';
+    message = 'Cargando datos analíticos de PulseMkt...';
   } else if (data?.system) {
     const score = data.system.health_score;
     if (score >= 80) message = `Sistema operando con salud óptima — Score: ${score}/100`;

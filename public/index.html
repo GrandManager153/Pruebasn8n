@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BOS Panel - Manuel Solis Law Offices</title>
-    <meta name="description" content="Business Operating System - Panel de Control Operativo y Financiero de Marketing">
+    <title>PulseMkt — Inteligencia de Marketing</title>
+    <meta name="description" content="PulseMkt — Panel de inteligencia de marketing, leads, embudo y pronósticos">
 
     <!-- Google Fonts -->
     <link
@@ -14,6 +14,7 @@
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
 
     <!-- Custom Extracted Stylesheets -->
     <link rel="stylesheet" href="/css/styles.css?v=13">
@@ -77,8 +78,8 @@
         <aside class="sidebar">
             <div class="sidebar-brand">
                 <div class="brand-text">
-                    <h1>Manuel Solis</h1>
-                    <p>Law Offices</p>
+                    <h1>PulseMkt</h1>
+                    <p>Inteligencia de Marketing</p>
                 </div>
             </div>
 
@@ -112,7 +113,7 @@
             </div>
 
             <div class="sidebar-footer">
-                <p>BOS System v7.2</p>
+                <p>PulseMkt v7.2</p>
                 <a href="#" style="font-size: 10px; opacity: 0.7; color: var(--text-muted); text-decoration: none; transition: color 0.2s;">Términos y Privacidad</a>
             </div>
         </aside>
@@ -137,14 +138,11 @@
                                 <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
                             </svg>
                         </button>
-                        <div class="status-pill">
-                            <div class="pulse-dot"></div> Manuel Solis
-                        </div>
                     </div>
                 </div>
                 <div class="sbar topbar-status" id="main-sbar">
                     <span class="sdot"></span>
-                    <span id="main-sbar-text">Auditoría del BOS en curso...</span>
+                    <span id="main-sbar-text">Auditoría PulseMkt en curso...</span>
                 </div>
             </header>
 
@@ -155,7 +153,7 @@
                 <div class="loading-state" id="loading">
                     <div class="loading-spinner"></div>
                     <p style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Estableciendo conexión y
-                        cargando datos analíticos del BOS...</p>
+                        cargando datos analíticos de PulseMkt...</p>
                 </div>
 
                 <!-- 1. TAB: RESUMEN GENERAL (DASHBOARD) -->
@@ -233,6 +231,7 @@
                                     <input type="checkbox" id="funnel-markov-advanced-toggle" onchange="toggleFunnelMarkovAdvanced()">
                                     <span>Mostrar métricas avanzadas</span>
                                 </label>
+                                <div class="funnel-markov-group-filters filter-pills" id="funnel-markov-group-filters" style="display: none;"></div>
                                 <div class="custom-table-container">
                                     <table class="custom-table">
                                         <thead id="funnel-probabilities-head"></thead>
@@ -276,6 +275,7 @@
                             <div class="chart-wrapper">
                                 <canvas id="chart-timeseries"></canvas>
                             </div>
+                            <p id="forecast-chart-split-sub" class="forecast-chart-split-sub" style="font-size: 11px; color: var(--text-muted); margin-top: 8px;"></p>
                         </div>
                         <div class="card card-animate forecast-detail-panel model-detail-card" style="animation-delay: 0.10s;">
                             <div class="chart-title"><span class="dot" style="background: var(--violet)"></span> Modelos en Gráfica</div>
@@ -532,8 +532,9 @@
     </div>
 
     <!-- Application Script Logic Linked Externally -->
+    <script src="/js/funnel-markov-groups.js?v=3"></script>
     <script src="/js/markov-stddev-enrich.js?v=1"></script>
-    <script src="/js/app.js?v=21" defer></script>
+    <script src="/js/app.js?v=25" defer></script>
 </body>
 
 </html>

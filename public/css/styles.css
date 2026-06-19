@@ -477,11 +477,45 @@ body.light-mode .wave-4 svg path {
 }
 
 /* === Custom Vanilla Grid & Layout System === */
+/* KPI grid: tarjetas de ancho uniforme; fila incompleta centrada, sin estirar */
 .v-grid-kpi {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 14px;
+    --kpi-cols: 5;
+    --kpi-gap: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--kpi-gap);
+    justify-content: center;
     margin-bottom: var(--gap-bento);
+}
+
+.v-grid-kpi > .card,
+.v-grid-kpi > .liquid-tank {
+    flex: 0 0 auto;
+    width: calc((100% - (var(--kpi-cols) - 1) * var(--kpi-gap)) / var(--kpi-cols));
+    max-width: 220px;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+@media (max-width: 1200px) {
+    .v-grid-kpi { --kpi-cols: 4; }
+}
+
+@media (max-width: 960px) {
+    .v-grid-kpi { --kpi-cols: 3; }
+}
+
+@media (max-width: 640px) {
+    .v-grid-kpi { --kpi-cols: 2; }
+}
+
+@media (max-width: 420px) {
+    .v-grid-kpi { --kpi-cols: 1; }
+
+    .v-grid-kpi > .card,
+    .v-grid-kpi > .liquid-tank {
+        max-width: none;
+    }
 }
 
 .v-grid-kpi .card {
@@ -921,6 +955,19 @@ body.light-mode .metric-badge-bad {
 
 .funnel-markov-advanced-toggle input {
     accent-color: var(--green);
+}
+
+.funnel-markov-group-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.funnel-markov-group-pill.active {
+    border-color: var(--green);
+    color: var(--green);
+    background: rgba(16, 185, 129, 0.1);
 }
 
 .forecast-chart-panel .chart-wrapper {
@@ -1874,12 +1921,14 @@ body.light-mode .list-group-item.active .nav-icon {
     line-height: 1.2;
 }
 
+.kpi-trend-good,
 .kpi-trend-up {
     background: rgba(45, 212, 168, 0.12);
     border: 1px solid rgba(45, 212, 168, 0.35);
     color: var(--green);
 }
 
+.kpi-trend-bad,
 .kpi-trend-down {
     background: rgba(248, 113, 113, 0.12);
     border: 1px solid rgba(248, 113, 113, 0.35);
@@ -1892,12 +1941,14 @@ body.light-mode .list-group-item.active .nav-icon {
     color: var(--text-muted);
 }
 
+body.light-mode .kpi-trend-good,
 body.light-mode .kpi-trend-up {
     background: rgba(5, 150, 105, 0.1);
     border-color: rgba(5, 150, 105, 0.28);
     color: #047857;
 }
 
+body.light-mode .kpi-trend-bad,
 body.light-mode .kpi-trend-down {
     background: rgba(220, 38, 38, 0.1);
     border-color: rgba(220, 38, 38, 0.28);

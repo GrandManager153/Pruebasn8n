@@ -13,11 +13,9 @@ from sklearn.neural_network import MLPRegressor
 
 from features import (
     build_adaptive_target_features,
-    build_adaptive_train_matrix,
-    build_backtest_target_features,
-    build_backtest_train_matrix,
     build_feature_matrix,
     build_next_features,
+    feature_columns,
     series_to_dataframe,
 )
 
@@ -34,6 +32,35 @@ SKLEARN_MODEL_NAMES = [
     "ridge",
     "mlp_neural_network",
 ]
+
+TRAIN_RATIO = 0.7
+MIN_TEST_DAYS = 14
+
+
+def _compute_train_test_split(n: int, dates: list[str] | None = None) -> dict[str, Any] | None:
+    if n < MIN_TEST_DAYS + 1:
+        return None
+    train_count = int(math.floor(n * TRAIN_RATIO))
+    test_count = n - train_count
+    if test_count < MIN_TEST_DAYS:
+        train_count = n - MIN_TEST_DAYS
+        test_count = MIN_TEST_DAYS
+    if train_count < 1:
+        return None
+    split_index = train_count
+    split_date = None
+    if dates and split_index < len(dates):
+        split_date = str(dates[split_index]).split("T")[0]
+    return {
+        "train_count": train_count,
+        "test_count": test_count,
+        "split_index": split_index,
+        "split_date": split_date,
+        "train_ratio": round(train_count / n, 3),
+        "test_ratio": round(test_count / n, 3),
+        "min_test_days": MIN_TEST_DAYS,
+        "total_days": n,
+    }
 
 
 def _seasonal_naive_mae(actual: np.ndarray, history: np.ndarray) -> float:
@@ -121,32 +148,50 @@ def _make_final_model(name: str):
     raise ValueError(f"Unknown model: {name}")
 
 
-def _build_full_history_series(
+def _build_holdout_series(
     df: pd.DataFrame,
     model_names: list[str],
-    min_train_rows: int = 2,
+    split_index: int,
 ) -> dict[str, list[float | None]]:
-    """One-step-ahead in-sample predictions for chart overlays across the full timeline."""
+    """In-sample train predictions + frozen-model OOS test predictions."""
     n = len(df)
-    values = df["value"].to_numpy()
+    train_df = df.iloc[:split_index]
     out: dict[str, list[float | None]] = {name: [None] * n for name in model_names}
+    fitted: dict[str, Any] = {}
 
-    for i in range(1, n):
-        X_train, y_train = build_adaptive_train_matrix(df, i)
-        X_pred = build_adaptive_target_features(df, i)
-        if len(X_train) < min_train_rows or X_pred is None:
-            fallback = round(float(values[i - 1]), 2)
-            for name in model_names:
-                out[name][i] = fallback
+    for name in model_names:
+        try:
+            X_train, y_train = build_feature_matrix(train_df)
+            if len(X_train) < 2:
+                continue
+            model = _make_sklearn_model(name)
+            model.fit(X_train, y_train)
+            fitted[name] = model
+
+            train_feat_df = train_df.dropna(subset=feature_columns() + ["value"])
+            for local_idx, row_idx in enumerate(train_feat_df.index):
+                if row_idx < 1 or row_idx >= split_index:
+                    continue
+                row_df = train_df.iloc[: row_idx + 1]
+                X_pred = build_next_features(row_df)
+                if X_pred is None:
+                    X_pred = build_adaptive_target_features(train_df, row_idx)
+                if X_pred is not None:
+                    out[name][row_idx] = round(float(model.predict(X_pred)[0]), 2)
+        except Exception:
             continue
 
-        for name in model_names:
-            try:
-                sklearn_model = _make_sklearn_model(name)
-                sklearn_model.fit(X_train, y_train)
-                out[name][i] = round(float(sklearn_model.predict(X_pred)[0]), 2)
-            except Exception:
-                out[name][i] = round(float(values[i - 1]), 2)
+    for name, model in fitted.items():
+        for idx in range(split_index, n):
+            row_df = df.iloc[: idx + 1]
+            X_pred = build_next_features(row_df)
+            if X_pred is None:
+                X_pred = build_adaptive_target_features(df, idx)
+            if X_pred is not None:
+                try:
+                    out[name][idx] = round(float(model.predict(X_pred)[0]), 2)
+                except Exception:
+                    pass
 
     return out
 
@@ -168,7 +213,7 @@ def _build_response(
     best_mase: float,
     df: pd.DataFrame,
     n: int,
-    bt: int,
+    split_meta: dict[str, Any],
     acts_bt: list[float],
     dates_bt: list[str],
     preds_bt_dict: dict[str, list[float]],
@@ -176,7 +221,6 @@ def _build_response(
     model_names: list[str],
     naive_mae: float,
     values: np.ndarray,
-    backtest_days: int,
 ) -> dict[str, Any]:
     X_full, y_full = build_feature_matrix(df)
     final_model = _make_final_model(best_model_name)
@@ -221,7 +265,7 @@ def _build_response(
         mode, confidence = "observed_fallback", "baja"
         label = f"{best_model_name} no supera baseline estacional (MASE: {best_mase})"
 
-    full_history = _build_full_history_series(df, model_names)
+    full_history = _build_holdout_series(df, model_names, split_meta["split_index"])
 
     models_list = []
     for name in model_names:
@@ -272,8 +316,10 @@ def _build_response(
         models_list.append(entry)
 
     naive_series_aligned = [None] * n
-    for i in range(7, n):
-        naive_series_aligned[i] = float(values[i - 7])
+    split_index = split_meta["split_index"]
+    for i in range(split_index, n):
+        if i >= 7:
+            naive_series_aligned[i] = float(values[i - 7])
 
     models_list.append({
         "name": "seasonal_naive",
@@ -285,6 +331,7 @@ def _build_response(
     models_list.sort(key=lambda x: x["mase"])
 
     all_mase = {name: model_results[name]["mase"] for name in model_names}
+    test_count = split_meta["test_count"]
 
     return {
         "model_name": best_model_name,
@@ -293,11 +340,13 @@ def _build_response(
         "confidence": confidence,
         "mode": mode,
         "label": label,
+        "train_test_split": split_meta,
         "backtest": {
-            "window_days": backtest_days,
+            "window_days": test_count,
             "naive_mae": round(naive_mae, 2),
             "models": models_list,
             "selected": best_model_name,
+            "train_test_split": split_meta,
         },
         "forecast_horizons": {
             "next_1d": {
@@ -336,7 +385,8 @@ def _build_response(
         },
         "diagnostics": {
             "total_history_days": n,
-            "backtest_days": bt,
+            "backtest_days": test_count,
+            "train_test_split": split_meta,
             "best_model": best_model_name,
             "best_mase": best_mase,
             "compared_models": model_names,
@@ -365,20 +415,41 @@ def run_forecast(
         return {"error": f"Unknown model: {model}", "model_name": model}
 
     values = df["value"].to_numpy()
-    bt = min(backtest_days, n - 15)
-    bt = max(bt, 0)
+    dates = [str(d) for d in df["date"].tolist()]
+    split_meta = _compute_train_test_split(n, dates)
+    if not split_meta:
+        return {
+            "error": f"Need at least {MIN_TEST_DAYS + 1} daily points for train/test split, got {n}",
+            "model_name": model,
+        }
 
+    split_index = split_meta["split_index"]
     preds_bt_dict: dict[str, list[float]] = {name: [] for name in model_names}
     acts_bt: list[float] = []
     dates_bt: list[str] = []
 
-    for i in range(n - bt, n):
-        train_df = df.iloc[:i].copy()
-        X_train, y_train = build_feature_matrix(train_df)
-        if len(X_train) < 10:
+    train_df = df.iloc[:split_index]
+    X_train, y_train = build_feature_matrix(train_df)
+    if len(X_train) < 10:
+        return {"error": "Insufficient training rows after split", "model_name": model}
+
+    fitted_models: dict[str, Any] = {}
+    for name in model_names:
+        try:
+            sklearn_model = _make_sklearn_model(name)
+            sklearn_model.fit(X_train, y_train)
+            fitted_models[name] = sklearn_model
+        except Exception:
             continue
+
+    if not fitted_models:
+        return {"error": "No ML models could be trained on holdout split", "model_name": model}
+
+    for i in range(split_index, n):
         row_df = df.iloc[: i + 1]
         X_next = build_next_features(row_df)
+        if X_next is None:
+            X_next = build_adaptive_target_features(df, i)
         if X_next is None:
             continue
 
@@ -386,27 +457,30 @@ def run_forecast(
         dates_bt.append(str(df["date"].iloc[i]))
 
         for name in model_names:
+            if name not in fitted_models:
+                preds_bt_dict[name].append(float("nan"))
+                continue
             try:
-                sklearn_model = _make_sklearn_model(name)
-                sklearn_model.fit(X_train, y_train)
-                p = float(sklearn_model.predict(X_next)[0])
+                p = float(fitted_models[name].predict(X_next)[0])
                 preds_bt_dict[name].append(p)
             except Exception:
                 preds_bt_dict[name].append(float("nan"))
 
     if not acts_bt:
-        return {"error": "Backtest produced no predictions", "model_name": model}
+        return {"error": "Holdout backtest produced no predictions", "model_name": model}
 
     act_a = np.array(acts_bt)
-    naive_mae = _seasonal_naive_mae(act_a, values[n - bt - 7 : n])
+    naive_mae = _seasonal_naive_mae(act_a, values[max(0, split_index - 7) : n])
 
     model_results: dict[str, dict[str, Any]] = {}
     for name in model_names:
-        pred_a = np.array(preds_bt_dict[name])
-        valid = pred_a[~np.isnan(pred_a)]
-        if len(valid) == 0:
+        if name not in fitted_models:
             continue
-        m = _metrics(act_a, pred_a)
+        pred_a = np.array(preds_bt_dict[name])
+        valid_mask = ~np.isnan(pred_a)
+        if not valid_mask.any():
+            continue
+        m = _metrics(act_a[valid_mask], pred_a[valid_mask])
         mase = round(m["mae"] / naive_mae, 4) if naive_mae > 0 else 999.0
         model_results[name] = {
             "mae": m["mae"],
@@ -416,7 +490,7 @@ def run_forecast(
         }
 
     if not model_results:
-        return {"error": "No ML models produced valid forecasts", "model_name": model}
+        return {"error": "No ML models produced valid holdout forecasts", "model_name": model}
 
     best_model_name = min(model_results.keys(), key=lambda k: model_results[k]["mase"])
     best_mase = model_results[best_model_name]["mase"]
@@ -426,7 +500,7 @@ def run_forecast(
         best_mase,
         df,
         n,
-        bt,
+        split_meta,
         acts_bt,
         dates_bt,
         preds_bt_dict,
@@ -434,5 +508,4 @@ def run_forecast(
         list(model_results.keys()),
         naive_mae,
         values,
-        backtest_days,
     )

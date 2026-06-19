@@ -239,7 +239,7 @@ const KPI_EXPLANATIONS = {
         icon: '💓',
         definition: 'SHS: indicador compuesto de 0 a 100 que resume el estado general de toda la operación comercial. Combina eficiencia del call center, calidad de contacto, velocidad de respuesta y balance de inversión publicitaria.',
         interpretation: 'Un valor de 80+ indica un sistema saludable. Entre 60-79, el sistema está bajo presión y requiere atención en áreas específicas. Por debajo de 60 indica estado crítico con problemas que afectan directamente los ingresos.',
-        source: 'Calculado por el Motor BOS — combina métricas de operaciones, embudo y finanzas'
+        source: 'Calculado por el Motor PulseMkt — combina métricas de operaciones, embudo y finanzas'
     },
     'Leads totales': {
         icon: '👥',
@@ -267,9 +267,9 @@ const KPI_EXPLANATIONS = {
     },
     'MASE': {
         icon: '🎯',
-        definition: 'MASE (error medio absoluto escalado): mide el error promedio del pronóstico ajustado por una línea base estacional. Si el valor es menor a 1.0, el modelo predice mejor que repetir el dato de la semana pasada.',
-        interpretation: 'Referencia del área: < 0.75 excelente; 0.75–1.0 aceptable; ≥ 1.0 no supera la línea base (usar con cautela).',
-        source: 'Menor MASE entre todos los modelos en backtest_models, forecast y forecast_rf'
+        definition: 'MASE (error medio absoluto escalado): mide el error promedio del pronóstico en el holdout de prueba (30% final del histórico), ajustado por una línea base estacional. Si el valor es menor a 1.0, el modelo predice mejor que repetir el dato de la semana pasada.',
+        interpretation: 'Referencia del área: < 0.75 excelente; 0.75–1.0 aceptable; ≥ 1.0 no supera la línea base (usar con cautela). La línea punteada vertical en la gráfica marca el corte entre entrenamiento (70%) y prueba (30%).',
+        source: 'Menor MASE entre modelos evaluados solo en la ventana de holdout (30% test)'
     },
     'CPL implicito': {
         icon: '💰',
@@ -341,13 +341,13 @@ const KPI_EXPLANATIONS = {
         icon: '🎯',
         definition: 'El porcentaje total de leads o prospectos que logran reservar una consulta o avanzar exitosamente a la fase clave del embudo, medido contra el total de leads entrantes en el sistema.',
         interpretation: 'Una tasa superior al 5% es excelente para este sector. Por debajo de 3.5% sugiere una fuga importante de prospectos en el primer contacto o que la publicidad atrae leads no calificados.',
-        source: 'Cálculo: (Consultas reservadas ÷ Leads totales) × 100 — Motor BOS desde n8n'
+        source: 'Cálculo: (Consultas reservadas ÷ Leads totales) × 100 — Motor PulseMkt desde n8n'
     },
     'Ingresos en Riesgo Estimados': {
         icon: '💸',
         definition: 'Valoración financiera del costo de oportunidad que representan los leads perdidos (no interesados, sin respuesta, cortadas o números incorrectos) asumiendo un valor promedio de caso de $1,200 USD.',
         interpretation: 'Representa el impacto de la ineficiencia del call center. Reducir esta cifra optimizando las llamadas incrementa de manera directa los ingresos facturados sin aumentar el presupuesto.',
-        source: 'Cálculo: Leads perdidos × Valor de caso promedio ($1,200) — Motor BOS'
+        source: 'Cálculo: Leads perdidos × Valor de caso promedio ($1,200) — Motor PulseMkt'
     },
     'Pronóstico Mañana': {
         icon: '🔮',
@@ -431,7 +431,7 @@ const KPI_EXPLANATIONS = {
         icon: '📉',
         definition: 'Indica un cambio o quiebre estructural significativo en el volumen diario de entrada de leads, detectado mediante el algoritmo de Sumas Acumuladas (CUSUM).',
         interpretation: 'Un valor negativo (como -14%) confirma que la media de entrada diaria ha sufrido una reducción persistente en su línea base, indicando fatiga en canales de adquisición o pauta publicitaria. Un valor positivo refleja un incremento sostenido en la demanda.',
-        source: 'Algoritmo estadístico CUSUM (Suma Acumulada) integrado en el motor de predicción BOS'
+        source: 'Algoritmo estadístico CUSUM (Suma Acumulada) integrado en el motor de predicción PulseMkt'
     },
     'Pre-Cierre (Solo Efectivo)': {
         icon: '💵',
@@ -692,7 +692,7 @@ function cleanTechnicalTerms(str) {
 
     // Replace technical models and internal jargon with elegant corporate terminology
     text = text.replace(/ensemble_weighted/gi, 'Modelo Predictivo');
-    text = text.replace(/FactsBuilder/gi, 'Motor BOS');
+    text = text.replace(/FactsBuilder/gi, 'Motor PulseMkt');
     text = text.replace(/baseline/gi, 'Línea Base');
     text = text.replace(/CPL implicito/gi, 'Costo por Lead');
 
@@ -796,7 +796,7 @@ function switchTab(tabId) {
     };
     const sectionTitleEl = document.getElementById('topbar-section-title');
     if (sectionTitleEl) {
-        sectionTitleEl.textContent = titles[tabId] || 'BOS Panel';
+        sectionTitleEl.textContent = titles[tabId] || 'PulseMkt';
     }
 
     currentTab = tabId;
@@ -1013,7 +1013,7 @@ async function loadBOS() {
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18M3 12h18M3 12a9 9 0 019-9m9 9a9 9 0 00-9-9m-9 9a9 9 0 009 9m9-9a9 9 0 01-9 9" />
                 </svg>
                 <h2 style="margin-bottom: 12px; font-weight: 800; letter-spacing: -0.2px;">Esperando inicialización de datos</h2>
-                <p style="color: var(--text-muted); max-width: 480px; margin: 0 auto; line-height: 1.6; font-size: 14px;">El servidor se encuentra activo y listo para recibir información operativa. Por favor, ejecuta el flujo de trabajo en tu n8n local para inicializar el BOS con datos de precisión.</p>
+                <p style="color: var(--text-muted); max-width: 480px; margin: 0 auto; line-height: 1.6; font-size: 14px;">El servidor se encuentra activo y listo para recibir información operativa. Por favor, ejecuta el flujo de trabajo en tu n8n local para inicializar PulseMkt con datos de precisión.</p>
             `;
             return;
         }
@@ -1173,18 +1173,12 @@ function renderBOS(data) {
             let formattedName = bestModelName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
             k.value = Number(bestMase).toFixed(3);
             sub = formattedName;
-            k.color = 'white';
             label = 'Precisión del Modelo';
             sub = applyIndustryInlineTerms(k.sub || '') || 'vs línea base naive';
-            if (!k.color) k.color = 'white';
         }
         if (k.label === 'CPL implicito') {
             label = 'Costo Promedio por Lead';
-            sub = 'Global';
-            k.color = 'blue';
-        }
-        if (k.label === 'Cambio regimen' || k.label === 'Cambio de Régimen') {
-            k.color = 'red';
+            sub = applyIndustryInlineTerms(k.sub || '') || 'Global';
         }
         if (k.label === 'Gasto total') {
             label = 'Inversión Publicitaria';
@@ -1206,7 +1200,6 @@ function renderBOS(data) {
                 value: String(data.operations.latest.leads),
                 label: 'Leads Hoy',
                 sub: data.operations.latest.date || 'Último día registrado',
-                color: 'blue'
             });
         }
         if (data.operations.max_daily) {
@@ -1214,7 +1207,6 @@ function renderBOS(data) {
                 value: String(data.operations.max_daily),
                 label: 'Máximo Diario',
                 sub: 'Pico histórico del periodo',
-                color: 'white'
             });
         }
         if (data.operations.contact_distribution && data.operations.contact_distribution.overcontact_pct != null) {
@@ -1222,7 +1214,6 @@ function renderBOS(data) {
                 value: data.operations.contact_distribution.overcontact_pct + '%',
                 label: 'Sobre-Contacto',
                 sub: 'Llamadas > 7 intentos',
-                color: 'red'
             });
         }
         if (data.operations.call_metrics && data.operations.call_metrics.call_rank) {
@@ -1230,7 +1221,6 @@ function renderBOS(data) {
                 value: String(data.operations.call_metrics.call_rank.avg),
                 label: 'Intentos Promedio',
                 sub: 'Marcaciones por lead (umbral: 7)',
-                color: 'red'
             });
         }
     }
@@ -1243,6 +1233,7 @@ function renderBOS(data) {
         const escapedLabel = kpi.label.replace(/'/g, "\\'");
         const escapedValue = String(kpi.value).replace(/'/g, "\\'");
         const trendBadge = isHealth ? '' : getKpiTrendBadgeHtml(kpi, data);
+        const cardColor = isHealth ? null : resolveKpiCardColor(kpi, data);
         if (isHealth) {
             return `
                 <div class="card liquid-tank liquid-tone-${liquidTone} card-animate"
@@ -1264,7 +1255,7 @@ function renderBOS(data) {
             `;
         }
         return `
-            <div class="card stat-card-${resolveStatCardColor(kpi.color)} card-animate kpi-card" style="animation-delay: ${idx * 0.025}s;"
+            <div class="card stat-card-${cardColor} card-animate kpi-card" style="animation-delay: ${idx * 0.025}s;"
                 onclick="openKpiModal('${escapedLabel}', '${escapedValue}')">
                 <div class="card-stat-top">
                     <div class="card-stat-label">${kpi.label}</div>
@@ -1372,7 +1363,6 @@ function renderBOS(data) {
 // =====================================================================
 
 const FUNNEL_MARKOV_DISPLAY = [
-    { state: 'Abierto', conversion: 2.14, loss: 97.86, steps: 14.2, stddev: 4.5 },
     { state: 'Conectado - Interesado', conversion: 35.24, loss: 64.76, steps: 5.4, stddev: 1.8 },
     { state: 'Reactivación', conversion: 20.00, loss: 80.00, steps: 7.2, stddev: 2.1 },
     { state: 'En Llamada', conversion: 14.15, loss: 85.85, steps: 8.9, stddev: 3.2 },
@@ -1386,6 +1376,7 @@ const funnelUiState = {
     leaksExpanded: false,
     markovExpanded: false,
     markovAdvanced: false,
+    markovGroup: 'all',
 };
 
 function buildFunnelInsight(feeders, leaks) {
@@ -1490,8 +1481,30 @@ function renderFunnelLeaksList(data, leaks) {
     renderFunnelListToggle('funnel-leaks-toggle', leaks, funnelUiState.leaksExpanded, 'fugas');
 }
 
+function renderFunnelMarkovGroupFilters(statesData) {
+    const container = document.getElementById('funnel-markov-group-filters');
+    if (!container) return;
+
+    const options = getMarkovGroupOptions(statesData);
+    if (options.length <= 1) {
+        container.innerHTML = '';
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'flex';
+    container.innerHTML = options.map((opt) => `
+        <button
+            type="button"
+            class="filter-pill funnel-markov-group-pill${funnelUiState.markovGroup === opt.id ? ' active' : ''}"
+            onclick="toggleFunnelMarkovGroup('${opt.id}')"
+        >${opt.label} (${opt.count})</button>
+    `).join('');
+}
+
 function renderFunnelMarkovTable(statesData) {
     const showAdvanced = funnelUiState.markovAdvanced;
+    const filtered = filterMarkovByGroup(statesData, funnelUiState.markovGroup);
     const head = document.getElementById('funnel-probabilities-head');
     const probBody = document.getElementById('funnel-probabilities-body');
 
@@ -1512,10 +1525,17 @@ function renderFunnelMarkovTable(statesData) {
     if (!probBody) return;
 
     const colSpan = showAdvanced ? 5 : 2;
-    probBody.innerHTML = statesData.length > 0
-        ? statesData.map(s => `
+    const emptyMessage = statesData.length > 0
+        ? 'Sin estados en este grupo para el periodo actual'
+        : 'Sin estados con actividad de conversión en este periodo';
+
+    probBody.innerHTML = filtered.length > 0
+        ? filtered.map(s => `
             <tr>
-                <td style="font-weight: 600; color: white;">${s.state}</td>
+                <td style="font-weight: 600; color: white;">
+                    <div>${s.state}</div>
+                    ${s.rawState && s.rawState !== s.state ? `<div class="funnel-list-item-subtitle">Estado CRM: ${s.rawState}</div>` : ''}
+                </td>
                 <td style="text-align: right; color: var(--green); font-weight: bold;">${s.conversion.toFixed(2)}%</td>
                 ${showAdvanced ? `
                     <td style="text-align: right; color: var(--text-muted);">${s.loss.toFixed(2)}%</td>
@@ -1524,7 +1544,7 @@ function renderFunnelMarkovTable(statesData) {
                 ` : ''}
             </tr>
         `).join('')
-        : `<tr><td colspan="${colSpan}" style="text-align: center; color: var(--text-dim); padding: 24px;">Sin estados con actividad de conversión en este periodo</td></tr>`;
+        : `<tr><td colspan="${colSpan}" style="text-align: center; color: var(--text-dim); padding: 24px;">${emptyMessage}</td></tr>`;
 }
 
 function syncFunnelMarkovAccordion() {
@@ -1563,6 +1583,15 @@ function toggleFunnelMarkovAdvanced() {
     funnelUiState.markovAdvanced = !!(checkbox && checkbox.checked);
     if (dashboardData) {
         const statesData = resolveFunnelMarkovStates(dashboardData);
+        renderFunnelMarkovTable(statesData);
+    }
+}
+
+function toggleFunnelMarkovGroup(groupId) {
+    funnelUiState.markovGroup = groupId || 'all';
+    if (dashboardData) {
+        const statesData = resolveFunnelMarkovStates(dashboardData);
+        renderFunnelMarkovGroupFilters(statesData);
         renderFunnelMarkovTable(statesData);
     }
 }
@@ -1634,18 +1663,37 @@ function resolveFunnelLeaks(data) {
 function resolveFunnelMarkovStates(data) {
     const absorption = data?.funnel?.absorption_probabilities;
     if (Array.isArray(absorption) && absorption.length) {
-        return absorption
-            .map((ap) => ({
-                state: cleanTechnicalTerms(ap.state),
-                conversion: (ap.prob_conversion || 0) * 100,
-                loss: (ap.prob_loss || 0) * 100,
-                steps: ap.expected_steps || 0,
-                stddev: ap.step_stddev || 0,
-            }))
-            .filter((p) => p.conversion > 0)
-            .sort((a, b) => b.conversion - a.conversion);
+        return filterVisibleMarkovRows(
+            absorption
+                .map((ap) => {
+                    const raw = ap.state || '';
+                    const cleaned = cleanTechnicalTerms(raw);
+                    return {
+                        rawState: raw,
+                        state: formatMarkovStateLabel(raw, cleanTechnicalTerms),
+                        group: resolveMarkovGroup(raw, cleaned),
+                        conversion: (ap.prob_conversion || 0) * 100,
+                        loss: (ap.prob_loss || 0) * 100,
+                        steps: ap.expected_steps || 0,
+                        stddev: ap.step_stddev || 0,
+                    };
+                })
+                .filter((p) => p.conversion > 0)
+                .sort((a, b) => b.conversion - a.conversion)
+        );
     }
-    return FUNNEL_MARKOV_DISPLAY;
+    return filterVisibleMarkovRows(
+        FUNNEL_MARKOV_DISPLAY.map((row) => {
+            const raw = row.state || '';
+            const cleaned = cleanTechnicalTerms(raw);
+            return {
+                ...row,
+                rawState: raw,
+                state: formatMarkovStateLabel(raw, cleanTechnicalTerms),
+                group: resolveMarkovGroup(raw, cleaned),
+            };
+        })
+    );
 }
 
 function renderFunnelListItem(options) {
@@ -1748,6 +1796,12 @@ function renderFunnelDetails(data) {
     if (advancedToggle) {
         advancedToggle.checked = funnelUiState.markovAdvanced;
     }
+    const activeGroupExists = funnelUiState.markovGroup === 'all'
+        || statesData.some((row) => row.group === funnelUiState.markovGroup);
+    if (!activeGroupExists) {
+        funnelUiState.markovGroup = 'all';
+    }
+    renderFunnelMarkovGroupFilters(statesData);
     renderFunnelMarkovTable(statesData);
     syncFunnelMarkovAccordion();
 
@@ -1791,49 +1845,152 @@ function resolveStatCardColor(color) {
     return valid.includes(color) ? color : 'blue';
 }
 
-function getKpiTrendBadgeHtml(kpi, data) {
-    const backendLabel = resolveKpiBackendKey(kpi.label);
+/** Extrae un número con signo desde strings tipo "-39.25%", "$534", "12.34". */
+function parseSignedPercent(value) {
+    if (value == null) return null;
+    const n = parseFloat(String(value).replace(/[^0-9.\-+]/g, ''));
+    return Number.isFinite(n) ? n : null;
+}
 
-    if (backendLabel === 'MASE' || kpi.label.includes('MASE') || kpi.label.includes('Precisión')) {
+/**
+ * Reglas de semántica KPI: color de tarjeta vs chip de tendencia.
+ * El chip ↑/↓ solo aparece si hay un delta explícito distinto del valor principal
+ * (p. ej. WoW en el subtexto del CPL, o MASE vs línea base 1.0).
+ * Métricas cuyo valor ya ES el cambio (Cambio Semanal) o son niveles absolutos
+ * (50% sobre-contacto, 189% capacidad) no duplican ese número en un badge.
+ */
+function getKpiSemantics(kpi, data) {
+    const backendKey = resolveKpiBackendKey(kpi.label);
+    const label = kpi.label || '';
+
+    if (backendKey === 'MASE' || label.includes('Precisión')) {
         const mase = parseFloat(String(kpi.value).replace(/[^0-9.]/g, ''));
-        if (isFinite(mase)) {
-            if (mase < 1) {
-                const pct = ((1 - mase) * 100).toFixed(1);
-                return `<span class="kpi-trend-badge kpi-trend-up">↓ ${pct}% base</span>`;
-            }
-            const pct = ((mase - 1) * 100).toFixed(1);
-            return `<span class="kpi-trend-badge kpi-trend-down">↑ ${pct}% base</span>`;
-        }
+        return {
+            backendKey,
+            showTrend: Number.isFinite(mase),
+            isMase: true,
+            mase,
+            goodWhenUp: null,
+            trendPct: null,
+            cardColor: !Number.isFinite(mase) ? resolveStatCardColor(kpi.color)
+                : mase < 0.75 ? 'green' : mase < 1.0 ? 'gold' : 'red',
+        };
     }
 
-    let pct = null;
+    let trendPct = null;
     let goodWhenUp = true;
+    let showTrend = false;
+    let cardColor = resolveStatCardColor(kpi.color);
 
-    if (backendLabel === 'Cambio semanal' || kpi.label.includes('WoW')) {
-        pct = data?.operations?.wow_change_pct ?? parseFloat(String(kpi.value).replace(/[^0-9.\-+]/g, ''));
-        goodWhenUp = true;
-    } else if (backendLabel === 'Cambio regimen' || kpi.label.includes('Regime Shift') || kpi.label.includes('Régimen')) {
-        pct = parseFloat(String(kpi.value).replace(/[^0-9.\-+]/g, ''));
-        goodWhenUp = true;
-    } else if (kpi.label.includes('Sobre-Contacto') || kpi.label.includes('Intentos')) {
-        pct = parseFloat(String(kpi.value).replace(/[^0-9.\-+]/g, ''));
-        goodWhenUp = false;
-    } else if (String(kpi.value).includes('%')) {
-        pct = parseFloat(String(kpi.value).replace(/[^0-9.\-+]/g, ''));
-        goodWhenUp = true;
+    switch (backendKey) {
+        case 'Cambio semanal': {
+            const wow = data?.operations?.wow_change_pct ?? parseSignedPercent(kpi.value);
+            showTrend = false;
+            if (wow != null) cardColor = wow >= 0 ? 'green' : 'red';
+            break;
+        }
+        case 'Cambio regimen': {
+            const shift = parseSignedPercent(kpi.value);
+            showTrend = false;
+            if (shift != null) cardColor = shift >= 0 ? 'green' : 'red';
+            break;
+        }
+        case 'Utilizacion capacidad': {
+            const util = parseSignedPercent(kpi.value);
+            showTrend = false;
+            if (util != null) {
+                cardColor = util > 100 ? 'red' : util > 85 ? 'gold' : 'green';
+            }
+            break;
+        }
+        case 'Conversion global':
+            showTrend = false;
+            if (parseSignedPercent(kpi.value) != null) {
+                const cvr = parseSignedPercent(kpi.value);
+                cardColor = cvr >= 3.0 ? 'green' : cvr >= 2.0 ? 'blue' : 'red';
+            }
+            break;
+        case 'CPL implicito': {
+            const sub = kpi.sub || '';
+            const m = sub.match(/([+\-]?\d+(?:\.\d+)?)\s*%\s*WoW/i);
+            if (m) {
+                trendPct = parseFloat(m[1]);
+                goodWhenUp = false;
+                showTrend = true;
+                cardColor = trendPct > 20 ? 'red' : trendPct > 0 ? 'gold' : 'green';
+            } else {
+                showTrend = false;
+                cardColor = 'blue';
+            }
+            break;
+        }
+        case 'HHI': {
+            const hhi = parseSignedPercent(kpi.value);
+            showTrend = false;
+            if (hhi != null) {
+                cardColor = hhi > 0.25 ? 'red' : hhi > 0.15 ? 'gold' : 'green';
+            }
+            break;
+        }
+        case 'Revenue at Risk': {
+            showTrend = false;
+            const risk = parseSignedPercent(kpi.value);
+            if (risk != null && risk > 5000) cardColor = 'red';
+            else if (risk != null && risk > 0) cardColor = 'gold';
+            break;
+        }
+        default:
+            if (label.includes('Sobre-Contacto')) {
+                const rate = parseSignedPercent(kpi.value);
+                showTrend = false;
+                if (rate != null) {
+                    cardColor = rate > 30 ? 'red' : rate > 15 ? 'gold' : 'green';
+                }
+            } else if (label.includes('Intentos')) {
+                const avg = parseSignedPercent(kpi.value);
+                showTrend = false;
+                if (avg != null) {
+                    cardColor = avg > 7 ? 'red' : avg > 5 ? 'gold' : 'blue';
+                }
+            } else {
+                showTrend = false;
+            }
+            break;
     }
 
-    if (pct == null || !isFinite(pct)) return '';
+    return { backendKey, showTrend, isMase: false, mase: null, goodWhenUp, trendPct, cardColor };
+}
 
+function resolveKpiCardColor(kpi, data) {
+    return getKpiSemantics(kpi, data).cardColor;
+}
+
+function getKpiTrendBadgeHtml(kpi, data) {
+    const sem = getKpiSemantics(kpi, data);
+
+    if (sem.isMase && sem.mase != null) {
+        const mase = sem.mase;
+        if (mase < 1) {
+            const pct = ((1 - mase) * 100).toFixed(1);
+            return `<span class="kpi-trend-badge kpi-trend-good">↓ ${pct}% base</span>`;
+        }
+        const pct = ((mase - 1) * 100).toFixed(1);
+        return `<span class="kpi-trend-badge kpi-trend-bad">↑ ${pct}% base</span>`;
+    }
+
+    if (!sem.showTrend || sem.trendPct == null || !Number.isFinite(sem.trendPct)) return '';
+
+    const pct = sem.trendPct;
     const absPct = Math.abs(pct).toFixed(1);
+
     if (Math.abs(pct) < 0.05) {
         return `<span class="kpi-trend-badge kpi-trend-neutral">→ ${absPct}%</span>`;
     }
 
     const isUp = pct > 0;
-    const isGood = goodWhenUp ? isUp : !isUp;
+    const isGood = sem.goodWhenUp ? isUp : !isUp;
     const arrow = isUp ? '↑' : '↓';
-    const cls = isGood ? 'kpi-trend-up' : 'kpi-trend-down';
+    const cls = isGood ? 'kpi-trend-good' : 'kpi-trend-bad';
     return `<span class="kpi-trend-badge ${cls}">${arrow} ${absPct}%</span>`;
 }
 
@@ -2782,6 +2939,80 @@ const plotAreaBackgroundPlugin = {
 //  CHART.JS PLOTTING INITIALIZERS
 // =====================================================================
 
+function computeTrainTestSplitClient(n, timeSeries = null) {
+    const MIN_TEST_DAYS = 14;
+    const TRAIN_RATIO = 0.7;
+    if (!n || n < MIN_TEST_DAYS + 1) return null;
+    let trainCount = Math.floor(n * TRAIN_RATIO);
+    let testCount = n - trainCount;
+    if (testCount < MIN_TEST_DAYS) {
+        trainCount = n - MIN_TEST_DAYS;
+        testCount = MIN_TEST_DAYS;
+    }
+    if (trainCount < 1) return null;
+    const splitIndex = trainCount;
+    let splitDate = null;
+    if (Array.isArray(timeSeries) && timeSeries[splitIndex]?.date) {
+        splitDate = String(timeSeries[splitIndex].date).split('T')[0];
+    }
+    return {
+        train_count: trainCount,
+        test_count: testCount,
+        split_index: splitIndex,
+        split_date: splitDate,
+    };
+}
+
+function resolveTrainTestSplit(forecast) {
+    return forecast?.train_test_split
+        || dashboardData?.forecast_rf?.diagnostics?.train_test_split
+        || computeTrainTestSplitClient(forecast?.time_series?.length, forecast?.time_series);
+}
+
+function updateForecastSplitSubtitle(forecast) {
+    const el = document.getElementById('forecast-chart-split-sub');
+    if (!el || !forecast) return;
+    const split = resolveTrainTestSplit(forecast);
+    if (!split) {
+        el.textContent = '';
+        return;
+    }
+    let cutLabel = split.split_date;
+    if (cutLabel) {
+        const dt = new Date(cutLabel);
+        if (!isNaN(dt.getTime())) {
+            cutLabel = dt.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+        }
+    }
+    el.textContent = `Entrenamiento: ${split.train_count} días · Prueba: ${split.test_count} días (holdout 30%)${cutLabel ? ` · Corte: ${cutLabel}` : ''}`;
+}
+
+function buildTrainTestSplitAnnotation(split, isLight, isForecastChart) {
+    if (!isForecastChart || !split || split.split_index == null) return {};
+    const lineColor = isLight ? 'rgba(100, 116, 139, 0.65)' : 'rgba(148, 163, 184, 0.55)';
+    const labelColor = isLight ? '#475569' : '#94a3b8';
+    const xPos = split.split_index - 0.5;
+    return {
+        trainTestSplit: {
+            type: 'line',
+            xMin: xPos,
+            xMax: xPos,
+            borderColor: lineColor,
+            borderWidth: 2,
+            borderDash: [6, 4],
+            label: {
+                display: true,
+                content: 'Entrenamiento | Prueba',
+                position: 'start',
+                backgroundColor: 'transparent',
+                color: labelColor,
+                font: { size: 10, family: 'Inter', weight: '600' },
+                padding: 4,
+            },
+        },
+    };
+}
+
 function computeChartYBounds(datasets) {
     const nums = [];
     (datasets || []).forEach((ds) => {
@@ -2887,6 +3118,7 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
     }
 
     const chartDataLen = chartLabels.length;
+    const trainTestSplit = resolveTrainTestSplit(forecast);
     overlays.forEach(ov => {
         if (!ov || !seriesHasChartPoints(ov.series)) return;
         datasets.push({
@@ -2900,13 +3132,15 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
             pointRadius: 0,
             pointHoverRadius: heavyChart ? 0 : 4,
             fill: false,
-            spanGaps: true,
+            spanGaps: false,
             clip: false,
             _modelName: ov.modelName || null,
         });
     });
 
     const yBounds = computeChartYBounds(datasets);
+    const splitAnnotations = buildTrainTestSplitAnnotation(trainTestSplit, isLight, isForecastChart);
+    updateForecastSplitSubtitle(forecast);
 
     charts[chartKey] = new Chart(ctx, {
         type: chartType,
@@ -2951,6 +3185,9 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
                 plotAreaBackground: isForecastChart ? {
                     fillColor: isLight ? 'rgba(2, 132, 199, 0.05)' : 'rgba(56, 189, 248, 0.06)',
                 } : undefined,
+                annotation: {
+                    annotations: splitAnnotations,
+                },
                 legend: {
                     display: true,
                     onClick: (evt, legendItem, legend) => {
@@ -3803,5 +4040,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadBOS();
     initSpotlight();
-    console.log('⚡ Solis BOS Dashboard logic active');
+    console.log('⚡ PulseMkt Dashboard logic active');
 });

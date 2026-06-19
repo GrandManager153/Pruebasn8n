@@ -17,8 +17,8 @@ export default function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-brand">
         <div className="brand-text">
-          <h1>Manuel Solis</h1>
-          <p>Law Offices</p>
+          <h1>PulseMkt</h1>
+          <p>Inteligencia de Marketing</p>
         </div>
       </div>
 
@@ -50,7 +50,7 @@ export default function Sidebar() {
       </div>
 
       <div className="sidebar-footer">
-        <p>BOS System v7.2 — React</p>
+        <p>PulseMkt v7.2 — React</p>
         <a
           href="#"
           style={{
