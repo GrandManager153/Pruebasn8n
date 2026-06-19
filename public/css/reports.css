@@ -1020,13 +1020,7 @@ body.embedded .info-section .info-body {
         display: none !important;
     }
 
-    /* Force page break before selected section headings dynamically */
-    .print-page-break,
-    #alertas.print-page-break,
-    #acciones.print-page-break {
-        page-break-before: always !important;
-        break-before: page !important;
-    }
+
 
     /* Clean academic B&W elements overrides */
     .content-block {

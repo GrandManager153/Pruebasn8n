@@ -566,36 +566,6 @@
         });
     }
 
-    function applyPageBreaks() {
-        const contentBlock = document.querySelector('.content-block');
-        if (!contentBlock) return;
-        
-        // Find all heading elements inside content-block
-        const inlineHeadings = Array.from(contentBlock.children).filter(child => {
-            return child.tagName === 'H2' || 
-                   child.tagName === 'H3' || 
-                   (child.tagName === 'P' && child.querySelector('strong')) ||
-                   (child.tagName === 'P' && (child.style.fontWeight === '800' || child.style.fontWeight === 'bold' || 
-                    child.getAttribute('style')?.includes('font-weight:800') || child.getAttribute('style')?.includes('font-weight: 800')));
-        });
-        
-        // Combine them with the main sections (#alertas and #acciones) in order
-        const allSections = [...inlineHeadings];
-        
-        const alertasSec = document.getElementById('alertas');
-        if (alertasSec) allSections.push(alertasSec);
-        
-        const accionesSec = document.getElementById('acciones');
-        if (accionesSec) allSections.push(accionesSec);
-        
-        // For every 2nd heading starting from the 3rd, add the print break class
-        allSections.forEach((sec, index) => {
-            if (index > 0 && index % 2 === 0) {
-                sec.classList.add('print-page-break');
-            }
-        });
-    }
-
     // ── Inicialización ──
     function initReportAnimations() {
         initTheme();
@@ -615,7 +585,6 @@
         setupEmbeddedPreview();
         
         injectKpiHelpTooltips();
-        applyPageBreaks();
         injectChartContainers();
         injectAlertsChart();
 
