@@ -16,7 +16,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 
     <!-- Custom Extracted Stylesheets -->
-    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/styles.css?v=13">
 </head>
 
 <body>
@@ -54,6 +54,7 @@
         <div class="kpi-modal" onclick="event.stopPropagation()">
             <button class="kpi-modal-close" onclick="closeKpiModal()">&times;</button>
             <div class="kpi-modal-title" id="kpi-modal-title"></div>
+            <div class="kpi-modal-subtitle" id="kpi-modal-subtitle" style="display: none;"></div>
             <div class="kpi-modal-value" id="kpi-modal-value"></div>
             <div class="kpi-modal-section">
                 <div class="kpi-modal-section-label">¿Qué significa?</div>
@@ -179,64 +180,66 @@
 
                 <!-- 2. TAB: EMBUDO Y CONVERSIONES (FUNNEL) -->
                 <section class="tab-content" id="tab-funnel">
-                    <!-- Conversion Rate Banner -->
                     <div class="card v-mb-4 card-animate"
                         style="background: linear-gradient(135deg, var(--bg-card), #0a2015) !important; border-left: 4px solid var(--green) !important; animation-delay: 0.02s;">
                         <div class="v-flex-between v-mb-3">
-                            <h2 style="font-size: 18px; font-weight: 800; color: white; margin: 0;">Funnel Absorption (Desempeño y Absorción de Leads)</h2>
+                            <h2 style="font-size: 18px; font-weight: 800; color: white; margin: 0;">¿Cómo van las conversiones?</h2>
                             <span class="custom-badge custom-badge-success" id="funnel-target-label">Objetivo</span>
                         </div>
-                        <p class="text-muted v-mb-4" style="font-size: 13.5px;">Análisis probabilístico de la conversión
-                            general de contactos. Mide la tasa de leads que transitan exitosamente a través del funnel
-                            hasta la consolidación.</p>
+                        <p class="text-muted v-mb-4" style="font-size: 13.5px;" id="funnel-narrative-subtitle">
+                            De cada 100 leads, <strong>0</strong> llegan a consulta. Hay <strong>$0</strong> en riesgo por fugas detectadas.
+                        </p>
                         <div class="v-grid-1-1">
                             <div class="card card-animate"
                                 style="background: rgba(255,255,255,0.01) !important; border-color: rgba(255,255,255,0.05) !important; animation-delay: 0.04s;"
-                                onclick="openKpiModal('Global CVR (Tasa de Conversión Global)', document.getElementById('funnel-conv-pct').textContent)">
-                                <div class="card-stat-label" style="font-size: 9px;">Global CVR (Tasa de Conversión Global)</div>
+                                onclick="openKpiModal('Tasa de conversión', document.getElementById('funnel-conv-pct').textContent)">
+                                <div class="card-stat-label" style="font-size: 9px;">Tasa de conversión</div>
                                 <div class="card-stat-value" id="funnel-conv-pct"
                                     style="font-size: 26px; color: var(--green);">0%</div>
                             </div>
                             <div class="card card-animate"
                                 style="background: rgba(255,255,255,0.01) !important; border-color: rgba(255,255,255,0.05) !important; animation-delay: 0.06s;"
-                                onclick="openKpiModal('Revenue at Risk (Ingreso en Riesgo por Fugas)', document.getElementById('funnel-risk-revenue').textContent)">
-                                <div class="card-stat-label" style="font-size: 9px;">Revenue at Risk (Ingreso en Riesgo por Fugas)</div>
+                                onclick="openKpiModal('Ingreso en riesgo', document.getElementById('funnel-risk-revenue').textContent)">
+                                <div class="card-stat-label" style="font-size: 9px;">Ingreso en riesgo</div>
                                 <div class="card-stat-value" id="funnel-risk-revenue"
                                     style="font-size: 26px; color: var(--red);">$0</div>
                             </div>
                         </div>
                     </div>
 
+                    <div id="funnel-insight-banner" class="funnel-insight-banner" style="display: none;"></div>
+
                     <div class="v-grid-1-1">
-                        <!-- Top Feeders -->
                         <div class="card card-animate" style="animation-delay: 0.08s;">
-                            <div class="chart-title"><span class="dot" style="background: var(--green)"></span> Feeders (Rutas de Conversión)</div>
-                            <div class="v-flex-col v-mt-2" id="funnel-feeders-list"></div>
+                            <div class="chart-title"><span class="dot" style="background: var(--green)"></span> De dónde vienen las conversiones</div>
+                            <div class="v-flex-col v-mt-2 funnel-scroll-list funnel-scroll-list--preview" id="funnel-feeders-list"></div>
+                            <button type="button" class="funnel-expand-btn" id="funnel-feeders-toggle" style="display: none;" onclick="toggleFunnelList('feeders')"></button>
                         </div>
-                        <!-- Key Leaks -->
                         <div class="card card-animate" style="animation-delay: 0.10s;">
-                            <div class="chart-title"><span class="dot" style="background: var(--red)"></span> Leaks (Puntos de Pérdida de Leads)</div>
-                            <div class="v-flex-col v-mt-2" id="funnel-leaks-list"></div>
+                            <div class="chart-title"><span class="dot" style="background: var(--red)"></span> Dónde se pierden los leads</div>
+                            <div class="v-flex-col v-mt-2 funnel-scroll-list funnel-scroll-list--preview" id="funnel-leaks-list"></div>
+                            <button type="button" class="funnel-expand-btn" id="funnel-leaks-toggle" style="display: none;" onclick="toggleFunnelList('leaks')"></button>
                         </div>
                     </div>
 
-                    <div class="section-header">
-                        <div class="section-title"><span class="bar"></span> Markov Probabilidades (Probabilidades de Conversión)</div>
-                    </div>
-                    <div class="card card-animate" style="animation-delay: 0.12s;">
-                        <div class="custom-table-container">
-                            <table class="custom-table">
-                                <thead>
-                                    <tr>
-                                        <th>Estado Inicial del Lead</th>
-                                        <th style="text-align: right;">Probabilidad de Conversión</th>
-                                        <th style="text-align: right;">Probabilidad de Cierre Defectuoso</th>
-                                        <th style="text-align: right;">Pasos Esperados</th>
-                                        <th style="text-align: right;">Desviación Estándar de Pasos</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="funnel-probabilities-body"></tbody>
-                            </table>
+                    <div class="funnel-accordion v-mt-4">
+                        <button type="button" class="funnel-accordion-header" id="funnel-markov-toggle" onclick="toggleFunnelMarkov()" aria-expanded="false">
+                            <span class="funnel-accordion-chevron" id="funnel-markov-chevron">▶</span>
+                            <span>Análisis avanzado (probabilidad por estado)</span>
+                        </button>
+                        <div class="funnel-accordion-body" id="funnel-markov-body">
+                            <div class="card card-animate" style="animation-delay: 0.12s; margin-top: 0;">
+                                <label class="funnel-markov-advanced-toggle">
+                                    <input type="checkbox" id="funnel-markov-advanced-toggle" onchange="toggleFunnelMarkovAdvanced()">
+                                    <span>Mostrar métricas avanzadas</span>
+                                </label>
+                                <div class="custom-table-container">
+                                    <table class="custom-table">
+                                        <thead id="funnel-probabilities-head"></thead>
+                                        <tbody id="funnel-probabilities-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -281,26 +284,6 @@
                         </div>
                     </div>
 
-                    <div class="v-mb-4">
-                        <div class="card card-animate" style="animation-delay: 0.12s;">
-                            <div class="chart-title"><span class="dot" style="background: var(--gold)"></span> Model Leaderboard (Clasificación de Modelos Predictivos)</div>
-                            <div class="custom-table-container v-mt-3">
-                                <table class="custom-table">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 48px;">#</th>
-                                            <th>Modelo de Proyección</th>
-                                            <th style="text-align: right;">MASE (error medio absoluto escalado)</th>
-                                            <th style="text-align: right;">MAE (error absoluto medio)</th>
-                                            <th style="text-align: right;">RMSE (error cuadrático medio)</th>
-                                            <th>Estado de Ajuste</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="forecast-models-body"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
                 </section>
 
                 <!-- 4. TAB: INVERSIÓN Y CAMPAÑAS -->
@@ -549,7 +532,8 @@
     </div>
 
     <!-- Application Script Logic Linked Externally -->
-    <script src="/js/app.js?v=6" defer></script>
+    <script src="/js/markov-stddev-enrich.js?v=1"></script>
+    <script src="/js/app.js?v=21" defer></script>
 </body>
 
 </html>

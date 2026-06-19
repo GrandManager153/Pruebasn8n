@@ -12,13 +12,13 @@ function resolveBacktestDays(seriesLength) {
   return Math.max(14, seriesLength - 15);
 }
 
-function postPredict(series) {
+function postPredict(series, model = 'compare') {
   return new Promise((resolve, reject) => {
     const url = new URL(`${ML_API_BASE.replace(/\/$/, '')}/predict`);
     const body = JSON.stringify({
       series,
       backtest_days: resolveBacktestDays(series.length),
-      model: 'compare',
+      model,
     });
     const req = http.request(
       url,
@@ -50,6 +50,83 @@ function postPredict(series) {
     req.write(body);
     req.end();
   });
+}
+
+const SKLEARN_MODEL_NAMES = [
+  'random_forest',
+  'gradient_boosting',
+  'ridge',
+  'mlp_neural_network',
+  'lightgbm',
+];
+
+function modelNeedsForecast1d(entry) {
+  if (!entry || !entry.name) return false;
+  if (String(entry.name).toLowerCase() === 'seasonal_naive') return false;
+  return entry.forecast_1d == null || !Number.isFinite(Number(entry.forecast_1d));
+}
+
+function needsMlModelForecastEnrichment(payload) {
+  const rf = payload && payload.forecast_rf;
+  if (!rf || rf.available === false || !Array.isArray(rf.backtest_models)) return false;
+  return rf.backtest_models.some(modelNeedsForecast1d);
+}
+
+async function enrichMlModelForecasts(payload) {
+  const rf = payload && payload.forecast_rf;
+  if (!rf || rf.available === false) return payload;
+  const baseTs = resolveTimeSeries(payload);
+  if (!baseTs.length) return payload;
+  const series = baseTs.map((d) => ({ date: d.date, value: d.value }));
+
+  const mergeModelForecasts = (models) => {
+    (models || []).forEach((src) => {
+      const entry = (rf.backtest_models || []).find(
+        (m) => String(m.name).toLowerCase() === String(src.name).toLowerCase()
+      );
+      if (!entry) return;
+      if (src.forecast_1d != null && Number.isFinite(Number(src.forecast_1d))) {
+        entry.forecast_1d = src.forecast_1d;
+      }
+      if (src.horizons) entry.horizons = src.horizons;
+    });
+  };
+
+  const syncPrimaryForecast = () => {
+    const primaryName = String(rf.model_name || 'random_forest').toLowerCase();
+    const primary = (rf.backtest_models || []).find(
+      (m) => String(m.name).toLowerCase() === primaryName
+    );
+    if (!primary) return;
+    if (modelNeedsForecast1d(primary)) {
+      const v = rf.recommended_value ?? rf.horizons?.next_1d?.forecast;
+      if (v != null && Number.isFinite(Number(v))) {
+        primary.forecast_1d = Math.round(Number(v));
+        primary.horizons = primary.horizons || rf.horizons || null;
+      }
+    }
+  };
+
+  try {
+    const pred = await postPredict(series, 'compare');
+    mergeModelForecasts(pred.backtest && pred.backtest.models);
+    syncPrimaryForecast();
+
+    for (const entry of rf.backtest_models || []) {
+      if (!modelNeedsForecast1d(entry)) continue;
+      try {
+        const single = await postPredict(series, entry.name);
+        if (single.recommended_value != null) entry.forecast_1d = single.recommended_value;
+        if (single.forecast_horizons) entry.horizons = single.forecast_horizons;
+      } catch (err) {
+        console.log(`  ⚠️ ML forecast_1d para ${entry.name} falló: ${err.message}`);
+      }
+    }
+  } catch (err) {
+    console.log(`  ⚠️ ML compare forecast_1d falló: ${err.message}`);
+    syncPrimaryForecast();
+  }
+  return payload;
 }
 
 function modelSeriesCoverage(series) {
@@ -173,13 +250,37 @@ async function enrichPayloadComplete(payload) {
   if (!payload) return payload;
   payload = enrichLinearForecastModels(payload);
   payload = await enrichPayloadWithMlApi(payload);
+  if (needsMlModelForecastEnrichment(payload)) {
+    payload = await enrichMlModelForecasts(payload);
+  }
+  payload = attachForecastFieldsToPayload(payload);
   return syncRfAlignedSeries(payload);
+}
+
+function attachForecastFieldsToPayload(payload) {
+  if (!payload) return payload;
+  const rf = payload.forecast_rf;
+  if (!rf || !Array.isArray(rf.backtest_models)) return payload;
+  (payload.forecast?.backtest_models || []).forEach((stat) => {
+    const entry = rf.backtest_models.find(
+      (m) => String(m.name).toLowerCase() === String(stat.name).toLowerCase()
+    );
+    if (!entry) return;
+    if ((entry.forecast_1d == null || !Number.isFinite(Number(entry.forecast_1d))) && stat.forecast_1d != null) {
+      entry.forecast_1d = stat.forecast_1d;
+    }
+    if (!entry.horizons && stat.horizons) entry.horizons = stat.horizons;
+  });
+  return payload;
 }
 
 module.exports = {
   enrichPayloadWithMlApi,
   enrichPayloadComplete,
   needsMlEnrichment,
+  needsMlModelForecastEnrichment,
+  enrichMlModelForecasts,
+  attachForecastFieldsToPayload,
   resolveBacktestDays,
   buildRfAlignedSeries,
   rfAlignedCoverage,

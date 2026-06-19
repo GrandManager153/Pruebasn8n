@@ -678,6 +678,15 @@ body.light-mode .custom-table tr:hover td {
   color: var(--chartreuse); text-transform: uppercase;
   letter-spacing: 1px; margin-bottom: 8px;
 }
+.kpi-modal-subtitle {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin: -4px 0 10px;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: 0;
+}
 .kpi-modal-value {
   font-size: 36px; font-weight: 900;
   letter-spacing: -1px; margin-bottom: 24px;
@@ -905,6 +914,209 @@ body.light-mode .custom-table tr:hover td {
 .action-text {
   font-size: 12px; color: var(--text-muted);
   line-height: 1.5;
+}
+
+/* ── Funnel UX (lists, insight, accordion) ── */
+.funnel-scroll-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 520px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.funnel-scroll-list--preview {
+  max-height: none;
+  overflow: visible;
+}
+
+.funnel-list-item {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.funnel-list-item:last-child {
+  border-bottom: none;
+}
+
+.funnel-list-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.funnel-list-item-title-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.funnel-list-item-subtitle {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-dim);
+  line-height: 1.35;
+}
+
+.funnel-list-item-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  line-height: 1.35;
+  flex: 1;
+  min-width: 0;
+}
+
+.funnel-list-item-pct {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.funnel-list-item-bar {
+  margin-top: 8px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.funnel-list-item-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 1s ease;
+}
+
+.funnel-list-item-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.funnel-list-empty {
+  text-align: center;
+  color: var(--text-dim);
+  padding: 40px 0;
+  font-size: 13px;
+}
+
+.funnel-insight-banner {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  padding: 12px 16px;
+  margin-bottom: var(--gap-bento, 16px);
+  border-left: 3px solid rgba(16, 185, 129, 0.45);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 0 8px 8px 0;
+}
+
+.funnel-insight-banner strong {
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.funnel-expand-btn {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  border-radius: 6px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.funnel-expand-btn:hover {
+  background: rgba(56, 189, 248, 0.08);
+  color: var(--text-main);
+}
+
+.funnel-accordion {
+  margin-top: var(--gap-bento, 16px);
+}
+
+.funnel-accordion-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 12px);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.funnel-accordion-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.funnel-accordion-chevron {
+  font-size: 11px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.funnel-accordion-body {
+  display: none;
+  margin-top: 12px;
+}
+
+.funnel-accordion-body--open {
+  display: block;
+}
+
+.funnel-markov-advanced-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.funnel-markov-advanced-toggle input {
+  accent-color: var(--green);
+}
+
+body.light-mode .funnel-insight-banner {
+  background: rgba(15, 23, 42, 0.03);
+  border-left-color: rgba(16, 185, 129, 0.55);
+}
+
+body.light-mode .funnel-insight-banner strong {
+  color: #0f172a;
+}
+
+body.light-mode .funnel-list-item-title {
+  color: #0f172a;
+}
+
+body.light-mode .funnel-accordion-header {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(15, 23, 42, 0.08);
+  color: #0f172a;
 }
 
 /* ── Circular Reveal ── */

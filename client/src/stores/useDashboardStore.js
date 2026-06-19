@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { enrichFunnelMarkovStddev } from '../utils/enrichFunnelMarkovStddev';
 
 const useDashboardStore = create((set, get) => ({
   // ── Data ──
@@ -59,6 +60,7 @@ const useDashboardStore = create((set, get) => ({
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
+          enrichFunnelMarkovStddev(json.data);
           set({
             data: json.data,
             loading: false,

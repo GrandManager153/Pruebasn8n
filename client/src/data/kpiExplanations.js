@@ -229,11 +229,13 @@ export const KPI_ALIASES = {
   'Global CVR (tasa de conversión)': 'Conversion global',
   'Tasa Global de Conversión': 'Conversion global',
   'GLOBAL CVR (TASA DE CONVERSIÓN GLOBAL)': 'Conversion global',
+  'Tasa de conversión': 'Conversion global',
   
   'Revenue at Risk (Ingreso en Riesgo por Fugas)': 'Revenue at Risk',
   'Revenue at Risk (ingreso en riesgo)': 'Revenue at Risk',
   'Revenue at Risk': 'Revenue at Risk',
   'REVENUE AT RISK (INGRESO EN RIESGO POR FUGAS)': 'Revenue at Risk',
+  'Ingreso en riesgo': 'Revenue at Risk',
   
   'Regime Shift (Cambio de Régimen)': 'Cambio de Régimen',
   'Cambio de Régimen': 'Cambio de Régimen',

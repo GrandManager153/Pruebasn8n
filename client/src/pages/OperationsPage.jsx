@@ -92,6 +92,27 @@ export default function OperationsPage() {
   const uniqueContacts = callMetrics.unique_contacts || 0;
   const attemptsAvg = callMetrics.call_rank ? callMetrics.call_rank.avg : 0;
   const intervalAvg = callMetrics.minutes_since_prev ? callMetrics.minutes_since_prev.avg : 0;
+  const intervalSlaMin = 24 * 60;
+  const intervalPair = (() => {
+    const actual = Number(intervalAvg);
+    const threshold = intervalSlaMin;
+    if (!Number.isFinite(actual) || actual < 0) {
+      return { actual: '—', threshold: '—' };
+    }
+    const scale = Math.max(actual, threshold);
+    if (scale >= 2880) {
+      const fmt = (m) => {
+        const days = (m / 1440).toFixed(1);
+        return `${days} ${Number(days) === 1 ? 'día' : 'días'}`;
+      };
+      return { actual: fmt(actual), threshold: fmt(threshold) };
+    }
+    if (scale >= 120) {
+      const fmt = (m) => `${(m / 60).toFixed(1)} h`;
+      return { actual: fmt(actual), threshold: fmt(threshold) };
+    }
+    return { actual: `${Math.round(actual)} min`, threshold: `${Math.round(threshold)} min` };
+  })();
   const attemptsMax = callMetrics.call_rank ? callMetrics.call_rank.max : 368;
 
   return (
@@ -130,14 +151,13 @@ export default function OperationsPage() {
           }}
         />
         <KpiCard
-          label="Avg Callback Interval (Minutos entre Intentos)"
-          value={Math.round(intervalAvg)}
-          suffix=" min"
-          sub={`~${Math.round(intervalAvg / 60)}h entre marcaciones`}
+          label="Avg Callback Interval (Demora entre Re-intentos)"
+          value={intervalPair.actual}
+          sub={`objetivo: ≤${intervalPair.threshold}`}
           color={intervalAvg > 1440 ? 'red' : 'blue'}
           delay={0.12}
           onClick={() => {
-            setModal({ open: true, label: 'Avg Callback Interval (Minutos entre Intentos)', value: `${Math.round(intervalAvg)} min` });
+            setModal({ open: true, label: 'Avg Callback Interval (Demora entre Re-intentos)', value: `${intervalPair.actual} (objetivo: ≤${intervalPair.threshold})` });
           }}
         />
       </div>

@@ -3,14 +3,21 @@ import { resolveKpiExplanation } from '../../data/kpiExplanations';
 
 /**
  * KPI Explanation Modal.
- * Props:
- *  - isOpen: boolean
- *  - label: KPI label
- *  - value: KPI value
- *  - onClose: callback
  */
-export default function KpiModal({ isOpen, label, value, onClose }) {
+export default function KpiModal({
+  isOpen,
+  label,
+  subtitle,
+  value,
+  definition,
+  interpretation,
+  source,
+  onClose,
+}) {
   const explain = resolveKpiExplanation(label);
+  const defText = definition || explain?.definition;
+  const interpText = interpretation || explain?.interpretation;
+  const sourceText = source || explain?.source;
 
   return (
     <AnimatePresence>
@@ -35,29 +42,34 @@ export default function KpiModal({ isOpen, label, value, onClose }) {
               &times;
             </button>
             <div className="kpi-modal-title">{label}</div>
+            {subtitle ? (
+              <div className="kpi-modal-subtitle">{subtitle}</div>
+            ) : null}
             <div className="kpi-modal-value">{value}</div>
 
-            {explain ? (
+            {defText ? (
               <>
                 <div className="kpi-modal-section">
                   <div className="kpi-modal-section-label">¿Qué significa?</div>
-                  <div className="kpi-modal-section-text">
-                    {explain.definition}
-                  </div>
+                  <div className="kpi-modal-section-text">{defText}</div>
                 </div>
-                <div className="kpi-modal-section">
-                  <div className="kpi-modal-section-label">
-                    ¿Cómo interpretar el valor actual?
+                {interpText ? (
+                  <div className="kpi-modal-section">
+                    <div className="kpi-modal-section-label">
+                      ¿Cómo interpretar el valor actual?
+                    </div>
+                    <div className="kpi-modal-section-text">{interpText}</div>
                   </div>
-                  <div className="kpi-modal-section-text">
-                    {explain.interpretation}
-                  </div>
-                </div>
-                <hr className="kpi-modal-divider" />
-                <div className="kpi-modal-source">
-                  <div className="kpi-modal-source-dot" />
-                  <span>{explain.source}</span>
-                </div>
+                ) : null}
+                {sourceText ? (
+                  <>
+                    <hr className="kpi-modal-divider" />
+                    <div className="kpi-modal-source">
+                      <div className="kpi-modal-source-dot" />
+                      <span>{sourceText}</span>
+                    </div>
+                  </>
+                ) : null}
               </>
             ) : (
               <div className="kpi-modal-section">

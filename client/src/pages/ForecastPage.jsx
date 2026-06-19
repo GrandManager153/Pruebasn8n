@@ -26,7 +26,18 @@ const MODEL_COLORS = {
   mean_7d: '#fb7185',
   ewma: '#facc15',
   random_forest: '#10b981',
+  gradient_boosting: '#f97316',
+  mlp_neural_network: '#ec4899',
 };
+
+const ML_MODEL_NAMES = [
+  'random_forest',
+  'gradient_boosting',
+  'ridge',
+  'mlp_neural_network',
+  'lightgbm',
+  'autoets',
+];
 
 function getModelColor(name) {
   if (!name) return '#f472b6';
@@ -63,7 +74,7 @@ function buildComparableModels(data) {
   const list = [];
   const f = (data && data.forecast) ? data.forecast : {};
   (f.backtest_models || []).forEach(m => {
-    list.push({ name: m.name, mase: m.mase, mae: m.mae, rmse: m.rmse, series: m.series });
+    list.push({ name: m.name, mase: m.mase, mae: m.mae, rmse: m.rmse, series: m.series, forecast_1d: m.forecast_1d, horizons: m.horizons });
   });
 
   const rf = data ? data.forecast_rf : null;
@@ -76,8 +87,33 @@ function buildComparableModels(data) {
         if (e && Array.isArray(e.series)) series = e.series;
       }
       if (!series) series = buildRfAlignedSeries(data);
-      list.push({ name: rfName, mase: rf.mase, series: series });
+      list.push({
+        name: rfName,
+        mase: rf.mase,
+        series,
+        forecast_1d: rf.recommended_value ?? rf.horizons?.next_1d?.forecast,
+        horizons: rf.horizons,
+      });
     }
+    (rf.backtest_models || []).forEach(m => {
+      const key = m.name;
+      if (ML_MODEL_NAMES.indexOf(key) < 0 && key !== rfName) return;
+      let series = Array.isArray(m.series) ? m.series : null;
+      if (!series && key === rfName) series = buildRfAlignedSeries(data);
+      const isPrimary = key === rfName;
+      const existing = list.find(x => x.name === key);
+      const entry = {
+        name: key,
+        mase: m.mase ?? (isPrimary ? rf.mase : null),
+        mae: m.mae,
+        rmse: m.rmse,
+        series,
+        forecast_1d: m.forecast_1d ?? (isPrimary ? (rf.recommended_value ?? rf.horizons?.next_1d?.forecast) : null),
+        horizons: m.horizons || (isPrimary ? rf.horizons : null),
+      };
+      if (existing) Object.assign(existing, entry);
+      else list.push(entry);
+    });
   }
   return list;
 }
@@ -91,7 +127,6 @@ export default function ForecastPage() {
 
   const forecast = data?.forecast || {};
   const timeSeries = forecast.time_series || [];
-  const models = forecast.model_leaderboard || forecast.models || [];
   const horizons = forecast.horizons || {};
   const changepoint = forecast.changepoint || {};
 
@@ -135,6 +170,22 @@ export default function ForecastPage() {
       return item;
     });
   }, [timeSeries, activeOverlays]);
+
+  const yAxisDomain = useMemo(() => {
+    const nums = [];
+    chartData.forEach((row) => {
+      Object.entries(row).forEach(([key, val]) => {
+        if (key === 'date') return;
+        if (val != null && isFinite(Number(val))) nums.push(Number(val));
+      });
+    });
+    if (!nums.length) return [0, 'auto'];
+    const min = Math.min(...nums);
+    const max = Math.max(...nums);
+    const span = Math.max(max - min, 1);
+    const pad = Math.max(span * 0.1, 8);
+    return [Math.floor(min - pad), Math.ceil(max + pad)];
+  }, [chartData]);
 
   const tooltipStyle = {
     contentStyle: {
@@ -370,7 +421,7 @@ export default function ForecastPage() {
                       tickLine={false}
                       interval="preserveStartEnd"
                     />
-                    <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} />
+                    <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} domain={yAxisDomain} />
                     <Tooltip {...tooltipStyle} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
                     <Area
@@ -416,7 +467,7 @@ export default function ForecastPage() {
                       tickLine={false}
                       interval="preserveStartEnd"
                     />
-                    <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} />
+                    <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} domain={yAxisDomain} />
                     <Tooltip {...tooltipStyle} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
                     <Bar dataKey="leads" fill="#3b82f6" radius={[2, 2, 0, 0]} name="Leads Reales" />
@@ -476,52 +527,6 @@ export default function ForecastPage() {
           </div>
         </motion.div>
       </div>
-
-      {/* Model Leaderboard */}
-      {models.length > 0 && (
-        <motion.div
-          className="card"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          style={{ marginTop: 'var(--gap-bento)' }}
-        >
-          <div className="chart-title">
-            <span className="dot" style={{ background: 'var(--gold)' }} />
-            Model Leaderboard (Clasificación de Modelos Predictivos)
-          </div>
-          <div className="custom-table-container" style={{ marginTop: 12 }}>
-            <table className="custom-table">
-              <thead>
-                <tr>
-                  <th>Modelo de Proyección</th>
-                  <th style={{ textAlign: 'right' }}>MASE</th>
-                  <th style={{ textAlign: 'right' }}>MAE</th>
-                  <th style={{ textAlign: 'right' }}>RMSE</th>
-                  <th>Estado de Ajuste</th>
-                </tr>
-              </thead>
-              <tbody>
-                {models.map((m, i) => (
-                  <tr key={i}>
-                    <td style={{ fontWeight: 600 }}>{m.model || m.name || '—'}</td>
-                    <td style={{ textAlign: 'right', color: parseFloat(m.mase) < 1 ? 'var(--green)' : 'var(--red)' }}>
-                      {m.mase || '—'}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>{m.mae || '—'}</td>
-                    <td style={{ textAlign: 'right' }}>{m.rmse || '—'}</td>
-                    <td>
-                      <span className={`badge ${parseFloat(m.mase) < 1 ? 'badge-success' : 'badge-warning'}`}>
-                        {parseFloat(m.mase) < 1 ? 'Supera baseline' : 'No supera'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </motion.div>
-      )}
 
       {/* Explanation Modal */}
       <KpiModal

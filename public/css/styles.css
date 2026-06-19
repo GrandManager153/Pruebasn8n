@@ -738,6 +738,191 @@ body.light-mode .metric-badge-bad {
     align-items: stretch;
 }
 
+/* === Funnel feeders / leaks lists === */
+.funnel-scroll-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    max-height: 520px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.funnel-list-item {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+}
+
+.funnel-list-item:last-child {
+    border-bottom: none;
+}
+
+.funnel-list-item-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.funnel-list-item-title-wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.funnel-list-item-subtitle {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-dim);
+    line-height: 1.35;
+}
+
+.funnel-list-item-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    line-height: 1.35;
+    flex: 1;
+    min-width: 0;
+}
+
+.funnel-list-item-pct {
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.funnel-list-item-bar {
+    margin-top: 8px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.funnel-list-item-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+}
+
+.funnel-list-item-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+.funnel-list-empty {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 40px 0;
+    font-size: 13px;
+}
+
+.funnel-scroll-list--preview {
+    max-height: none;
+    overflow: visible;
+}
+
+.funnel-insight-banner {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-muted);
+    padding: 12px 16px;
+    margin-bottom: var(--gap-bento, 16px);
+    border-left: 3px solid rgba(16, 185, 129, 0.45);
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 0 8px 8px 0;
+}
+
+.funnel-insight-banner strong {
+    color: var(--text-main);
+    font-weight: 700;
+}
+
+.funnel-expand-btn {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: var(--blue);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    border-radius: 6px;
+    transition: background 0.2s, color 0.2s;
+}
+
+.funnel-expand-btn:hover {
+    background: rgba(56, 189, 248, 0.08);
+    color: var(--text-main);
+}
+
+.funnel-accordion {
+    margin-top: var(--gap-bento, 16px);
+}
+
+.funnel-accordion-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md, 12px);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-main);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.funnel-accordion-header:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.funnel-accordion-chevron {
+    font-size: 11px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+}
+
+.funnel-accordion-body {
+    display: none;
+    margin-top: 12px;
+}
+
+.funnel-accordion-body--open {
+    display: block;
+}
+
+.funnel-markov-advanced-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+}
+
+.funnel-markov-advanced-toggle input {
+    accent-color: var(--green);
+}
+
 .forecast-chart-panel .chart-wrapper {
     min-height: 340px;
 }
@@ -757,7 +942,63 @@ body.light-mode .metric-badge-bad {
 
 .forecast-detail-panel .model-detail-panel .custom-table-container {
     max-height: 480px;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.forecast-detail-panel .model-detail-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.forecast-detail-panel .model-detail-table th,
+.forecast-detail-panel .model-detail-table td {
+    padding: 5px 3px;
+    font-size: 10.5px;
+    line-height: 1.25;
+    overflow: hidden;
+}
+
+.forecast-detail-panel .model-detail-table th {
+    font-size: 9px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.forecast-detail-panel .model-detail-table th:nth-child(1),
+.forecast-detail-panel .model-detail-table td:nth-child(1) {
+    width: 34%;
+    white-space: normal;
+    word-break: break-word;
+    font-family: Inter, sans-serif;
+    font-size: 10px;
+    padding-right: 4px;
+}
+
+.forecast-detail-panel .model-detail-table th:nth-child(2),
+.forecast-detail-panel .model-detail-table td:nth-child(2) {
+    width: 16%;
+}
+
+.forecast-detail-panel .model-detail-table th:nth-child(3),
+.forecast-detail-panel .model-detail-table td:nth-child(3),
+.forecast-detail-panel .model-detail-table th:nth-child(4),
+.forecast-detail-panel .model-detail-table td:nth-child(4),
+.forecast-detail-panel .model-detail-table th:nth-child(5),
+.forecast-detail-panel .model-detail-table td:nth-child(5) {
+    width: 16%;
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+}
+
+.forecast-detail-panel .model-detail-table td.metric-pron,
+.forecast-detail-panel .model-detail-table td.metric-mae,
+.forecast-detail-panel .model-detail-table td.metric-rmse,
+.forecast-detail-panel .model-detail-table td.metric-mase-good,
+.forecast-detail-panel .model-detail-table td.metric-mase-warn,
+.forecast-detail-panel .model-detail-table td.metric-mase-bad {
+    padding-left: 2px;
+    padding-right: 2px;
 }
 
 .forecast-detail-panel .model-detail-table th {
@@ -3058,15 +3299,24 @@ body.light-mode #tab-funnel .card .card {
     border-color: rgba(15, 23, 42, 0.05) !important;
 }
 
-body.light-mode #tab-funnel #funnel-feeders-list .card-animate,
-body.light-mode #tab-funnel #funnel-leaks-list .card-animate {
-    background: rgba(15, 23, 42, 0.02) !important;
-    border-color: rgba(15, 23, 42, 0.05) !important;
+body.light-mode #tab-funnel #funnel-feeders-list .funnel-list-item,
+body.light-mode #tab-funnel #funnel-leaks-list .funnel-list-item {
+    border-bottom-color: rgba(15, 23, 42, 0.08) !important;
 }
 
-body.light-mode #tab-funnel #funnel-feeders-list span,
-body.light-mode #tab-funnel #funnel-leaks-list span {
+body.light-mode #tab-funnel #funnel-feeders-list .funnel-list-item-title,
+body.light-mode #tab-funnel #funnel-leaks-list .funnel-list-item-title {
     color: #0f172a !important;
+}
+
+body.light-mode #tab-funnel #funnel-feeders-list .funnel-list-item-subtitle,
+body.light-mode #tab-funnel #funnel-leaks-list .funnel-list-item-subtitle {
+    color: #64748b !important;
+}
+
+body.light-mode #tab-funnel #funnel-feeders-list .funnel-list-item-meta,
+body.light-mode #tab-funnel #funnel-leaks-list .funnel-list-item-meta {
+    color: #64748b !important;
 }
 
 body.light-mode #tab-funnel #funnel-feeders-list .progress-bar-fill {
@@ -3085,9 +3335,38 @@ body.light-mode #tab-funnel #funnel-leaks-list .progress-bar-val {
     color: var(--red) !important;
 }
 
-body.light-mode #tab-funnel #funnel-feeders-list .card-animate>div:nth-child(2),
-body.light-mode #tab-funnel #funnel-leaks-list .card-animate>div:nth-child(2) {
-    background: rgba(15, 23, 42, 0.05) !important;
+body.light-mode #tab-funnel #funnel-feeders-list .funnel-list-item-bar,
+body.light-mode #tab-funnel #funnel-leaks-list .funnel-list-item-bar {
+    background: rgba(15, 23, 42, 0.08) !important;
+}
+
+body.light-mode #tab-funnel .funnel-insight-banner {
+    background: rgba(15, 23, 42, 0.03);
+    border-left-color: rgba(16, 185, 129, 0.55);
+    color: #64748b;
+}
+
+body.light-mode #tab-funnel .funnel-insight-banner strong {
+    color: #0f172a;
+}
+
+body.light-mode #tab-funnel .funnel-expand-btn {
+    color: #0284c7;
+}
+
+body.light-mode #tab-funnel .funnel-expand-btn:hover {
+    background: rgba(2, 132, 199, 0.08);
+    color: #0f172a;
+}
+
+body.light-mode #tab-funnel .funnel-accordion-header {
+    background: rgba(255, 255, 255, 0.7);
+    border-color: rgba(15, 23, 42, 0.08);
+    color: #0f172a;
+}
+
+body.light-mode #tab-funnel .funnel-markov-advanced-toggle {
+    color: #64748b;
 }
 
 body.light-mode #forecast-changepoint-banner .card {
@@ -3304,6 +3583,14 @@ body.light-mode .chart-tool-btn.active {
     color: white;
     letter-spacing: -0.3px;
     margin-bottom: 6px;
+}
+
+.kpi-modal-subtitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    line-height: 1.4;
 }
 
 .kpi-modal-value {

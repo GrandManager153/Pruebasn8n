@@ -4,6 +4,92 @@ import useDashboardStore from '../stores/useDashboardStore';
 import KpiCard from '../components/shared/KpiCard';
 import KpiModal from '../components/shared/KpiModal';
 
+const INTERVAL_CALLBACK_SLA_MIN = 24 * 60;
+
+function formatDurationPair(actualMin, thresholdMin, decimals = 1) {
+  const actual = Number(actualMin);
+  const threshold = Number(thresholdMin);
+  if (!Number.isFinite(actual) || actual < 0) {
+    return { actual: { text: '—' }, threshold: { text: '—' } };
+  }
+  const scale = Math.max(actual, Number.isFinite(threshold) ? threshold : 0, 0);
+
+  if (scale >= 2880) {
+    const fmt = (m) => {
+      const days = (m / 1440).toFixed(decimals);
+      const label = Number(days) === 1 ? 'día' : 'días';
+      return `${days} ${label}`;
+    };
+    return {
+      actual: { text: fmt(actual) },
+      threshold: { text: Number.isFinite(threshold) ? fmt(threshold) : '—' },
+    };
+  }
+  if (scale >= 120) {
+    const fmt = (m) => `${(m / 60).toFixed(decimals)} h`;
+    return {
+      actual: { text: fmt(actual) },
+      threshold: { text: Number.isFinite(threshold) ? fmt(threshold) : '—' },
+    };
+  }
+  const fmt = (m) => `${Math.round(m)} min`;
+  return {
+    actual: { text: fmt(actual) },
+    threshold: { text: Number.isFinite(threshold) ? fmt(threshold) : '—' },
+  };
+}
+
+function formatAlertThreshold(threshold, alert) {
+  if (alert?.threshold_display) return alert.threshold_display;
+  if (threshold == null || threshold === 0) return 'N/A';
+  if (isIntervalMinutesMetric(alert)) {
+    return formatDurationPair(alert.actual, threshold).threshold.text;
+  }
+  return threshold;
+}
+
+function isIntervalMinutesMetric(alert) {
+  return alert?.metric === 'avg_interval_min';
+}
+
+function formatObservedValue(alert) {
+  if (alert?.actual_display) return alert.actual_display;
+  const val = alert.actual ?? alert.observed_value ?? alert.value;
+  if (val === undefined || val === null || val === '') return '—';
+  if (isIntervalMinutesMetric(alert)) {
+    return formatDurationPair(alert.actual, alert.threshold ?? INTERVAL_CALLBACK_SLA_MIN).actual.text;
+  }
+  return val;
+}
+
+function formatAlertTitle(alert) {
+  return alert.title || alert.message || alert.alert || '—';
+}
+
+function normalizeOperationalAlerts(data) {
+  const alerts = data?.system?.alerts;
+  if (!Array.isArray(alerts)) return data;
+
+  const intervalAlert = alerts.find((a) => a.metric === 'avg_interval_min');
+  if (!intervalAlert) return data;
+
+  const actualMin = Number(intervalAlert.actual) || 0;
+  const pair = formatDurationPair(actualMin, INTERVAL_CALLBACK_SLA_MIN);
+  const ratio = actualMin / INTERVAL_CALLBACK_SLA_MIN;
+
+  intervalAlert.threshold = INTERVAL_CALLBACK_SLA_MIN;
+  intervalAlert.actual_display = pair.actual.text;
+  intervalAlert.threshold_display = pair.threshold.text;
+  intervalAlert.title = `Demora media entre re-intentos: ${pair.actual.text} (objetivo: ≤${pair.threshold.text})`;
+  intervalAlert.impact = `Entre una marcación y la siguiente, los leads esperan ${pair.actual.text} en promedio (${ratio.toFixed(1)}× el objetivo de ${pair.threshold.text}). Esto incluye pausas largas y leads reactivados días después.`;
+
+  if (ratio >= 2.5 && intervalAlert.severity === 'warning') {
+    intervalAlert.severity = 'critical';
+  }
+
+  return data;
+}
+
 export default function AlertsPage() {
   const { data, loading } = useDashboardStore();
   const [filter, setFilter] = useState('all');
@@ -18,15 +104,17 @@ export default function AlertsPage() {
     );
   }
 
-  const alerts = data.system?.alerts || [];
+  const alerts = normalizeOperationalAlerts(data).system?.alerts || [];
   const criticals = alerts.filter((a) => a.severity === 'critical').length;
   const warnings = alerts.filter((a) => a.severity === 'warning').length;
   const infos = alerts.filter((a) => a.severity === 'info').length;
   const maxRPN = Math.max(...alerts.map((a) => a.rpn_score || a.rpn || 0), 0);
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return alerts;
-    return alerts.filter((a) => a.severity === filter);
+    const list = filter === 'all'
+      ? alerts
+      : alerts.filter((a) => a.severity === filter);
+    return [...list].sort((a, b) => (b.rpn_score || b.rpn || 0) - (a.rpn_score || a.rpn || 0));
   }, [alerts, filter]);
 
   const severityBadge = (s) => {
@@ -125,9 +213,9 @@ export default function AlertsPage() {
                     transition={{ delay: i * 0.03 }}
                   >
                     <td>{severityBadge(alert.severity)}</td>
-                    <td style={{ fontWeight: 600 }}>{alert.message || alert.alert || '—'}</td>
-                    <td style={{ textAlign: 'right' }}>{alert.observed_value || alert.value || '—'}</td>
-                    <td style={{ textAlign: 'right' }}>{alert.threshold || '—'}</td>
+                    <td style={{ fontWeight: 600 }}>{formatAlertTitle(alert)}</td>
+                    <td style={{ textAlign: 'right' }}>{formatObservedValue(alert)}</td>
+                    <td style={{ textAlign: 'right' }}>{formatAlertThreshold(alert.threshold, alert)}</td>
                     <td>
                       <span style={{
                         color: (alert.rpn_score || alert.rpn || 0) > 400 ? 'var(--red)' : 'var(--amber)',

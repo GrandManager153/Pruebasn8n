@@ -225,8 +225,10 @@ const KPI_EXPLANATION_ALIASES = {
     'Diversificación de Pauta': 'HHI',
     'Tasa Global de Conversión': 'Conversion global',
     'Global CVR (tasa de conversión global)': 'Conversion global',
+    'Tasa de conversión': 'Conversion global',
     'Ingresos en Riesgo Estimados': 'Revenue at Risk',
     'Revenue at Risk (ingreso en riesgo)': 'Revenue at Risk',
+    'Ingreso en riesgo': 'Revenue at Risk',
     'Severidad Máxima': 'RPN max',
     'Regime Shift (cambio estructural de demanda)': 'Cambio de Régimen',
     'Cambio de Régimen': 'Cambio de Régimen',
@@ -451,52 +453,67 @@ const KPI_EXPLANATIONS = {
     }
 };
 
+function setKpiModalContent({ title, subtitle, value, definition, interpretation, source }) {
+    document.getElementById('kpi-modal-title').textContent = title;
+    const subtitleEl = document.getElementById('kpi-modal-subtitle');
+    if (subtitleEl) {
+        if (subtitle) {
+            subtitleEl.textContent = subtitle;
+            subtitleEl.style.display = 'block';
+        } else {
+            subtitleEl.textContent = '';
+            subtitleEl.style.display = 'none';
+        }
+    }
+    document.getElementById('kpi-modal-value').textContent = value;
+    document.getElementById('kpi-modal-definition').textContent = definition;
+    document.getElementById('kpi-modal-interpretation').textContent = interpretation;
+    document.getElementById('kpi-modal-source-text').textContent = source;
+    document.getElementById('kpi-modal-overlay').classList.add('open');
+}
+
 function openKpiModal(label, value) {
     const explainKey = resolveKpiExplanationKey(label);
     const explain = explainKey ? KPI_EXPLANATIONS[explainKey] : null;
     if (!explain) return;
 
-    document.getElementById('kpi-modal-title').textContent = label;
-    document.getElementById('kpi-modal-value').textContent = value;
-    document.getElementById('kpi-modal-definition').textContent = explain.definition;
-    document.getElementById('kpi-modal-interpretation').textContent = explain.interpretation;
-    document.getElementById('kpi-modal-source-text').textContent = explain.source;
-
-    document.getElementById('kpi-modal-overlay').classList.add('open');
+    setKpiModalContent({
+        title: label,
+        value,
+        definition: explain.definition,
+        interpretation: explain.interpretation,
+        source: explain.source,
+    });
 }
 
-function openFeederModal(state, pct) {
-    const cleanState = cleanTechnicalTerms(state);
-    const explainKey = resolveKpiExplanationKey(cleanState);
-    const explain = explainKey ? KPI_EXPLANATIONS[explainKey] : null;
+function openFeederModal(rawFrom, pct, cnt) {
+    const displayName = shortenFunnelLabel(cleanTechnicalTerms(rawFrom));
+    const pctNum = parseFloat(String(pct).replace('%', '')) || 0;
+    const count = Number(cnt) || 0;
 
-    document.getElementById('kpi-modal-title').textContent = cleanState;
-    document.getElementById('kpi-modal-value').textContent = pct;
-
-    if (explain) {
-        document.getElementById('kpi-modal-definition').textContent = explain.definition;
-        document.getElementById('kpi-modal-interpretation').textContent = explain.interpretation;
-        document.getElementById('kpi-modal-source-text').textContent = explain.source;
-    } else {
-        document.getElementById('kpi-modal-definition').textContent = `Canal de atribución o ruta de conversión ("feeder") que aporta leads calificados al estado de conversión final.`;
-        document.getElementById('kpi-modal-interpretation').textContent = `Este canal representa el ${pct} de todos los leads que logran convertirse en el periodo. Un porcentaje alto indica que es un canal muy eficiente que vale la pena potenciar.`;
-        document.getElementById('kpi-modal-source-text').textContent = `Mapeo de transiciones del CRM de ventas vía n8n`;
-    }
-
-    document.getElementById('kpi-modal-overlay').classList.add('open');
+    setKpiModalContent({
+        title: displayName,
+        value: pct,
+        definition: `Ruta de conversión desde "${displayName}". Los leads que pasan por esta etapa logran una consulta agendada.`,
+        interpretation: `Participa con el ${pctNum.toFixed(2)}% de las conversiones del periodo, con ${count} consultas agendadas atribuidas a esta ruta.`,
+        source: 'Mapeo de transiciones del CRM vía n8n',
+    });
 }
 
-function openLeakModal(from, to, value) {
-    const cleanFrom = cleanTechnicalTerms(from);
-    const cleanTo = cleanTechnicalTerms(to);
+function openLeakModal(from, to, pct, cnt) {
+    const leak = formatLeakDisplay(from, to);
+    const origin = leak.subtitle.replace('Origen: ', '');
+    const pctNum = parseFloat(String(pct).replace('%', '')) || 0;
+    const count = Number(cnt) || 0;
 
-    document.getElementById('kpi-modal-title').textContent = `Fuga: de ${cleanFrom} a ${cleanTo}`;
-    document.getElementById('kpi-modal-value').textContent = value;
-    document.getElementById('kpi-modal-definition').textContent = `Fuga de prospectos detectada durante la transición de la etapa "${cleanFrom}" a "${cleanTo}". Representa leads que abandonan el embudo en este punto.`;
-    document.getElementById('kpi-modal-interpretation').textContent = `Un valor de ${value} indica una pérdida de prospectos en esta transición. Se aconseja evaluar los tiempos de respuesta o la calidad del contacto del equipo de ventas.`;
-    document.getElementById('kpi-modal-source-text').textContent = `Análisis de transición de estados del CRM`;
-
-    document.getElementById('kpi-modal-overlay').classList.add('open');
+    setKpiModalContent({
+        title: leak.title,
+        subtitle: leak.subtitle,
+        value: pct,
+        definition: `Punto de fuga: los leads que vienen de ${origin} acaban en ${leak.title} y abandonan el embudo.`,
+        interpretation: `El ${pctNum.toFixed(2)}% de los leads en esta transición se pierden (${count} leads afectados). Conviene revisar tiempos de respuesta y calidad del contacto en ${origin}.`,
+        source: 'Análisis de transición de estados del CRM',
+    });
 }
 
 function closeKpiModal(event) {
@@ -587,6 +604,74 @@ const CRM_TRANSLATIONS = {
     'Recovery Not Interested': 'Recuperación - No Interesado',
     'NL Agendado CUN': 'Lead Agendado CUN'
 };
+
+const FUNNEL_SHORT_LABELS = {
+    'Contactado (No Interesado)': 'No interesado',
+    'Sin Respuesta': 'Sin respuesta',
+    'Llamada Colgada': 'Colgó',
+    'Número Equivocado': 'Núm. equivocado',
+    'Buzón de Voz': 'Buzón de voz',
+    'Ocupado (Re-llamada)': 'Ocupado',
+    'Pre-Cierre (Sin Respuesta)': 'Pre-cierre sin resp.',
+    'Pre-Cierre (Llamada Colgada)': 'Pre-cierre colgó',
+    'Pre-Cierre (Desconfianza)': 'Desconfianza',
+    'Pre-Cierre (Ocupado)': 'Pre-cierre ocupado',
+    'Pre-Cierre (Sin Tarjeta)': 'Pre-cierre sin tarjeta',
+    'Pre-Cierre (Solo Efectivo)': 'Pre-cierre efectivo',
+    'Pre-Cierre (Cliente Indirecto)': 'Cliente indirecto',
+    'Pre-Cierre (Sin Dinero/Trabajo)': 'Sin dinero/trabajo',
+    'Pre-Cierre (Prefiere Oficina)': 'Prefiere oficina',
+    'Pre-Cierre (Reactivación)': 'Pre-cierre reactivación',
+    'Pre-Cierre (Promo)': 'Pre-cierre promo',
+    'Pre-Cierre (Pendiente Aprobación)': 'Pendiente aprobación',
+    'Recuperación - Sin Respuesta': 'Recup. sin respuesta',
+    'Recuperación - No Interesado': 'Recup. no interesado',
+    'Nuevo Lead - 1er Intento': 'Lead nuevo (1.er)',
+    'Nuevo Lead - 2do Intento': 'Lead nuevo (2.do)',
+    'Contacto - 1er Intento': '1.er contacto',
+    'Contacto - 2do Intento': '2.do contacto',
+    'Contacto - 3er Intento': '3.er contacto',
+    'En Llamada': 'En llamada',
+    'Consulta Agendada': 'Cita agendada',
+    'Consulta Agendada (Promo)': 'Cita promo',
+    'Dpto. de Recuperación': 'Recuperación',
+    'Transferido a Detenidos': 'A detenidos',
+    'Lead Duplicado': 'Duplicado',
+    'Llamada Atención Cliente': 'Atención cliente',
+    'Detenidos / Cortes': 'Detenidos',
+    'Oportunidad de Lead': 'Oportunidad',
+    'Oportunidad de Pre-Cierre': 'Oport. pre-cierre',
+    'Reconversión de Lead': 'Reconversión',
+    'Lead Agendado CDMX': 'Agendado CDMX',
+    'Lead Agendado CUN': 'Agendado CUN',
+    'Nuevo Lead': 'Lead nuevo',
+    'Abierto': 'Abierto',
+};
+
+function shortenFunnelLabel(name) {
+    const cleaned = String(name || '—').trim();
+    if (FUNNEL_SHORT_LABELS[cleaned]) return FUNNEL_SHORT_LABELS[cleaned];
+
+    const preClosed = cleaned.match(/^Pre-Cierre \((.+)\)$/i);
+    if (preClosed) return preClosed[1];
+
+    const contacted = cleaned.match(/^Contactado \((.+)\)$/i);
+    if (contacted) return contacted[1];
+
+    if (cleaned.length > 34) return `${cleaned.slice(0, 32)}…`;
+    return cleaned;
+}
+
+function formatLeakDisplay(from, to) {
+    const sourceFull = cleanTechnicalTerms(from || 'Origen');
+    const targetFull = cleanTechnicalTerms(to || 'Destino');
+    return {
+        title: shortenFunnelLabel(targetFull),
+        subtitle: `Origen: ${shortenFunnelLabel(sourceFull)}`,
+        sourceFull,
+        targetFull,
+    };
+}
 
 function cleanTechnicalTerms(str) {
     if (!str || typeof str !== 'string') return str;
@@ -857,6 +942,65 @@ function parseAndAnimate(element, rawValue, duration = 700) {
 //  LOAD DATA FROM API
 // =====================================================================
 
+const INTERVAL_CALLBACK_SLA_MIN = 24 * 60;
+
+function formatDurationPair(actualMin, thresholdMin, decimals = 1) {
+    const actual = Number(actualMin);
+    const threshold = Number(thresholdMin);
+    if (!Number.isFinite(actual) || actual < 0) {
+        return { actual: { text: '—' }, threshold: { text: '—' } };
+    }
+    const scale = Math.max(actual, Number.isFinite(threshold) ? threshold : 0, 0);
+
+    if (scale >= 2880) {
+        const fmt = (m) => {
+            const days = (m / 1440).toFixed(decimals);
+            const label = Number(days) === 1 ? 'día' : 'días';
+            return `${days} ${label}`;
+        };
+        return {
+            actual: { text: fmt(actual) },
+            threshold: { text: Number.isFinite(threshold) ? fmt(threshold) : '—' },
+        };
+    }
+    if (scale >= 120) {
+        const fmt = (m) => `${(m / 60).toFixed(decimals)} h`;
+        return {
+            actual: { text: fmt(actual) },
+            threshold: { text: Number.isFinite(threshold) ? fmt(threshold) : '—' },
+        };
+    }
+    const fmt = (m) => `${Math.round(m)} min`;
+    return {
+        actual: { text: fmt(actual) },
+        threshold: { text: Number.isFinite(threshold) ? fmt(threshold) : '—' },
+    };
+}
+
+function normalizeOperationalAlerts(data) {
+    const alerts = data?.system?.alerts;
+    if (!Array.isArray(alerts)) return data;
+
+    const intervalAlert = alerts.find((a) => a.metric === 'avg_interval_min');
+    if (!intervalAlert) return data;
+
+    const actualMin = Number(intervalAlert.actual) || 0;
+    const pair = formatDurationPair(actualMin, INTERVAL_CALLBACK_SLA_MIN);
+    const ratio = actualMin / INTERVAL_CALLBACK_SLA_MIN;
+
+    intervalAlert.threshold = INTERVAL_CALLBACK_SLA_MIN;
+    intervalAlert.actual_display = pair.actual.text;
+    intervalAlert.threshold_display = pair.threshold.text;
+    intervalAlert.title = `Demora media entre re-intentos: ${pair.actual.text} (objetivo: ≤${pair.threshold.text})`;
+    intervalAlert.impact = `Entre una marcación y la siguiente, los leads esperan ${pair.actual.text} en promedio (${ratio.toFixed(1)}× el objetivo de ${pair.threshold.text}). Esto incluye pausas largas y leads reactivados días después.`;
+
+    if (ratio >= 2.5 && intervalAlert.severity === 'warning') {
+        intervalAlert.severity = 'critical';
+    }
+
+    return data;
+}
+
 async function loadBOS() {
     try {
         const res = await fetch('/api/dashboard');
@@ -874,6 +1018,10 @@ async function loadBOS() {
             return;
         }
 
+        normalizeOperationalAlerts(json.data);
+        if (typeof enrichFunnelMarkovStddev === 'function') {
+            enrichFunnelMarkovStddev(json.data);
+        }
         dashboardData = json.data;
         clearComparableModelsCache();
         clearTermCache();
@@ -1223,6 +1371,321 @@ function renderBOS(data) {
 //  RENDER FUNNEL & MARKOV TAB DETAILS
 // =====================================================================
 
+const FUNNEL_MARKOV_DISPLAY = [
+    { state: 'Abierto', conversion: 2.14, loss: 97.86, steps: 14.2, stddev: 4.5 },
+    { state: 'Conectado - Interesado', conversion: 35.24, loss: 64.76, steps: 5.4, stddev: 1.8 },
+    { state: 'Reactivación', conversion: 20.00, loss: 80.00, steps: 7.2, stddev: 2.1 },
+    { state: 'En Llamada', conversion: 14.15, loss: 85.85, steps: 8.9, stddev: 3.2 },
+    { state: 'Pre-Cerrado (Sin tarjeta)', conversion: 13.01, loss: 86.99, steps: 11.5, stddev: 3.9 },
+];
+
+const FUNNEL_PREVIEW_COUNT = 3;
+
+const funnelUiState = {
+    feedersExpanded: false,
+    leaksExpanded: false,
+    markovExpanded: false,
+    markovAdvanced: false,
+};
+
+function buildFunnelInsight(feeders, leaks) {
+    const topFeeder = feeders[0];
+    const topLeak = leaks[0];
+    if (!topFeeder && !topLeak) return '';
+
+    const parts = [];
+    if (topFeeder) {
+        const state = shortenFunnelLabel(cleanTechnicalTerms(topFeeder.from || 'Origen'));
+        const pct = Number(topFeeder.pct) || 0;
+        parts.push(`Tu mejor ruta es <strong>${state}</strong> (${pct.toFixed(1)}% de las conversiones).`);
+    }
+    if (topLeak) {
+        const leak = formatLeakDisplay(topLeak.from, topLeak.to);
+        const cnt = Number(topLeak.cnt) || 0;
+        const pct = Number(topLeak.pct) || 0;
+        parts.push(`La fuga más relevante: <strong>${leak.title}</strong> (${leak.subtitle.replace('Origen: ', '')}) — ${pct.toFixed(1)}%, ${cnt} leads.`);
+    }
+    return parts.join(' ');
+}
+
+function renderFunnelListToggle(listId, items, expanded, noun) {
+    const btn = document.getElementById(listId);
+    if (!btn) return;
+
+    const hasMore = items.length > FUNNEL_PREVIEW_COUNT;
+    if (!hasMore) {
+        btn.style.display = 'none';
+        return;
+    }
+
+    const remaining = items.length - FUNNEL_PREVIEW_COUNT;
+    btn.style.display = 'block';
+    btn.textContent = expanded
+        ? 'Ver menos'
+        : `Ver las ${remaining} ${noun} restantes`;
+}
+
+function renderFunnelFeedersList(data, feeders) {
+    const feedersList = document.getElementById('funnel-feeders-list');
+    if (!feedersList) return;
+
+    feedersList.classList.toggle('funnel-scroll-list--preview', !funnelUiState.feedersExpanded);
+
+    if (feeders.length > 0) {
+        const visible = funnelUiState.feedersExpanded
+            ? feeders
+            : feeders.slice(0, FUNNEL_PREVIEW_COUNT);
+        feedersList.innerHTML = visible.map((f, idx) => {
+            const state = shortenFunnelLabel(cleanTechnicalTerms(f.from));
+            const pct = Number(f.pct) || 0;
+            const cnt = Number(f.cnt) || 0;
+            return renderFunnelListItem({
+                title: state,
+                pct,
+                color: 'var(--green)',
+                barColor: 'var(--green)',
+                metaLeft: 'Participación en conversiones',
+                metaRight: `${cnt} consultas agendadas`,
+                onClick: `openFeederModal('${(f.from || '').replace(/'/g, "\\'")}', '${pct.toFixed(2)}%', ${cnt})`,
+                delay: (idx * 0.02) + 0.12,
+            });
+        }).join('');
+    } else {
+        feedersList.innerHTML = `<div class="funnel-list-empty">Sin datos de rutas disponibles</div>`;
+    }
+
+    renderFunnelListToggle('funnel-feeders-toggle', feeders, funnelUiState.feedersExpanded, 'rutas');
+}
+
+function renderFunnelLeaksList(data, leaks) {
+    const leaksList = document.getElementById('funnel-leaks-list');
+    if (!leaksList) return;
+
+    leaksList.classList.toggle('funnel-scroll-list--preview', !funnelUiState.leaksExpanded);
+
+    if (leaks.length > 0) {
+        const visible = funnelUiState.leaksExpanded
+            ? leaks
+            : leaks.slice(0, FUNNEL_PREVIEW_COUNT);
+        leaksList.innerHTML = visible.map((l, idx) => {
+            const leak = formatLeakDisplay(l.from, l.to);
+            const leakPct = Number(l.pct) || 0;
+            const leakCnt = Number(l.cnt) || 0;
+            return renderFunnelListItem({
+                title: leak.title,
+                subtitle: leak.subtitle,
+                pct: leakPct,
+                color: 'var(--red)',
+                barColor: 'var(--red)',
+                metaLeft: 'Leads afectados',
+                metaRight: `${leakCnt} leads perdidos`,
+                onClick: `openLeakModal('${(l.from || '').replace(/'/g, "\\'")}', '${(l.to || '').replace(/'/g, "\\'")}', '${leakPct.toFixed(2)}%', ${leakCnt})`,
+                delay: (idx * 0.02) + 0.12,
+            });
+        }).join('');
+    } else {
+        leaksList.innerHTML = `<div class="funnel-list-empty">Sin datos de fugas disponibles</div>`;
+    }
+
+    renderFunnelListToggle('funnel-leaks-toggle', leaks, funnelUiState.leaksExpanded, 'fugas');
+}
+
+function renderFunnelMarkovTable(statesData) {
+    const showAdvanced = funnelUiState.markovAdvanced;
+    const head = document.getElementById('funnel-probabilities-head');
+    const probBody = document.getElementById('funnel-probabilities-body');
+
+    if (head) {
+        head.innerHTML = `
+            <tr>
+                <th>Estado inicial</th>
+                <th style="text-align: right;">Prob. de conversión</th>
+                ${showAdvanced ? `
+                    <th style="text-align: right;">Prob. de no convertir</th>
+                    <th style="text-align: right;">Toques promedio</th>
+                    <th style="text-align: right;">Variabilidad</th>
+                ` : ''}
+            </tr>
+        `;
+    }
+
+    if (!probBody) return;
+
+    const colSpan = showAdvanced ? 5 : 2;
+    probBody.innerHTML = statesData.length > 0
+        ? statesData.map(s => `
+            <tr>
+                <td style="font-weight: 600; color: white;">${s.state}</td>
+                <td style="text-align: right; color: var(--green); font-weight: bold;">${s.conversion.toFixed(2)}%</td>
+                ${showAdvanced ? `
+                    <td style="text-align: right; color: var(--text-muted);">${s.loss.toFixed(2)}%</td>
+                    <td style="text-align: right; font-family: var(--mono); color: white;">${s.steps.toFixed(1)}</td>
+                    <td style="text-align: right; font-family: var(--mono); color: var(--text-dim);">${s.stddev > 0 ? s.stddev.toFixed(1) : '—'}</td>
+                ` : ''}
+            </tr>
+        `).join('')
+        : `<tr><td colspan="${colSpan}" style="text-align: center; color: var(--text-dim); padding: 24px;">Sin estados con actividad de conversión en este periodo</td></tr>`;
+}
+
+function syncFunnelMarkovAccordion() {
+    const body = document.getElementById('funnel-markov-body');
+    const chevron = document.getElementById('funnel-markov-chevron');
+    const toggle = document.getElementById('funnel-markov-toggle');
+    if (body) {
+        body.classList.toggle('funnel-accordion-body--open', funnelUiState.markovExpanded);
+    }
+    if (chevron) {
+        chevron.textContent = funnelUiState.markovExpanded ? '▼' : '▶';
+    }
+    if (toggle) {
+        toggle.setAttribute('aria-expanded', funnelUiState.markovExpanded ? 'true' : 'false');
+    }
+}
+
+function toggleFunnelList(type) {
+    if (type === 'feeders') {
+        funnelUiState.feedersExpanded = !funnelUiState.feedersExpanded;
+    } else if (type === 'leaks') {
+        funnelUiState.leaksExpanded = !funnelUiState.leaksExpanded;
+    }
+    if (dashboardData) {
+        renderFunnelDetails(dashboardData);
+    }
+}
+
+function toggleFunnelMarkov() {
+    funnelUiState.markovExpanded = !funnelUiState.markovExpanded;
+    syncFunnelMarkovAccordion();
+}
+
+function toggleFunnelMarkovAdvanced() {
+    const checkbox = document.getElementById('funnel-markov-advanced-toggle');
+    funnelUiState.markovAdvanced = !!(checkbox && checkbox.checked);
+    if (dashboardData) {
+        const statesData = resolveFunnelMarkovStates(dashboardData);
+        renderFunnelMarkovTable(statesData);
+    }
+}
+
+function parseFeederAlert(alert) {
+    const titleStr = (alert.title || '').replace('Feeder a conversion: ', '');
+    const parts = titleStr.split(' aporta ');
+    const pct = parseFloat((parts[1] || '0').split('%')[0]) || 0;
+    const leadMatch = titleStr.match(/\((\d+)\s*leads?\)/i);
+    return {
+        from: parts[0] || 'Origen',
+        pct,
+        cnt: leadMatch ? parseInt(leadMatch[1], 10) : 0,
+    };
+}
+
+function resolveFunnelFeeders(data) {
+    const feeders = data?.funnel?.feeders;
+    if (Array.isArray(feeders) && feeders.length) {
+        return feeders
+            .map((f) => ({
+                from: f.from || f.state || 'Origen',
+                pct: Number(f.pct) || 0,
+                cnt: Number(f.cnt) || 0,
+            }))
+            .sort((a, b) => b.pct - a.pct);
+    }
+
+    return (data.system?.alerts || [])
+        .filter((a) => (a.title || '').includes('Feeder a conversion'))
+        .map(parseFeederAlert);
+}
+
+function isLeakDestination(to) {
+    const t = String(to || '').toLowerCase();
+    return t.includes('not interested')
+        || t.includes('no answer')
+        || t.includes('hung up')
+        || t.includes('wrong number')
+        || t.includes('busy')
+        || t.includes('lost')
+        || t.includes('voicemail')
+        || t.includes('distrust');
+}
+
+function resolveFunnelLeaks(data) {
+    const leaks = data?.funnel?.leaks;
+    if (Array.isArray(leaks) && leaks.length) {
+        return leaks
+            .map((l) => ({
+                from: l.from || 'Origen',
+                to: l.to || 'Destino',
+                pct: Number(l.pct) || 0,
+                cnt: Number(l.cnt) || 0,
+            }))
+            .sort((a, b) => b.pct - a.pct);
+    }
+    return (data.funnel?.transitions || [])
+        .filter((t) => isLeakDestination(t.to))
+        .map((t) => ({
+            from: t.from || 'Origen',
+            to: t.to || 'Destino',
+            pct: Number(t.pct) || 0,
+            cnt: Number(t.cnt) || 0,
+        }))
+        .sort((a, b) => b.pct - a.pct);
+}
+
+function resolveFunnelMarkovStates(data) {
+    const absorption = data?.funnel?.absorption_probabilities;
+    if (Array.isArray(absorption) && absorption.length) {
+        return absorption
+            .map((ap) => ({
+                state: cleanTechnicalTerms(ap.state),
+                conversion: (ap.prob_conversion || 0) * 100,
+                loss: (ap.prob_loss || 0) * 100,
+                steps: ap.expected_steps || 0,
+                stddev: ap.step_stddev || 0,
+            }))
+            .filter((p) => p.conversion > 0)
+            .sort((a, b) => b.conversion - a.conversion);
+    }
+    return FUNNEL_MARKOV_DISPLAY;
+}
+
+function renderFunnelListItem(options) {
+    const {
+        title,
+        subtitle,
+        pct,
+        color,
+        barColor,
+        metaLeft,
+        metaRight,
+        onClick,
+        delay = 0,
+    } = options;
+    const safePct = Math.max(0, Number(pct) || 0);
+    const barWidth = Math.min(safePct, 100);
+    const clickAttr = onClick ? `onclick="${onClick}"` : '';
+    const subtitleHtml = subtitle
+        ? `<span class="funnel-list-item-subtitle">${subtitle}</span>`
+        : '';
+    return `
+        <div class="funnel-list-item card-animate" ${clickAttr} style="animation-delay: ${delay}s;">
+            <div class="funnel-list-item-head">
+                <div class="funnel-list-item-title-wrap">
+                    <span class="funnel-list-item-title">${title}</span>
+                    ${subtitleHtml}
+                </div>
+                <span class="funnel-list-item-pct progress-bar-val" style="color: ${color};" data-value="${safePct.toFixed(2)}%">${safePct.toFixed(2)}%</span>
+            </div>
+            <div class="funnel-list-item-bar">
+                <div class="funnel-list-item-bar-fill progress-bar-fill" data-pct="${barWidth}" style="width: 0%; background: ${barColor};"></div>
+            </div>
+            <div class="funnel-list-item-meta">
+                <span>${metaLeft}</span>
+                <span>${metaRight}</span>
+            </div>
+        </div>
+    `;
+}
+
 function renderFunnelDetails(data) {
     const leadKPI = data.kpis.find(k => k.label.includes('leads') || k.label.includes('Leads'));
     const totalLeads = leadKPI ? parseInt(leadKPI.value.replace(/,/g, '')) : 11113;
@@ -1231,7 +1694,9 @@ function renderFunnelDetails(data) {
         .filter(t => t.to === 'Consult Booked' || t.to === 'absorption')
         .reduce((acc, curr) => acc + curr.cnt, 0) || 684;
 
-    const conversionRate = ((consults / totalLeads) * 100).toFixed(2);
+    const conversionRate = data.funnel?.conversion_pct != null
+        ? Number(data.funnel.conversion_pct).toFixed(2)
+        : ((consults / totalLeads) * 100).toFixed(2);
 
     const funnelConvVal = document.getElementById('funnel-conv-pct');
     if (funnelConvVal) {
@@ -1244,123 +1709,47 @@ function renderFunnelDetails(data) {
         targetLabel.textContent = `Objetivo: ${cleanTechnicalTerms(data.funnel.conversion_target)}`;
     }
 
-    const leaks = data.funnel.transitions
-        .filter(t => {
-            const to = t.to.toLowerCase();
-            return to.includes('not interested') || to.includes('no answer') || to.includes('hung up') || to.includes('wrong number') || to.includes('busy') || to.includes('lost');
-        });
+    const leaks = resolveFunnelLeaks(data);
 
-    const totalLostLeads = leaks.reduce((acc, curr) => acc + curr.cnt, 0);
+    const totalLostLeads = leaks.reduce((acc, curr) => acc + (Number(curr.cnt) || 0), 0);
     const caseValue = 1200;
     const revenueAtRisk = totalLostLeads * caseValue;
+    const riskRevenueFormatted = `$${revenueAtRisk.toLocaleString('es-MX')}`;
+
+    const narrative = document.getElementById('funnel-narrative-subtitle');
+    if (narrative) {
+        narrative.innerHTML = `De cada 100 leads, <strong>${conversionRate}</strong> llegan a consulta. Hay <strong>${riskRevenueFormatted}</strong> en riesgo por fugas detectadas.`;
+    }
 
     const riskRevVal = document.getElementById('funnel-risk-revenue');
     if (riskRevVal) {
-        riskRevVal.setAttribute('data-value', `$${revenueAtRisk}`);
-        parseAndAnimate(riskRevVal, `$${revenueAtRisk}`);
+        riskRevVal.setAttribute('data-value', riskRevenueFormatted);
+        parseAndAnimate(riskRevVal, riskRevenueFormatted);
     }
 
-    const feederAlerts = data.system.alerts.filter(a => a.title.includes('Feeder a conversion'));
-    const feedersList = document.getElementById('funnel-feeders-list');
-
-    if (feedersList) {
-        if (feederAlerts.length > 0) {
-            feedersList.innerHTML = feederAlerts.map((f, idx) => {
-                const titleStr = cleanTechnicalTerms(f.title.replace('Feeder a conversion: ', ''));
-                const parts = titleStr.split(' aporta ');
-                const state = parts[0] || 'Origen';
-                const metricsStr = parts[1] || '0%';
-                const pct = metricsStr.split('%')[0] || '0';
-
-                return `
-                    <div class="card-animate" onclick="openFeederModal('${state.replace(/'/g, "\\'")}', '${pct}%')" style="cursor: pointer; padding: 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; animation-delay: ${(idx * 0.025) + 0.12}s;">
-                        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; color: white;">
-                            <span>${state}</span>
-                            <span style="color: var(--green);" class="progress-bar-val" data-value="${pct}%">${pct}%</span>
-                        </div>
-                        <div style="margin-top: 8px; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
-                            <div class="progress-bar-fill" data-pct="${pct}" style="width: 0%; background: var(--green);"></div>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-top: 6px;">
-                            <span>Tasa de Atribución</span>
-                            <span>Contribución Directa</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+    const feederAlerts = resolveFunnelFeeders(data);
+    const insightBanner = document.getElementById('funnel-insight-banner');
+    const insightText = buildFunnelInsight(feederAlerts, leaks);
+    if (insightBanner) {
+        if (insightText) {
+            insightBanner.innerHTML = insightText;
+            insightBanner.style.display = 'block';
         } else {
-            feedersList.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 40px 0;">No se detectaron feeders en este periodo.</div>`;
+            insightBanner.innerHTML = '';
+            insightBanner.style.display = 'none';
         }
     }
 
-    const sortedLeaks = [...leaks].sort((a, b) => b.cnt - a.cnt).slice(0, 4);
-    const leaksList = document.getElementById('funnel-leaks-list');
-    if (leaksList) {
-        leaksList.innerHTML = sortedLeaks.map((l, idx) => {
-            const leakPct = l.pct.toFixed(2);
-            return `
-                <div class="card-animate" onclick="openLeakModal('${l.from.replace(/'/g, "\\'")}', '${l.to.replace(/'/g, "\\'")}', '${leakPct}%')" style="cursor: pointer; padding: 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; animation-delay: ${(idx * 0.025) + 0.12}s;">
-                    <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; color: white;">
-                        <span>De ${cleanTechnicalTerms(l.from)} a ${cleanTechnicalTerms(l.to)}</span>
-                        <span style="color: var(--red);" class="progress-bar-val" data-value="${leakPct}%">${leakPct}%</span>
-                    </div>
-                    <div style="margin-top: 8px; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
-                        <div class="progress-bar-fill" data-pct="${leakPct}" style="width: 0%; background: var(--red);"></div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-top: 6px;">
-                        <span>Volumen de Desviación</span>
-                        <span>${l.cnt} prospectos perdidos</span>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
+    renderFunnelFeedersList(data, feederAlerts);
+    renderFunnelLeaksList(data, leaks);
 
-    let statesData = [];
-    if (data.funnel && Array.isArray(data.funnel.absorption_probabilities) && data.funnel.absorption_probabilities.length > 0) {
-        statesData = data.funnel.absorption_probabilities
-            .filter(ap => (ap.prob_conversion || 0) > 0.0001) // Filter out practically 0% conversion states to keep the table clean
-            .map(ap => ({
-                state: cleanTechnicalTerms(ap.state),
-                conversion: (ap.prob_conversion || 0) * 100,
-                loss: (ap.prob_loss || 0) * 100,
-                steps: ap.expected_steps || 0,
-                stddev: ap.step_stddev || 0
-            }));
-        if (statesData.length === 0) {
-            statesData = data.funnel.absorption_probabilities
-                .map(ap => ({
-                    state: cleanTechnicalTerms(ap.state),
-                    conversion: (ap.prob_conversion || 0) * 100,
-                    loss: (ap.prob_loss || 0) * 100,
-                    steps: ap.expected_steps || 0,
-                    stddev: ap.step_stddev || 0
-                }))
-                .sort((a, b) => b.conversion - a.conversion)
-                .slice(0, 5);
-        }
-    } else {
-        statesData = [
-            { state: "Abierto", conversion: 2.14, loss: 97.86, steps: 14.2, stddev: 4.5 },
-            { state: "Conectado - Interesado", conversion: 35.24, loss: 64.76, steps: 5.4, stddev: 1.8 },
-            { state: "Reactivación", conversion: 20.00, loss: 80.00, steps: 7.2, stddev: 2.1 },
-            { state: "En Llamada", conversion: 14.15, loss: 85.85, steps: 8.9, stddev: 3.2 },
-            { state: "Pre-Cerrado (Sin tarjeta)", conversion: 13.01, loss: 86.99, steps: 11.5, stddev: 3.9 }
-        ];
+    const statesData = resolveFunnelMarkovStates(data);
+    const advancedToggle = document.getElementById('funnel-markov-advanced-toggle');
+    if (advancedToggle) {
+        advancedToggle.checked = funnelUiState.markovAdvanced;
     }
-
-    const probBody = document.getElementById('funnel-probabilities-body');
-    if (probBody) {
-        probBody.innerHTML = statesData.map(s => `
-            <tr>
-                <td style="font-weight: 600; color: white;">${s.state}</td>
-                <td style="text-align: right; color: var(--green); font-weight: bold;">${s.conversion.toFixed(2)}%</td>
-                <td style="text-align: right; color: var(--text-muted);">${s.loss.toFixed(2)}%</td>
-                <td style="text-align: right; font-family: var(--mono); color: white;">${s.steps.toFixed(1)}</td>
-                <td style="text-align: right; font-family: var(--mono); color: var(--text-dim);">${s.stddev.toFixed(1)}</td>
-            </tr>
-        `).join('');
-    }
+    renderFunnelMarkovTable(statesData);
+    syncFunnelMarkovAccordion();
 
     applyProgressBars(document.getElementById('tab-funnel'));
 }
@@ -1526,37 +1915,6 @@ function renderForecastDetails(forecast, options = {}) {
         renderHorizonCards(cardHorizons, { prefix, show14d, bestModelName: bestLabel });
     }
 
-    const modelsBody = document.getElementById(`${prefix}forecast-models-body`);
-    if (modelsBody && Array.isArray(forecast.backtest_models)) {
-        const models = forecast.backtest_models.slice();
-
-        // Incluir todos los modelos ML (desde forecast_rf) en la clasificación
-        if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.forecast_rf && dashboardData.forecast_rf.available !== false) {
-            const rf = dashboardData.forecast_rf;
-            const rfName = rf.model_name || 'random_forest';
-            const rfModels = Array.isArray(rf.backtest_models) ? rf.backtest_models : [];
-            if (!rfModels.length && rf.mase != null) {
-                rfModels.push({ name: rfName, mase: rf.mase });
-            }
-            rfModels.forEach(rfEntry => {
-                if (rfEntry.mase != null && !models.some(m => normModelName(m.name) === normModelName(rfEntry.name))) {
-                    models.push(rfEntry);
-                }
-            });
-        }
-
-        // Ordenar por MASE ascendente (mejor desempeño primero)
-        models.sort((a, b) => (a.mase != null ? a.mase : Infinity) - (b.mase != null ? b.mase : Infinity));
-
-        modelsBody.innerHTML = models.map((m, idx) => renderModelLeaderboardRow(m, idx + 1)).join('');
-
-        requestAnimationFrame(() => {
-            modelsBody.querySelectorAll('.mase-bar-fill').forEach(bar => {
-                const pct = bar.getAttribute('data-pct');
-                if (pct != null) bar.style.width = pct + '%';
-            });
-        });
-    }
 }
 
 // =====================================================================
@@ -1622,35 +1980,24 @@ function normModelName(name) {
 
 /** Pronóstico 1d y confianza del bloque forecast o forecast_rf que corresponde al modelo. */
 function resolveDailyForecastForModel(data, modelName) {
-    const key = normModelName(modelName);
     const f = data.forecast || {};
     const rf = data.forecast_rf;
+    const confidence = f.confidence || rf?.confidence || 'media';
+    const rec = getModelRecord(data, modelName);
 
+    if (rec) {
+        const v = rec.forecast_1d ?? rec.horizons?.next_1d?.forecast;
+        if (v != null && isFinite(v)) return { value: v, confidence };
+    }
+
+    const key = normModelName(modelName);
     if (rf && rf.available !== false && normModelName(rf.model_name || 'random_forest') === key) {
         const v = rf.recommended_value ?? rf.horizons?.next_1d?.forecast;
         if (v != null && isFinite(v)) return { value: v, confidence: rf.confidence };
     }
-    const mlEntry = (rf?.backtest_models || []).find(m => normModelName(m.name) === key);
-    if (mlEntry?.forecast_1d != null && isFinite(mlEntry.forecast_1d)) {
-        return { value: mlEntry.forecast_1d, confidence: rf.confidence };
-    }
     if (normModelName(f.method) === key) {
         const v = f.recommended_value ?? f.horizons?.next_1d?.forecast;
         if (v != null && isFinite(v)) return { value: v, confidence: f.confidence };
-    }
-    const entry = (f.backtest_models || []).find(m => normModelName(m.name) === key);
-    if (entry?.horizons?.next_1d?.forecast != null) {
-        return { value: entry.horizons.next_1d.forecast, confidence: f.confidence };
-    }
-    if (entry?.forecast_1d != null && isFinite(entry.forecast_1d)) {
-        return { value: entry.forecast_1d, confidence: f.confidence };
-    }
-    if (entry && Array.isArray(entry.series) && entry.series.length) {
-        const last = entry.series[entry.series.length - 1];
-        if (typeof last === 'number' && isFinite(last)) {
-            console.warn(`[forecast] ${modelName}: usando último backtest como fallback; falta forecast_1d/horizons`);
-            return { value: last, confidence: f.confidence };
-        }
     }
     return null;
 }
@@ -1873,20 +2220,41 @@ function getVisibleModelNames() {
 function getModelRecord(data, modelName) {
     if (!data || !modelName) return null;
     const key = normModelName(modelName);
+    const statEntry = (data.forecast?.backtest_models || []).find(m => normModelName(m.name) === key);
     const rf = data.forecast_rf;
-    if (rf && rf.available !== false && normModelName(rf.model_name || 'random_forest') === key) {
-        return {
-            name: rf.model_name || 'random_forest',
-            mase: rf.mase,
-            mae: (rf.backtest_models || []).find(x => x.name === (rf.model_name || 'random_forest'))?.mae,
-            rmse: (rf.backtest_models || []).find(x => x.name === (rf.model_name || 'random_forest'))?.rmse,
-            series: buildRfAlignedSeries(data),
-            horizons: rf.horizons,
-            forecast_1d: rf.recommended_value ?? rf.horizons?.next_1d?.forecast,
-        };
+
+    if (rf && rf.available !== false) {
+        const mlEntry = (rf.backtest_models || []).find(m => normModelName(m.name) === key);
+        if (mlEntry) {
+            const rfName = rf.model_name || 'random_forest';
+            const isPrimary = normModelName(mlEntry.name) === normModelName(rfName);
+            let series = Array.isArray(mlEntry.series) ? mlEntry.series : null;
+            if (!series && isPrimary) series = buildRfAlignedSeries(data);
+            if (!series && Array.isArray(statEntry?.series)) series = statEntry.series;
+
+            let forecast_1d = mlEntry.forecast_1d;
+            let horizons = mlEntry.horizons;
+            if ((forecast_1d == null || !isFinite(forecast_1d)) && statEntry) {
+                forecast_1d = statEntry.forecast_1d ?? statEntry.horizons?.next_1d?.forecast;
+                horizons = horizons || statEntry.horizons;
+            }
+            if ((forecast_1d == null || !isFinite(forecast_1d)) && isPrimary) {
+                forecast_1d = rf.recommended_value ?? rf.horizons?.next_1d?.forecast;
+                horizons = horizons || rf.horizons;
+            }
+
+            return {
+                name: mlEntry.name,
+                mase: mlEntry.mase ?? statEntry?.mase,
+                mae: mlEntry.mae ?? statEntry?.mae,
+                rmse: mlEntry.rmse ?? statEntry?.rmse,
+                series,
+                horizons,
+                forecast_1d: forecast_1d != null && isFinite(forecast_1d) ? forecast_1d : null,
+            };
+        }
     }
-    const entry = (data.forecast?.backtest_models || []).find(m => normModelName(m.name) === key);
-    if (entry) return entry;
+    if (statEntry) return statEntry;
     return buildComparableModels(data).find(m => normModelName(m.name) === key) || null;
 }
 
@@ -1979,10 +2347,10 @@ function renderModelDetailPanel() {
                 <thead>
                     <tr>
                         <th>Modelo</th>
-                        <th style="text-align: right;">Pronóstico</th>
-                        <th style="text-align: right;">MASE</th>
-                        <th style="text-align: right;">MAE</th>
-                        <th style="text-align: right;">RMSE</th>
+                        <th style="text-align: right;" title="Pronóstico diario">Pron.</th>
+                        <th style="text-align: right;" title="Error medio absoluto escalado">MASE</th>
+                        <th style="text-align: right;" title="Error absoluto medio">MAE</th>
+                        <th style="text-align: right;" title="Error cuadrático medio">RMSE</th>
                     </tr>
                 </thead>
                 <tbody>${rows}</tbody>
@@ -2248,6 +2616,33 @@ function onModelCompareChange() {
 //  INTERACTIVE ALERTS CENTRE
 // =====================================================================
 
+function formatAlertThreshold(threshold, alert) {
+    if (alert?.threshold_display) return alert.threshold_display;
+    if (threshold == null || threshold === 0) return 'N/A';
+    if (isIntervalMinutesMetric(alert)) {
+        return formatDurationPair(alert.actual, threshold).threshold.text;
+    }
+    return threshold;
+}
+
+function isIntervalMinutesMetric(alert) {
+    return alert?.metric === 'avg_interval_min';
+}
+
+function formatAlertObservedValue(alert) {
+    if (alert?.actual_display) return alert.actual_display;
+    const val = alert?.actual;
+    if (val === undefined || val === null || val === '') return '—';
+    if (isIntervalMinutesMetric(alert)) {
+        return formatDurationPair(alert.actual, alert.threshold ?? INTERVAL_CALLBACK_SLA_MIN).actual.text;
+    }
+    return val;
+}
+
+function formatAlertTitle(alert) {
+    return cleanTechnicalTerms(alert.title || '');
+}
+
 function renderAlertsCentre(alerts) {
     const statsGrid = document.getElementById('alerts-stats-cards');
     const tableBody = document.getElementById('alerts-centre-table-body');
@@ -2350,9 +2745,9 @@ function renderAlertsTableList(filteredList) {
                 <td>
                     <span class="custom-badge custom-badge-${a.severity === 'critical' ? 'critical' : a.severity === 'warning' ? 'warning' : 'success'}">${badgeLabel}</span>
                 </td>
-                <td style="font-weight: 600; color: white;">${cleanTechnicalTerms(a.title)}</td>
-                <td style="font-family: var(--mono); font-weight: 600; color: var(--gold); text-align: right;">${a.actual}</td>
-                <td style="font-family: var(--mono); color: var(--text-muted); text-align: right;">${a.threshold}</td>
+                <td style="font-weight: 600; color: white;">${formatAlertTitle(a)}</td>
+                <td style="font-family: var(--mono); font-weight: 600; color: var(--gold); text-align: right;">${formatAlertObservedValue(a)}</td>
+                <td style="font-family: var(--mono); color: var(--text-muted); text-align: right;">${formatAlertThreshold(a.threshold, a)}</td>
                 <td>
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <span style="font-family: var(--mono); font-weight: 700; font-size: 13px; min-width: 32px;">${a.rpn_score || 0}</span>
@@ -2366,9 +2761,44 @@ function renderAlertsTableList(filteredList) {
     applyProgressBars(tableBody);
 }
 
+const plotAreaBackgroundPlugin = {
+    id: 'plotAreaBackground',
+    beforeDatasetsDraw(chart, _args, opts) {
+        const { ctx, chartArea } = chart;
+        if (!chartArea) return;
+        ctx.save();
+        ctx.fillStyle = (opts && opts.fillColor) || 'rgba(56, 189, 248, 0.06)';
+        ctx.fillRect(
+            chartArea.left,
+            chartArea.top,
+            chartArea.right - chartArea.left,
+            chartArea.bottom - chartArea.top
+        );
+        ctx.restore();
+    },
+};
+
 // =====================================================================
 //  CHART.JS PLOTTING INITIALIZERS
 // =====================================================================
+
+function computeChartYBounds(datasets) {
+    const nums = [];
+    (datasets || []).forEach((ds) => {
+        (ds.data || []).forEach((v) => {
+            if (v != null && isFinite(Number(v))) nums.push(Number(v));
+        });
+    });
+    if (!nums.length) return null;
+    const min = Math.min(...nums);
+    const max = Math.max(...nums);
+    const span = Math.max(max - min, 1);
+    const pad = Math.max(span * 0.1, 8);
+    return {
+        min: min - pad,
+        max: max + pad,
+    };
+}
 
 function renderTimeSeriesChart(forecast, typeOrOptions) {
     let options = {
@@ -2427,8 +2857,8 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
             borderColor: isLight ? '#0284c7' : '#38bdf8',
             backgroundColor: isBar
                 ? (isLight ? 'rgba(2, 132, 199, 0.55)' : 'rgba(56, 189, 248, 0.45)')
-                : (isLight ? 'rgba(2, 132, 199, 0.05)' : 'rgba(56, 189, 248, 0.06)'),
-            fill: !isBar,
+                : 'transparent',
+            fill: false,
             tension: 0.35,
             borderRadius: isBar ? 6 : 0,
             pointRadius: isBar ? 0 : (forecastAnimated ? 3 : (heavyChart ? 0 : 2)),
@@ -2471,12 +2901,16 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
             pointHoverRadius: heavyChart ? 0 : 4,
             fill: false,
             spanGaps: true,
+            clip: false,
             _modelName: ov.modelName || null,
         });
     });
 
+    const yBounds = computeChartYBounds(datasets);
+
     charts[chartKey] = new Chart(ctx, {
         type: chartType,
+        plugins: isForecastChart ? [plotAreaBackgroundPlugin] : [],
         data: {
             labels: chartLabels,
             datasets
@@ -2514,6 +2948,9 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
+                plotAreaBackground: isForecastChart ? {
+                    fillColor: isLight ? 'rgba(2, 132, 199, 0.05)' : 'rgba(56, 189, 248, 0.06)',
+                } : undefined,
                 legend: {
                     display: true,
                     onClick: (evt, legendItem, legend) => {
@@ -2553,6 +2990,13 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
                     ticks: { color: isLight ? '#475569' : '#64748b', font: { size: 10 }, maxTicksLimit: 10 }
                 },
                 y: {
+                    beginAtZero: false,
+                    grace: 0,
+                    afterDataLimits(axis) {
+                        if (!yBounds) return;
+                        axis.min = yBounds.min;
+                        axis.max = yBounds.max;
+                    },
                     grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' },
                     ticks: { color: isLight ? '#475569' : '#64748b', font: { size: 11, family: 'JetBrains Mono' } }
                 }
@@ -2915,6 +3359,8 @@ function renderOperationsTab(data, options = {}) {
         const attemptsAvg = call.call_rank ? call.call_rank.avg : 0;
         const intervalAvg = call.minutes_since_prev ? call.minutes_since_prev.avg : 0;
 
+        const intervalPair = formatDurationPair(intervalAvg, INTERVAL_CALLBACK_SLA_MIN);
+
         const kpis = [
             {
                 label: 'Total Records (Registros de Llamadas)',
@@ -2935,9 +3381,9 @@ function renderOperationsTab(data, options = {}) {
                 color: attemptsAvg > 7 ? 'red' : 'blue'
             },
             {
-                label: 'Avg Callback Interval (Minutos entre Intentos)',
-                value: `${Math.round(intervalAvg).toLocaleString()} min`,
-                sub: `~${Math.round(intervalAvg / 60)}h entre marcaciones`,
+                label: 'Avg Callback Interval (Demora entre Re-intentos)',
+                value: intervalPair.actual.text,
+                sub: `objetivo: ≤${intervalPair.threshold.text}`,
                 color: intervalAvg > 1440 ? 'red' : 'blue'
             }
         ];

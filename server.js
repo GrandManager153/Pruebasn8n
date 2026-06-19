@@ -7,8 +7,10 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const { enrichPayloadComplete, needsMlEnrichment } = require('./scripts/ml-enrich-payload');
+const { enrichPayloadComplete, needsMlEnrichment, needsMlModelForecastEnrichment, attachForecastFieldsToPayload } = require('./scripts/ml-enrich-payload');
 const { enrichLinearForecastModels } = require('./scripts/linear-backtest');
+const { enrichOperationalAlerts, formatDurationMinutes } = require('./scripts/enrich-operational-alerts');
+const { enrichFunnelMarkovStddev } = require('./scripts/enrich-funnel-markov-stddev');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -463,19 +465,26 @@ app.get('/api/dashboard', async (req, res) => {
     if (fs.existsSync(payloadPath)) {
       let data = JSON.parse(fs.readFileSync(payloadPath, 'utf-8'));
 
-      if (needsMlEnrichment(data)) {
+      attachForecastFieldsToPayload(data);
+
+      if (needsMlEnrichment(data) || needsMlModelForecastEnrichment(data)) {
         try {
           data = await enrichPayloadComplete(data);
           fs.writeFileSync(payloadPath, JSON.stringify(data, null, 2), 'utf-8');
         } catch (enrichErr) {
           console.warn('[Dashboard] ML enrich falló:', enrichErr.message);
         }
+      } else {
+        attachForecastFieldsToPayload(data);
       }
 
       // Rebuild full-length statistical model series (replaces truncated n8n payloads)
       if (data?.forecast?.time_series?.length && Array.isArray(data.forecast.backtest_models)) {
         enrichLinearForecastModels(data, { force: true });
       }
+
+      enrichOperationalAlerts(data);
+      enrichFunnelMarkovStddev(data);
 
       res.json({ success: true, data });
     } else {
@@ -520,6 +529,8 @@ app.post('/api/webhook', async (req, res) => {
 
             try {
               payload = await enrichPayloadComplete(payload);
+              enrichOperationalAlerts(payload);
+              enrichFunnelMarkovStddev(payload);
               file.content = JSON.stringify(payload, null, 2);
               console.log('  [Enrich] Payload enriquecido con modelos ML y series lineales');
             } catch (enrichErr) {

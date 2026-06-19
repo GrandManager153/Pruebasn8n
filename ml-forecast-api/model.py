@@ -225,13 +225,51 @@ def _build_response(
 
     models_list = []
     for name in model_names:
-        models_list.append({
+        fc_int = None
+        horizons = None
+        try:
+            final_m = _make_final_model(name)
+            final_m.fit(X_full, y_full)
+            model_fc = max(0.0, float(final_m.predict(X_next)[0]))
+            fc_int = int(round(model_fc))
+            res = np.abs(np.array(acts_bt) - model_results[name]["preds"])
+            q50 = float(np.quantile(res, 0.5)) if len(res) else 0.0
+            q80 = float(np.quantile(res, 0.8)) if len(res) else 0.0
+            horizons = {
+                "next_1d": {
+                    "forecast": fc_int,
+                    "band_low": max(0, int(round(model_fc - q80))),
+                    "band_high": int(round(model_fc + q80)),
+                    "method": name,
+                },
+                "next_7d": {
+                    "forecast": fc_int * 7,
+                    "band_low": max(0, int(round((model_fc - q80) * 7))),
+                    "band_high": int(round((model_fc + q80) * 7)),
+                    "method": f"{name}+scale",
+                },
+                "next_14d": {
+                    "forecast": fc_int * 14,
+                    "band_low": max(0, int(round((model_fc - q80) * 14))),
+                    "band_high": int(round((model_fc + q80) * 14)),
+                    "method": f"{name}+scale",
+                },
+            }
+        except Exception:
+            pass
+
+        entry: dict[str, Any] = {
             "name": name,
             "mae": model_results[name]["mae"],
             "mase": model_results[name]["mase"],
             "rmse": model_results[name]["rmse"],
             "series": full_history[name],
-        })
+        }
+        if fc_int is not None:
+            entry["forecast_1d"] = fc_int
+        if horizons is not None:
+            entry["horizons"] = horizons
+        models_list.append(entry)
 
     naive_series_aligned = [None] * n
     for i in range(7, n):
