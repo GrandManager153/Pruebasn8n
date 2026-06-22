@@ -91,8 +91,10 @@ function normalizeOperationalAlerts(data) {
 }
 
 export default function AlertsPage() {
-  const { data, loading } = useDashboardStore();
+  const { data, history, loading } = useDashboardStore();
   const [filter, setFilter] = useState('all');
+  const [recurrenceFilter, setRecurrenceFilter] = useState('all');
+  const [showResolved, setShowResolved] = useState(false);
   const [modal, setModal] = useState({ open: false, label: '', value: '' });
 
   if (loading || !data) {
@@ -110,12 +112,45 @@ export default function AlertsPage() {
   const infos = alerts.filter((a) => a.severity === 'info').length;
   const maxRPN = Math.max(...alerts.map((a) => a.rpn_score || a.rpn || 0), 0);
 
+  const alertDiff = history?.compare?.alerts || { new: [], recurrent: [], resolved: [] };
+
+  const alertFingerprint = (a) => String(a?.metric || a?.id || '').trim();
+
+  const classifyAlert = (a) => {
+    const fp = alertFingerprint(a);
+    if (alertDiff.new?.includes(fp)) return 'new';
+    if (alertDiff.recurrent?.includes(fp)) return 'recurrent';
+    return null;
+  };
+
+  const recurrentCount = alerts.filter((a) => classifyAlert(a) === 'recurrent').length;
+
   const filtered = useMemo(() => {
-    const list = filter === 'all'
+    let list = filter === 'all'
       ? alerts
       : alerts.filter((a) => a.severity === filter);
+
+    if (recurrenceFilter === 'new') {
+      list = list.filter((a) => classifyAlert(a) === 'new');
+    } else if (recurrenceFilter === 'recurrent') {
+      list = list.filter((a) => classifyAlert(a) === 'recurrent');
+    } else if (recurrenceFilter === 'resolved') {
+      list = [];
+    }
+
     return [...list].sort((a, b) => (b.rpn_score || b.rpn || 0) - (a.rpn_score || a.rpn || 0));
-  }, [alerts, filter]);
+  }, [alerts, filter, recurrenceFilter, alertDiff]);
+
+  const recurrenceBadge = (a) => {
+    const cls = classifyAlert(a);
+    if (!cls) return null;
+    const map = {
+      new: { cls: 'badge-info', label: 'Nueva' },
+      recurrent: { cls: 'badge-warning', label: 'Recurrente' },
+    };
+    const b = map[cls];
+    return b ? <span className={`badge ${b.cls}`} style={{ marginLeft: 8, fontSize: 10 }}>{b.label}</span> : null;
+  };
 
   const severityBadge = (s) => {
     const map = {
@@ -160,6 +195,15 @@ export default function AlertsPage() {
           delay={0.12}
           onClick={() => setModal({ open: true, label: 'Warnings & Info (Advertencias e Info)', value: String(warnings + infos) })}
         />
+        {history?.compare?.available && (
+          <KpiCard
+            label="Recurrent Alerts (Alertas Recurrentes)"
+            value={recurrentCount}
+            color="gold"
+            delay={0.16}
+            onClick={() => setModal({ open: true, label: 'Recurrent Alerts (Alertas Recurrentes)', value: String(recurrentCount) })}
+          />
+        )}
       </div>
 
       {/* Alerts Table */}
@@ -175,16 +219,36 @@ export default function AlertsPage() {
             <span className="bar" />
             Incident Box (Buzón de Incidentes y Anomalías)
           </div>
-          <div className="filter-pills">
-            {['all', 'critical', 'warning', 'info'].map((f) => (
-              <button
-                key={f}
-                className={`filter-pill ${f !== 'all' ? f : ''} ${filter === f ? 'active' : ''}`}
-                onClick={() => setFilter(f)}
-              >
-                {f === 'all' ? 'Todas' : f === 'critical' ? 'Críticas' : f === 'warning' ? 'Advertencias' : 'Informativas'}
-              </button>
-            ))}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+            <div className="filter-pills">
+              {['all', 'critical', 'warning', 'info'].map((f) => (
+                <button
+                  key={f}
+                  className={`filter-pill ${f !== 'all' ? f : ''} ${filter === f ? 'active' : ''}`}
+                  onClick={() => setFilter(f)}
+                >
+                  {f === 'all' ? 'Todas' : f === 'critical' ? 'Críticas' : f === 'warning' ? 'Advertencias' : 'Informativas'}
+                </button>
+              ))}
+            </div>
+            {history?.compare?.available && (
+              <div className="filter-pills">
+                {[
+                  { id: 'all', label: 'Todas' },
+                  { id: 'new', label: 'Nuevas' },
+                  { id: 'recurrent', label: 'Recurrentes' },
+                  { id: 'resolved', label: 'Resueltas' },
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    className={`filter-pill ${recurrenceFilter === f.id ? 'active' : ''}`}
+                    onClick={() => setRecurrenceFilter(f.id)}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -213,7 +277,10 @@ export default function AlertsPage() {
                     transition={{ delay: i * 0.03 }}
                   >
                     <td>{severityBadge(alert.severity)}</td>
-                    <td style={{ fontWeight: 600 }}>{formatAlertTitle(alert)}</td>
+                    <td style={{ fontWeight: 600 }}>
+                      {formatAlertTitle(alert)}
+                      {recurrenceBadge(alert)}
+                    </td>
                     <td style={{ textAlign: 'right' }}>{formatObservedValue(alert)}</td>
                     <td style={{ textAlign: 'right' }}>{formatAlertThreshold(alert.threshold, alert)}</td>
                     <td>
@@ -236,6 +303,34 @@ export default function AlertsPage() {
             </tbody>
           </table>
         </div>
+
+        {history?.compare?.available && (alertDiff.resolved?.length > 0) && (
+          <div style={{ marginTop: 20 }}>
+            <button
+              type="button"
+              onClick={() => setShowResolved(!showResolved)}
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--border)',
+                color: 'var(--text-muted)',
+                padding: '6px 12px',
+                borderRadius: 6,
+                fontSize: 12,
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              {showResolved ? '▾' : '▸'} Alertas resueltas ({alertDiff.resolved.length})
+            </button>
+            {showResolved && (
+              <ul style={{ marginTop: 10, paddingLeft: 20, color: 'var(--text-muted)', fontSize: 13 }}>
+                {alertDiff.resolved.map((fp) => (
+                  <li key={fp}>{fp}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </motion.div>
 
       {/* Explanation Modal */}

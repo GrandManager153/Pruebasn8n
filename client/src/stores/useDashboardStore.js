@@ -4,6 +4,7 @@ import { enrichFunnelMarkovStddev } from '../utils/enrichFunnelMarkovStddev';
 const useDashboardStore = create((set, get) => ({
   // ── Data ──
   data: null,
+  history: null,
   loading: true,
   error: null,
   lastUpdate: null,
@@ -63,6 +64,7 @@ const useDashboardStore = create((set, get) => ({
           enrichFunnelMarkovStddev(json.data);
           set({
             data: json.data,
+            history: json.history || null,
             loading: false,
             error: null,
             lastUpdate: new Date(),

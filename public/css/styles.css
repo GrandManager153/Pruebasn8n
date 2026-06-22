@@ -773,13 +773,203 @@ body.light-mode .metric-badge-bad {
 }
 
 /* === Funnel feeders / leaks lists === */
+.funnel-panel {
+    overflow: hidden;
+}
+
+.funnel-panel--feeders {
+    border-top: 2px solid rgba(16, 185, 129, 0.35);
+}
+
+.funnel-panel--leaks {
+    border-top: 2px solid rgba(239, 68, 68, 0.35);
+}
+
+.funnel-data-thead {
+    display: grid;
+    grid-template-columns: 36px 1fr 64px;
+    gap: 10px;
+    align-items: center;
+    margin-top: 12px;
+    padding: 0 12px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.funnel-data-th {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.funnel-data-th--pct {
+    text-align: right;
+}
+
 .funnel-scroll-list {
     display: flex;
     flex-direction: column;
-    gap: 0;
+    gap: 8px;
     max-height: 520px;
     overflow-y: auto;
     overflow-x: hidden;
+    padding: 10px 8px 4px;
+}
+
+.funnel-data-row {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 10px;
+    align-items: stretch;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+    cursor: pointer;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.funnel-data-row:hover {
+    transform: translateY(-1px);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.funnel-data-row--feeder:hover {
+    border-color: rgba(16, 185, 129, 0.28);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(255, 255, 255, 0.02));
+}
+
+.funnel-data-row--leak:hover {
+    border-color: rgba(239, 68, 68, 0.28);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(255, 255, 255, 0.02));
+}
+
+.funnel-rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 800;
+    font-family: var(--mono);
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    align-self: start;
+    margin-top: 2px;
+}
+
+.funnel-rank--gold {
+    color: #fcd34d;
+    background: rgba(252, 211, 77, 0.12);
+    border-color: rgba(252, 211, 77, 0.35);
+    box-shadow: 0 0 12px rgba(252, 211, 77, 0.15);
+}
+
+.funnel-rank--silver {
+    color: #cbd5e1;
+    background: rgba(203, 213, 225, 0.1);
+    border-color: rgba(203, 213, 225, 0.28);
+}
+
+.funnel-rank--bronze {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.28);
+}
+
+.funnel-data-row-main {
+    min-width: 0;
+}
+
+.funnel-data-row-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.funnel-data-row-titles {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.funnel-data-row-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    line-height: 1.35;
+}
+
+.funnel-data-row-sub {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-dim);
+    line-height: 1.35;
+}
+
+.funnel-data-row-pct {
+    font-size: 14px;
+    font-weight: 800;
+    font-family: var(--mono);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.funnel-data-row-bar {
+    margin-top: 10px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.funnel-data-row-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.08);
+}
+
+.funnel-data-row--feeder .funnel-data-row-bar-fill {
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.65), var(--green)) !important;
+}
+
+.funnel-data-row--leak .funnel-data-row-bar-fill {
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.65), var(--red)) !important;
+}
+
+.funnel-data-row-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.funnel-data-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--text-dim);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.funnel-data-chip--value {
+    color: var(--text-muted);
+    font-family: var(--mono);
 }
 
 .funnel-list-item {
@@ -968,6 +1158,176 @@ body.light-mode .metric-badge-bad {
     border-color: var(--green);
     color: var(--green);
     background: rgba(16, 185, 129, 0.1);
+}
+
+/* === Funnel Markov table === */
+.funnel-markov-table-wrap {
+    margin-top: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+    max-height: 520px;
+    overflow: auto;
+}
+
+.funnel-markov-table {
+    margin: 0;
+}
+
+.funnel-markov-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: rgba(10, 14, 24, 0.96);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 12px 14px;
+}
+
+.funnel-markov-th-rank {
+    width: 48px;
+}
+
+.funnel-markov-th-metric {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.funnel-markov-row td {
+    padding: 14px;
+    vertical-align: middle;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.funnel-markov-row:last-child td {
+    border-bottom: none;
+}
+
+.funnel-markov-row--high {
+    box-shadow: inset 3px 0 0 rgba(16, 185, 129, 0.75);
+}
+
+.funnel-markov-row--mid {
+    box-shadow: inset 3px 0 0 rgba(56, 189, 248, 0.55);
+}
+
+.funnel-markov-row--low {
+    box-shadow: inset 3px 0 0 rgba(148, 163, 184, 0.35);
+}
+
+.funnel-markov-row:hover td {
+    background: rgba(204, 164, 59, 0.04);
+}
+
+.funnel-markov-rank-cell {
+    width: 48px;
+}
+
+.funnel-markov-state {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+}
+
+.funnel-markov-state-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+    background: var(--green);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+}
+
+.funnel-markov-state-dot[data-group="contacto"] { background: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.35); }
+.funnel-markov-state-dot[data-group="llamada"] { background: #a78bfa; box-shadow: 0 0 10px rgba(167, 139, 250, 0.35); }
+.funnel-markov-state-dot[data-group="cierre"] { background: #f59e0b; box-shadow: 0 0 10px rgba(245, 158, 11, 0.35); }
+.funnel-markov-state-dot[data-group="perdida"] { background: #f43f5e; box-shadow: 0 0 10px rgba(244, 63, 94, 0.35); }
+
+.funnel-markov-state-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: white;
+    line-height: 1.35;
+}
+
+.funnel-markov-state-raw {
+    margin-top: 3px;
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.35;
+}
+
+.funnel-markov-metric-cell {
+    text-align: right;
+}
+
+.funnel-markov-metric {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    min-width: 88px;
+}
+
+.funnel-markov-pct {
+    font-size: 14px;
+    font-weight: 800;
+    font-family: var(--mono);
+    color: var(--green);
+}
+
+.funnel-markov-mini-bar {
+    width: 100%;
+    max-width: 120px;
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+}
+
+.funnel-markov-mini-bar span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.55), var(--green));
+}
+
+.funnel-markov-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 56px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.funnel-markov-pill--loss {
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.22);
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.funnel-markov-pill--mono {
+    color: white;
+    font-family: var(--mono);
+}
+
+.funnel-markov-pill--dim {
+    color: var(--text-dim);
+    font-family: var(--mono);
+}
+
+.funnel-markov-empty {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 28px 16px !important;
+    font-size: 13px;
 }
 
 .forecast-chart-panel .chart-wrapper {
@@ -3351,44 +3711,78 @@ body.light-mode #tab-funnel .card .card {
 }
 
 body.light-mode #tab-funnel #funnel-feeders-list .funnel-list-item,
-body.light-mode #tab-funnel #funnel-leaks-list .funnel-list-item {
-    border-bottom-color: rgba(15, 23, 42, 0.08) !important;
+body.light-mode #tab-funnel #funnel-leaks-list .funnel-list-item,
+body.light-mode #tab-funnel #funnel-feeders-list .funnel-data-row,
+body.light-mode #tab-funnel #funnel-leaks-list .funnel-data-row {
+    border-color: rgba(15, 23, 42, 0.08) !important;
+    background: rgba(255, 255, 255, 0.72) !important;
 }
 
 body.light-mode #tab-funnel #funnel-feeders-list .funnel-list-item-title,
-body.light-mode #tab-funnel #funnel-leaks-list .funnel-list-item-title {
+body.light-mode #tab-funnel #funnel-leaks-list .funnel-list-item-title,
+body.light-mode #tab-funnel #funnel-feeders-list .funnel-data-row-title,
+body.light-mode #tab-funnel #funnel-leaks-list .funnel-data-row-title {
     color: #0f172a !important;
 }
 
 body.light-mode #tab-funnel #funnel-feeders-list .funnel-list-item-subtitle,
-body.light-mode #tab-funnel #funnel-leaks-list .funnel-list-item-subtitle {
+body.light-mode #tab-funnel #funnel-leaks-list .funnel-list-item-subtitle,
+body.light-mode #tab-funnel #funnel-feeders-list .funnel-data-row-sub,
+body.light-mode #tab-funnel #funnel-leaks-list .funnel-data-row-sub {
     color: #64748b !important;
 }
 
 body.light-mode #tab-funnel #funnel-feeders-list .funnel-list-item-meta,
-body.light-mode #tab-funnel #funnel-leaks-list .funnel-list-item-meta {
+body.light-mode #tab-funnel #funnel-leaks-list .funnel-list-item-meta,
+body.light-mode #tab-funnel .funnel-data-chip {
     color: #64748b !important;
 }
 
-body.light-mode #tab-funnel #funnel-feeders-list .progress-bar-fill {
+body.light-mode #tab-funnel #funnel-feeders-list .progress-bar-fill,
+body.light-mode #tab-funnel #funnel-feeders-list .funnel-data-row-bar-fill {
     background: var(--green) !important;
 }
 
-body.light-mode #tab-funnel #funnel-leaks-list .progress-bar-fill {
+body.light-mode #tab-funnel #funnel-leaks-list .progress-bar-fill,
+body.light-mode #tab-funnel #funnel-leaks-list .funnel-data-row-bar-fill {
     background: var(--red) !important;
 }
 
-body.light-mode #tab-funnel #funnel-feeders-list .progress-bar-val {
+body.light-mode #tab-funnel #funnel-feeders-list .progress-bar-val,
+body.light-mode #tab-funnel #funnel-feeders-list .funnel-data-row-pct {
     color: var(--green) !important;
 }
 
-body.light-mode #tab-funnel #funnel-leaks-list .progress-bar-val {
+body.light-mode #tab-funnel #funnel-leaks-list .progress-bar-val,
+body.light-mode #tab-funnel #funnel-leaks-list .funnel-data-row-pct {
     color: var(--red) !important;
 }
 
 body.light-mode #tab-funnel #funnel-feeders-list .funnel-list-item-bar,
-body.light-mode #tab-funnel #funnel-leaks-list .funnel-list-item-bar {
+body.light-mode #tab-funnel #funnel-leaks-list .funnel-list-item-bar,
+body.light-mode #tab-funnel .funnel-data-row-bar {
     background: rgba(15, 23, 42, 0.08) !important;
+}
+
+body.light-mode #tab-funnel .funnel-data-thead {
+    border-bottom-color: rgba(15, 23, 42, 0.08);
+}
+
+body.light-mode #tab-funnel .funnel-markov-table-wrap {
+    border-color: rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.75);
+}
+
+body.light-mode #tab-funnel .funnel-markov-table thead th {
+    background: rgba(248, 250, 252, 0.96);
+}
+
+body.light-mode #tab-funnel .funnel-markov-state-name {
+    color: #0f172a !important;
+}
+
+body.light-mode #tab-funnel .funnel-markov-pill--mono {
+    color: #0f172a !important;
 }
 
 body.light-mode #tab-funnel .funnel-insight-banner {

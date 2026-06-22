@@ -15,9 +15,10 @@ export default function KpiModal({
   onClose,
 }) {
   const explain = resolveKpiExplanation(label);
-  const defText = definition || explain?.definition;
-  const interpText = interpretation || explain?.interpretation;
-  const sourceText = source || explain?.source;
+  const defText = definition || explain?.definition || 'Indicador operativo del call center registrado en el periodo analizado.';
+  const interpText = interpretation || explain?.interpretation || 'Compara el valor actual con los umbrales operativos recomendados para decidir si requiere acción.';
+  const sourceText = source || explain?.source || 'CRM integrado vía n8n — operations';
+  const displayValue = value != null && value !== '' ? value : '—';
 
   return (
     <AnimatePresence>
@@ -45,39 +46,23 @@ export default function KpiModal({
             {subtitle ? (
               <div className="kpi-modal-subtitle">{subtitle}</div>
             ) : null}
-            <div className="kpi-modal-value">{value}</div>
+            <div className="kpi-modal-value">{displayValue}</div>
 
-            {defText ? (
-              <>
-                <div className="kpi-modal-section">
-                  <div className="kpi-modal-section-label">¿Qué significa?</div>
-                  <div className="kpi-modal-section-text">{defText}</div>
-                </div>
-                {interpText ? (
-                  <div className="kpi-modal-section">
-                    <div className="kpi-modal-section-label">
-                      ¿Cómo interpretar el valor actual?
-                    </div>
-                    <div className="kpi-modal-section-text">{interpText}</div>
-                  </div>
-                ) : null}
-                {sourceText ? (
-                  <>
-                    <hr className="kpi-modal-divider" />
-                    <div className="kpi-modal-source">
-                      <div className="kpi-modal-source-dot" />
-                      <span>{sourceText}</span>
-                    </div>
-                  </>
-                ) : null}
-              </>
-            ) : (
-              <div className="kpi-modal-section">
-                <div className="kpi-modal-section-text" style={{ color: 'var(--text-dim)' }}>
-                  No hay información detallada para este indicador.
-                </div>
+            <div className="kpi-modal-section">
+              <div className="kpi-modal-section-label">¿Qué significa?</div>
+              <div className="kpi-modal-section-text">{defText}</div>
+            </div>
+            <div className="kpi-modal-section">
+              <div className="kpi-modal-section-label">
+                ¿Cómo interpretar el valor actual?
               </div>
-            )}
+              <div className="kpi-modal-section-text">{interpText}</div>
+            </div>
+            <hr className="kpi-modal-divider" />
+            <div className="kpi-modal-source">
+              <div className="kpi-modal-source-dot" />
+              <span>{sourceText}</span>
+            </div>
           </motion.div>
         </motion.div>
       )}

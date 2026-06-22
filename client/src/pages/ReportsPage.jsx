@@ -38,6 +38,8 @@ export default function ReportsPage() {
   const [iframeUrl, setIframeUrl] = useState('');
   const lastUpdate = useDashboardStore((state) => state.lastUpdate);
   const theme = useDashboardStore((state) => state.theme);
+  const narrativeQa = useDashboardStore((state) => state.data?.meta?.narrative_qa);
+  const qaPassed = narrativeQa?.passed === true;
 
   const resizeReportIframe = (iframe) => {
     if (!iframe?.contentWindow) return;
@@ -131,7 +133,14 @@ export default function ReportsPage() {
               {r.code}
             </div>
             <div className="report-info">
-              <h4>{r.title}</h4>
+              <h4>
+                {r.title}
+                {qaPassed && (
+                  <span className="badge badge-success" style={{ marginLeft: 8, fontSize: 10, verticalAlign: 'middle' }}>
+                    Narrativa validada
+                  </span>
+                )}
+              </h4>
               <p>Dirigido a: {r.audience}</p>
             </div>
             <span className="arrow">→</span>

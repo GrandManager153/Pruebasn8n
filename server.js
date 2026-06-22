@@ -11,6 +11,29 @@ const { enrichPayloadComplete, needsMlEnrichment, needsMlModelForecastEnrichment
 const { enrichLinearForecastModels } = require('./scripts/linear-backtest');
 const { enrichOperationalAlerts, formatDurationMinutes } = require('./scripts/enrich-operational-alerts');
 const { enrichFunnelMarkovStddev } = require('./scripts/enrich-funnel-markov-stddev');
+const { enrichFunnelFromTransitions } = require('./scripts/enrich-funnel-from-transitions');
+const { enrichOperationsDerived } = require('./scripts/enrich-operations-derived');
+const { enrichLittlesLaw } = require('./scripts/enrich-littles-law');
+const {
+  appendHistoryEntry,
+  buildHistoryResponse,
+  loadHistoryIndex,
+  compareWithPrevious,
+} = require('./scripts/history-store');
+
+function applyServerEnrichment(data) {
+  enrichFunnelFromTransitions(data);
+  enrichOperationsDerived(data);
+  enrichLittlesLaw(data);
+  enrichOperationalAlerts(data);
+  enrichFunnelMarkovStddev(data);
+  return data;
+}
+
+/** @deprecated use applyServerEnrichment */
+function applyPhase1Enrichment(data) {
+  return applyServerEnrichment(data);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -519,13 +542,40 @@ app.get('/api/dashboard', async (req, res) => {
 
       ensureTrainTestSplit(data);
 
-      enrichOperationalAlerts(data);
-      enrichFunnelMarkovStddev(data);
+      applyServerEnrichment(data);
 
-      res.json({ success: true, data });
+      const history = buildHistoryResponse(data, DATA_DIR);
+
+      res.json({ success: true, data, history });
     } else {
       res.status(404).json({ success: false, message: 'No hay datos de dashboard disponibles aún. Ejecuta el workflow de n8n.' });
     }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Historial de ejecuciones (índice ligero)
+app.get('/api/history', (req, res) => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 90, 90);
+    const entries = loadHistoryIndex(DATA_DIR, limit);
+    res.json({ success: true, entry_count: entries.length, entries });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/history/compare', (req, res) => {
+  const payloadPath = path.join(DATA_DIR, 'dashboard_payload.json');
+  try {
+    if (!fs.existsSync(payloadPath)) {
+      return res.status(404).json({ success: false, message: 'No hay payload actual' });
+    }
+    const data = JSON.parse(fs.readFileSync(payloadPath, 'utf-8'));
+    applyServerEnrichment(data);
+    const compare = compareWithPrevious(data, DATA_DIR);
+    res.json({ success: true, compare });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -565,10 +615,17 @@ app.post('/api/webhook', async (req, res) => {
 
             try {
               payload = await enrichPayloadComplete(payload);
-              enrichOperationalAlerts(payload);
-              enrichFunnelMarkovStddev(payload);
+              if (payload?.forecast?.time_series?.length && Array.isArray(payload.forecast.backtest_models)) {
+                enrichLinearForecastModels(payload, { force: true });
+              }
+              ensureTrainTestSplit(payload);
+              applyServerEnrichment(payload);
+              const histResult = appendHistoryEntry(payload, DATA_DIR);
+              if (histResult.appended) {
+                console.log(`  [History] Entrada guardada: ${histResult.entry.execution_id}`);
+              }
               file.content = JSON.stringify(payload, null, 2);
-              console.log('  [Enrich] Payload enriquecido con modelos ML y series lineales');
+              console.log('  [Enrich] Payload enriquecido (ML + servidor Fase 1/2)');
             } catch (enrichErr) {
               console.warn('  [Enrich] Falló enriquecimiento ML:', enrichErr.message);
             }

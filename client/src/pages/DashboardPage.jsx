@@ -4,9 +4,34 @@ import useDashboardStore from '../stores/useDashboardStore';
 import KpiCard from '../components/shared/KpiCard';
 import KpiModal from '../components/shared/KpiModal';
 import HealthHero from '../components/shared/HealthHero';
+import DashboardCompareStrip from '../components/shared/DashboardCompareStrip';
+
+function deltaBadgeForKey(key, deltas) {
+  const d = deltas?.[key];
+  if (!d || d.delta == null || d.delta === 0) return null;
+  const sign = d.delta > 0 ? '+' : '';
+  const arrow = d.direction === 'up' ? '↑' : d.direction === 'down' ? '↓' : '→';
+  return {
+    text: `${arrow} ${sign}${d.delta} vs ant.`,
+    color: d.direction === 'up' ? 'var(--green)' : d.direction === 'down' ? 'var(--red)' : 'var(--text-muted)',
+  };
+}
+
+const KPI_DELTA_MAP = {
+  'Health Score': 'health_score',
+  'Leads totales': 'total_leads',
+  'Tasa de Sobre-Contacto': 'overcontact_pct',
+  'Overcontact Rate (Tasa de Sobre-Contacto)': 'overcontact_pct',
+  'Conversion global': 'conversion_pct',
+  'Global CVR (Tasa de Conversión Global)': 'conversion_pct',
+  'CPL implicito': 'global_cpl',
+  'CPL (Costo por Lead Implícito)': 'global_cpl',
+  'MASE': 'mase',
+  'MASE (Precisión del Modelo)': 'mase',
+};
 
 export default function DashboardPage() {
-  const { data, loading } = useDashboardStore();
+  const { data, history, loading } = useDashboardStore();
   const [modal, setModal] = useState({ open: false, label: '', value: '' });
 
   if (loading || !data) {
@@ -222,9 +247,63 @@ export default function DashboardPage() {
         decimals: 2
       });
     }
+
+    const derived = data.operations.derived;
+    if (derived?.first_contact_rate != null) {
+      kpis.push({
+        key: 'First Contact Rate',
+        value: derived.first_contact_rate * 100,
+        label: 'First Contact Rate (Tasa de Primer Contacto)',
+        sub: 'Primer intento / contactos únicos',
+        color: 'green',
+        suffix: '%',
+        decimals: 1,
+        animateValue: true,
+      });
+    }
+    if (derived?.sweet_spot_pct != null) {
+      kpis.push({
+        key: 'Sweet Spot',
+        value: derived.sweet_spot_pct,
+        label: 'Sweet Spot % (Intentos 1–3)',
+        sub: 'Marcaciones en ventana óptima',
+        color: 'green',
+        suffix: '%',
+        decimals: 1,
+        animateValue: true,
+      });
+    }
+
+    const economics = data.derived?.economics;
+    if (economics?.roas_proxy != null && investment?.total_spend > 0) {
+      kpis.push({
+        key: 'ROAS Proxy',
+        value: economics.roas_proxy,
+        label: 'ROAS Proxy (Retorno Estimado / Gasto)',
+        sub: 'Basado en conversiones Markov',
+        color: economics.roas_proxy >= 1 ? 'green' : 'red',
+        decimals: 2,
+        animateValue: true,
+      });
+    }
+    if (economics?.breakeven_cpl_gap != null) {
+      const gap = economics.breakeven_cpl_gap;
+      kpis.push({
+        key: 'Breakeven CPL Gap',
+        value: gap,
+        label: 'Breakeven CPL Gap (CPL vs Umbral Rentable)',
+        sub: economics.breakeven_cpl != null ? `Umbral: $${economics.breakeven_cpl}` : 'Global',
+        color: gap > 0 ? 'red' : 'green',
+        prefix: '$',
+        decimals: 2,
+        animateValue: true,
+      });
+    }
   }
 
   const actions = (data.system?.actions || []).slice(0, 3);
+  const compare = history?.compare;
+  const deltas = compare?.deltas || {};
 
   return (
     <>
@@ -233,6 +312,16 @@ export default function DashboardPage() {
         score={sys.health_score || 0}
         reasons={sys.health_reason || sys.health_reasons || ''}
       />
+
+      {compare?.available ? (
+        <DashboardCompareStrip compare={compare} />
+      ) : (
+        history && (history.entry_count || 0) < 2 && (
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '0 0 16px' }}>
+            Historial disponible tras la próxima ejecución diaria de n8n
+          </p>
+        )
+      )}
 
       {/* KPIs */}
       <div className="section-header">
@@ -254,6 +343,7 @@ export default function DashboardPage() {
             suffix={kpi.suffix}
             decimals={kpi.decimals}
             animateValue={kpi.animateValue !== false}
+            deltaBadge={compare?.available ? deltaBadgeForKey(KPI_DELTA_MAP[kpi.key], deltas) : null}
             onClick={() => {
               let formattedVal = String(kpi.value);
               if (typeof kpi.value === 'number') {

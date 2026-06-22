@@ -296,7 +296,7 @@ let dpbCode = dpb.parameters.jsCode;
   console.log('Patched', wfPath);
 }
 
-['Mkt_BI_IA_v7 (2).json', 'Mkt_BI_IA_v7 (1).json'].forEach((name) => {
+['Mkt_BI_IA_v7 (2).json'].forEach((name) => {
   const fp = path.join(root, name);
   if (fs.existsSync(fp)) patchWorkflow(fp);
 });

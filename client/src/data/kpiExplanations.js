@@ -116,24 +116,149 @@ export const KPI_EXPLANATIONS = {
   },
   'Promedio Intentos': {
     icon: '⚡',
+    shortHint: 'Cuántas veces en promedio se llama a cada lead.',
     definition: 'El promedio general de intentos de llamadas telefónicas por lead.',
     interpretation: 'Valores mayores a 7 sugieren sobre-contacto y saturación de la base de datos.',
     source: 'Métricas operativas del CRM',
   },
+  'First Contact Rate (Tasa de Primer Contacto)': {
+    icon: '🎯',
+    shortHint: 'Cuántos leads se contactan al primer intento de llamada.',
+    definition: 'Proporción de contactos únicos alcanzados en el primer intento de marcación.',
+    interpretation: 'Valores altos indican mejor speed-to-lead y menor desperdicio de intentos.',
+    source: 'operations.derived.first_contact_rate',
+  },
+  'Sweet Spot % (Intentos 1–3)': {
+    icon: '✅',
+    shortHint: 'Llamadas dentro de la ventana ideal de 1 a 3 intentos.',
+    definition: 'Porcentaje de llamadas realizadas dentro de la ventana óptima de 1 a 3 intentos.',
+    interpretation: 'Por encima del sobre-contacto (>7) refleja disciplina operativa saludable.',
+    source: 'operations.derived.sweet_spot_pct',
+  },
+  'Dial Efficiency (Eficiencia de Marcación)': {
+    icon: '📲',
+    shortHint: 'Qué tan bien se evitan llamadas repetidas al mismo lead.',
+    definition: 'Proporción de contactos únicos respecto al total de registros de llamada. Mide si cada marcación llega a un lead distinto.',
+    interpretation: 'Valores altos = menos duplicidad. Bajo indica muchas re-marcaciones al mismo prospecto.',
+    source: 'operations.derived.dial_efficiency',
+  },
+  'Overcontact Index (Llamadas >7 est.)': {
+    icon: '⚠️',
+    shortHint: 'Llamadas que superan el límite recomendado de intentos.',
+    definition: 'Estimación de llamadas con más de 7 intentos acumulados, umbral donde el retorno marginal cae drásticamente.',
+    interpretation: 'Valores altos señalan desgaste de la base y posible saturación de leads.',
+    source: 'operations.derived.overcontact_index',
+  },
+  'Tasa de llegada (λ)': {
+    icon: '📥',
+    shortHint: 'Leads que entran por hora según el promedio diario.',
+    definition: 'Tasa de llegada (λ): volumen de leads nuevos por hora, derivado del promedio diario dividido entre 24.',
+    interpretation: 'Base del modelo de colas; a mayor λ, más agentes o menor tiempo de servicio se requieren.',
+    source: 'operations.littles_law.arrival_rate_per_hour',
+  },
+  'Tiempo de servicio (W)': {
+    icon: '⏱️',
+    shortHint: 'Duración media de cada llamada atendida.',
+    definition: 'Tiempo de servicio (W): minutos promedio que un agente dedica a cada interacción telefónica.',
+    interpretation: 'W alto aumenta la cola estimada (L = λ × W) si no se ajusta la capacidad.',
+    source: 'operations.littles_law.avg_service_minutes',
+  },
+  'Cola estimada (L)': {
+    icon: '📋',
+    shortHint: 'Leads en espera según la ley de Little (λ × W).',
+    definition: 'Cola estimada (L): número de leads en sistema esperando atención, calculado con la ley de Little (L = λ × W).',
+    interpretation: 'Valores elevados anticipan saturación del call center si no hay refuerzo de staffing.',
+    source: 'operations.littles_law.estimated_queue_leads',
+  },
+  'Utilización': {
+    icon: '⚙️',
+    shortHint: 'Porcentaje de capacidad diaria que consume la demanda actual.',
+    definition: 'Porcentaje de utilización de la capacidad operativa: qué fracción del máximo de leads/día que el equipo puede atender está siendo demandada.',
+    interpretation: 'Por encima de 85% hay riesgo de colas y tiempos de espera prolongados.',
+    source: 'operations.littles_law.utilization_pct',
+  },
+  'Presión de staffing': {
+    icon: '👥',
+    shortHint: 'Si el equipo actual cubre la demanda de mañana.',
+    definition: 'Indicador de presión de personal: compara la demanda proyectada contra la capacidad disponible de agentes.',
+    interpretation: 'Crítica o Presión implica gap de leads sin atender; OK indica cobertura suficiente.',
+    source: 'operations.littles_law.staffing_pressure',
+  },
+  'Daily Volume (Volumen Diario de Leads)': {
+    icon: '📊',
+    shortHint: 'Cuántos leads llegan cada día y cómo se comparan con el promedio.',
+    definition: 'Serie temporal del volumen diario de leads recibidos en el periodo analizado.',
+    interpretation: 'Picos sostenidos por encima del promedio requieren más agentes; valles sugieren revisar pauta.',
+    source: 'operations.daily_volumes',
+  },
+  'Hourly Distribution (Distribución Horaria)': {
+    icon: '🕐',
+    shortHint: 'En qué horas del día se concentran las llamadas.',
+    definition: 'Distribución porcentual de contactos telefónicos a lo largo de las 24 horas del día.',
+    interpretation: 'Alinea turnos de agentes con la hora pico para mejorar el speed-to-lead.',
+    source: 'operations.hourly_distribution',
+  },
+  'Contact Distribution (Distribución de Contacto)': {
+    icon: '📞',
+    shortHint: 'En cuántos intentos se logra contactar a los leads.',
+    definition: 'Desglose de llamadas según el número de intento: primer contacto, ventana 1–3, 1–5 y sobre-contacto (>7).',
+    interpretation: 'Un alto % en 1er intento o sweet spot indica operación eficiente; >7% en sobre-contacto es señal de alerta.',
+    source: 'operations.contact_distribution',
+  },
+  'Forecast vs capacidad': {
+    icon: '⚖️',
+    shortHint: 'Compara el pronóstico de mañana con la capacidad histórica.',
+    definition: 'Relación entre el pronóstico de leads del día siguiente y el promedio diario histórico de capacidad.',
+    interpretation: 'Ratio > 1 con presión crítica indica que mañana se superará la capacidad operativa habitual.',
+    source: 'operations.derived.forecast_vs_capacity',
+  },
+  'ROAS Proxy (Retorno Estimado / Gasto)': {
+    icon: '📈',
+    definition: 'Retorno estimado sobre gasto publicitario usando conversiones Markov y valor por caso.',
+    interpretation: '≥ 1 sugiere rentabilidad proxy; < 1 indica que el gasto supera el ingreso estimado.',
+    source: 'derived.economics.roas_proxy',
+  },
+  'Breakeven CPL Gap (CPL vs Umbral Rentable)': {
+    icon: '⚖️',
+    definition: 'Diferencia entre el CPL global actual y el CPL máximo rentable según la tasa de conversión.',
+    interpretation: 'Positivo = estás pagando más de lo sostenible por lead; negativo = margen favorable.',
+    source: 'derived.economics.breakeven_cpl_gap',
+  },
+  'Delta vs ejecución anterior': {
+    icon: '📉',
+    definition: 'Cambio de cada KPI respecto a la ejecución diaria anterior guardada en el historial local.',
+    interpretation: 'En SHS/leads/conversión, subir suele ser bueno; en CPL, MASE y sobre-contacto la dirección favorable se invierte.',
+    source: 'history.compare.deltas',
+  },
+  'Alertas recurrentes': {
+    icon: '🔁',
+    definition: 'Incidentes cuya métrica ya aparecía en la ejecución anterior.',
+    interpretation: 'Indican problemas persistentes que requieren acción de fondo, no solo monitoreo.',
+    source: 'history.compare.alerts.recurrent',
+  },
+  'Narrativa validada': {
+    icon: '✅',
+    definition: 'Los informes HTML pasaron la validación NarrativeQA en n8n.',
+    interpretation: 'Badge verde cuando meta.narrative_qa.passed es true.',
+    source: 'meta.narrative_qa',
+  },
   'Registros de Llamadas': {
     icon: '📞',
+    shortHint: 'Todas las llamadas registradas, incluyendo reintentos.',
     definition: 'Total Records: cantidad total de llamadas telefónicas brutas registradas en el CRM durante el periodo analizado.',
     interpretation: 'Mide la carga de trabajo bruta. Útil para dimensionar el esfuerzo bruto y el volumen de marcaciones diarias.',
     source: 'CRM integrado vía n8n',
   },
   'Contactos Únicos': {
     icon: '👤',
+    shortHint: 'Prospectos distintos que recibieron al menos una llamada.',
     definition: 'Unique Leads: número de prospectos únicos que recibieron llamadas o gestiones.',
     interpretation: 'Diferencia el esfuerzo bruto del alcance real. Un ratio llamadas/contactos alto indica alta insistencia telefónica.',
     source: 'CRM integrado vía n8n',
   },
   'Intervalo entre Intentos': {
     icon: '⏱️',
+    shortHint: 'Tiempo promedio entre una llamada y la siguiente al mismo lead.',
     definition: 'Avg Callback Interval: el tiempo promedio transcurrido entre intentos consecutivos de llamada a un mismo lead.',
     interpretation: 'Intervalos muy largos (miles de minutos) indican un seguimiento lento, lo cual reduce drásticamente la probabilidad de conversión.',
     source: 'Diferencia de tiempo entre llamadas en el CRM',
@@ -236,7 +361,33 @@ export const KPI_ALIASES = {
   'Revenue at Risk': 'Revenue at Risk',
   'REVENUE AT RISK (INGRESO EN RIESGO POR FUGAS)': 'Revenue at Risk',
   'Ingreso en riesgo': 'Revenue at Risk',
-  
+
+  'First Contact Rate (Tasa de Primer Contacto)': 'First Contact Rate (Tasa de Primer Contacto)',
+  'First Contact Rate': 'First Contact Rate (Tasa de Primer Contacto)',
+  'Sweet Spot % (Intentos 1–3)': 'Sweet Spot % (Intentos 1–3)',
+  'Sweet Spot %': 'Sweet Spot % (Intentos 1–3)',
+  'ROAS Proxy (Retorno Estimado / Gasto)': 'ROAS Proxy (Retorno Estimado / Gasto)',
+  'ROAS Proxy': 'ROAS Proxy (Retorno Estimado / Gasto)',
+  'Breakeven CPL Gap (CPL vs Umbral Rentable)': 'Breakeven CPL Gap (CPL vs Umbral Rentable)',
+  'Breakeven CPL Gap': 'Breakeven CPL Gap (CPL vs Umbral Rentable)',
+  'Dial Efficiency (Eficiencia de Marcación)': 'Dial Efficiency (Eficiencia de Marcación)',
+  'Dial Efficiency': 'Dial Efficiency (Eficiencia de Marcación)',
+  'Overcontact Index (Llamadas >7 est.)': 'Overcontact Index (Llamadas >7 est.)',
+  'Overcontact Index': 'Overcontact Index (Llamadas >7 est.)',
+
+  'Tasa de llegada (λ)': 'Tasa de llegada (λ)',
+  'Tiempo de servicio (W)': 'Tiempo de servicio (W)',
+  'Cola estimada (L)': 'Cola estimada (L)',
+  'Presión de staffing': 'Presión de staffing',
+
+  'Avg Callback Interval (Demora entre Re-intentos)': 'Intervalo entre Intentos',
+  'AVG CALLBACK INTERVAL (DEMORA ENTRE RE-INTENTOS)': 'Intervalo entre Intentos',
+
+  'Daily Volume (Volumen Diario de Leads)': 'Daily Volume (Volumen Diario de Leads)',
+  'Hourly Distribution (Distribución Horaria)': 'Hourly Distribution (Distribución Horaria)',
+  'Contact Distribution (Distribución de Contacto)': 'Contact Distribution (Distribución de Contacto)',
+  'Forecast vs capacidad': 'Forecast vs capacidad',
+
   'Regime Shift (Cambio de Régimen)': 'Cambio de Régimen',
   'Cambio de Régimen': 'Cambio de Régimen',
   'Cambio regimen': 'Cambio de Régimen',
@@ -333,4 +484,14 @@ export function resolveKpiExplanation(label) {
   }
   
   return null;
+}
+
+/** Short one-liner for inline card hints (non-invasive) */
+export function resolveKpiShortHint(label) {
+  const explain = resolveKpiExplanation(label);
+  if (!explain) return null;
+  if (explain.shortHint) return explain.shortHint;
+  if (!explain.definition) return null;
+  const first = explain.definition.split(/(?<=[.!?])\s+/)[0];
+  return first.length > 110 ? `${first.slice(0, 107)}…` : first;
 }
