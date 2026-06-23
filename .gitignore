@@ -18,6 +18,7 @@ __pycache__/
 data/request_logs.json
 data/dashboard_payload.json
 data/reports/*.html
+data/history/
 data/*.pkl
 test-results/
 

@@ -422,6 +422,67 @@ body.light-mode .card:hover {
   color: rgba(255, 255, 255, 0.7); /* Subtitle in bright off-white */
   font-weight: 500;
 }
+.card-stat-hint {
+  margin-top: 8px;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 400;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.chart-desc {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+  max-width: 52ch;
+}
+.card-stat-pending {
+  opacity: 0.72;
+}
+.card-stat-pending .card-stat-value {
+  color: var(--text-muted) !important;
+  text-shadow: none !important;
+}
+.ops-data-banner {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ops-data-banner--loading {
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  background: rgba(56, 189, 248, 0.06);
+  color: var(--text-muted);
+}
+.ops-data-banner--error {
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  background: rgba(244, 63, 94, 0.08);
+  color: var(--text-main);
+}
+.ops-data-banner button {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-main);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ops-data-banner button:hover {
+  border-color: var(--chartreuse);
+  color: var(--chartreuse);
+}
 
 /* ── Card Gradient Variations (Aesthetic Enhancement) ── */
 .stat-card-blue,
@@ -481,6 +542,9 @@ body.light-mode .card-stat-value {
 }
 body.light-mode .card-stat-sub {
   color: #64748b;
+}
+body.light-mode .card-stat-hint {
+  color: #94a3b8;
 }
 
 body.light-mode .stat-card-blue,
@@ -674,9 +738,10 @@ body.light-mode .custom-table tr:hover td {
 }
 .kpi-modal-close:hover { color: var(--red); }
 .kpi-modal-title {
-  font-size: 14px; font-weight: 800;
-  color: var(--chartreuse); text-transform: uppercase;
-  letter-spacing: 1px; margin-bottom: 8px;
+  font-size: 18px; font-weight: 800;
+  color: #ffffff; letter-spacing: -0.3px;
+  margin-bottom: 6px;
+  text-transform: none;
 }
 .kpi-modal-subtitle {
   font-size: 12px;
@@ -688,8 +753,10 @@ body.light-mode .custom-table tr:hover td {
   letter-spacing: 0;
 }
 .kpi-modal-value {
-  font-size: 36px; font-weight: 900;
-  letter-spacing: -1px; margin-bottom: 24px;
+  font-family: var(--mono);
+  font-size: 28px; font-weight: 800;
+  color: var(--gold);
+  letter-spacing: -0.5px; margin-bottom: 20px;
 }
 .kpi-modal-section { margin-bottom: 18px; }
 .kpi-modal-section-label {

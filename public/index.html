@@ -17,7 +17,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
 
     <!-- Custom Extracted Stylesheets -->
-    <link rel="stylesheet" href="/css/styles.css?v=13">
+    <link rel="stylesheet" href="/css/styles.css?v=14">
 </head>
 
 <body>
@@ -161,6 +161,11 @@
                     <!-- System Health Hero -->
                     <div class="health-hero" id="dashboard-health-hero"></div>
 
+                    <div id="dashboard-compare-strip" style="display: none; margin-bottom: 16px;"></div>
+                    <p id="dashboard-history-empty" style="display: none; font-size: 13px; color: var(--text-muted); margin: 0 0 16px;">
+                        Historial disponible tras la próxima ejecución diaria de n8n
+                    </p>
+
                     <!-- Core KPIs Grid -->
                     <div class="section-header">
                         <div class="section-title"><span class="bar"></span> KPIs</div>
@@ -208,17 +213,29 @@
                     <div id="funnel-insight-banner" class="funnel-insight-banner" style="display: none;"></div>
 
                     <div class="v-grid-1-1">
-                        <div class="card card-animate" style="animation-delay: 0.08s;">
+                        <div class="card card-animate funnel-panel funnel-panel--feeders" style="animation-delay: 0.08s;">
                             <div class="chart-title"><span class="dot" style="background: var(--green)"></span> De dónde vienen las conversiones</div>
-                            <div class="v-flex-col v-mt-2 funnel-scroll-list funnel-scroll-list--preview" id="funnel-feeders-list"></div>
+                            <div class="funnel-data-thead funnel-data-thead--feeders" aria-hidden="true">
+                                <span class="funnel-data-th funnel-data-th--rank">#</span>
+                                <span class="funnel-data-th funnel-data-th--main">Estado / ruta</span>
+                                <span class="funnel-data-th funnel-data-th--pct">%</span>
+                            </div>
+                            <div class="funnel-scroll-list funnel-scroll-list--preview" id="funnel-feeders-list"></div>
                             <button type="button" class="funnel-expand-btn" id="funnel-feeders-toggle" style="display: none;" onclick="toggleFunnelList('feeders')"></button>
                         </div>
-                        <div class="card card-animate" style="animation-delay: 0.10s;">
+                        <div class="card card-animate funnel-panel funnel-panel--leaks" style="animation-delay: 0.10s;">
                             <div class="chart-title"><span class="dot" style="background: var(--red)"></span> Dónde se pierden los leads</div>
-                            <div class="v-flex-col v-mt-2 funnel-scroll-list funnel-scroll-list--preview" id="funnel-leaks-list"></div>
+                            <div class="funnel-data-thead funnel-data-thead--leaks" aria-hidden="true">
+                                <span class="funnel-data-th funnel-data-th--rank">#</span>
+                                <span class="funnel-data-th funnel-data-th--main">Transición / fuga</span>
+                                <span class="funnel-data-th funnel-data-th--pct">%</span>
+                            </div>
+                            <div class="funnel-scroll-list funnel-scroll-list--preview" id="funnel-leaks-list"></div>
                             <button type="button" class="funnel-expand-btn" id="funnel-leaks-toggle" style="display: none;" onclick="toggleFunnelList('leaks')"></button>
                         </div>
                     </div>
+
+                    <div id="funnel-trap-states-panel" class="card v-mt-4" style="display: none;"></div>
 
                     <div class="funnel-accordion v-mt-4">
                         <button type="button" class="funnel-accordion-header" id="funnel-markov-toggle" onclick="toggleFunnelMarkov()" aria-expanded="false">
@@ -232,8 +249,8 @@
                                     <span>Mostrar métricas avanzadas</span>
                                 </label>
                                 <div class="funnel-markov-group-filters filter-pills" id="funnel-markov-group-filters" style="display: none;"></div>
-                                <div class="custom-table-container">
-                                    <table class="custom-table">
+                                <div class="funnel-markov-table-wrap custom-table-container">
+                                    <table class="custom-table funnel-markov-table">
                                         <thead id="funnel-probabilities-head"></thead>
                                         <tbody id="funnel-probabilities-body"></tbody>
                                     </table>
@@ -334,6 +351,8 @@
 
                 <!-- 5. TAB: OPERACIONES DIARIAS -->
                 <section class="tab-content" id="tab-operations">
+                    <div id="operations-capacity-badge" class="card" style="display: none; margin-top: 16px; font-size: 13px;"></div>
+                    <div id="operations-littles-law-cards" class="v-grid-4" style="display: none; margin-top: 16px;"></div>
                     <!-- Operations KPI Cards -->
                     <div class="v-grid-4" id="operations-kpi-cards" style="margin-top: 16px;">
                         <!-- Will be populated dynamically from JS -->
@@ -394,7 +413,7 @@
                     <div class="card v-mb-4 card-animate" style="animation-delay: 0.10s;">
                         <div class="v-flex-between v-mb-3" style="flex-wrap: wrap;">
                             <div class="section-title"><span class="bar"></span> Incident Box (Buzón de Incidentes y Anomalías)</div>
-                            <div class="filter-pills">
+                            <div class="filter-pills" id="alerts-severity-filters">
                                 <button class="filter-pill active" data-filter="all"
                                     onclick="filterAlerts('all')">Todas</button>
                                 <button class="filter-pill critical" data-filter="critical"
@@ -404,7 +423,18 @@
                                 <button class="filter-pill info" data-filter="info"
                                     onclick="filterAlerts('info')">Informativas</button>
                             </div>
+                            <div class="filter-pills" id="alerts-recurrence-filters" style="display: none;">
+                                <button class="filter-pill active" data-recurrence="all"
+                                    onclick="filterAlertsRecurrence('all')">Todas</button>
+                                <button class="filter-pill" data-recurrence="new"
+                                    onclick="filterAlertsRecurrence('new')">Nuevas</button>
+                                <button class="filter-pill warning" data-recurrence="recurrent"
+                                    onclick="filterAlertsRecurrence('recurrent')">Recurrentes</button>
+                                <button class="filter-pill" data-recurrence="resolved"
+                                    onclick="filterAlertsRecurrence('resolved')">Resueltas</button>
+                            </div>
                         </div>
+                        <div id="alerts-resolved-panel" style="display: none; margin-top: 16px;"></div>
                         <p class="text-muted v-mb-4" style="font-size: 13px;">Supervisión en tiempo real de desviaciones
                             operativas, reintentos de contacto por lead y anomalías de inversión publicitaria. Los
                             incidentes se ponderan con RPN (prioridad de riesgo FMEA).</p>

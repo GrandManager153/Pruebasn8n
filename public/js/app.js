@@ -4,6 +4,7 @@
    ===================================================================== */
 
 let dashboardData = null;
+let dashboardHistory = null;
 let charts = {};
 let comparableModelsCache = null;
 const termCache = new Map();
@@ -12,6 +13,7 @@ const PERF = { lite: true };
 
 let currentTab = 'dashboard';
 let currentAlertFilter = 'all';
+let currentRecurrenceFilter = 'all';
 let timeSeriesType = 'line';
 let dailyVolumeType = 'bar';
 let selectedCompareModel = '';
@@ -202,12 +204,17 @@ function applyIndustryInlineTerms(text) {
 function resolveKpiExplanationKey(label) {
     if (!label) return null;
     if (KPI_EXPLANATIONS[label]) return label;
+    const upper = label.trim().toUpperCase();
     const backendKey = Object.keys(KPI_BACKEND_LABEL_MAP).find(
         (k) => KPI_BACKEND_LABEL_MAP[k] === label
     );
     if (backendKey && KPI_EXPLANATIONS[backendKey]) return backendKey;
-    const alias = KPI_EXPLANATION_ALIASES[label];
+    const alias = KPI_EXPLANATION_ALIASES[label] || KPI_EXPLANATION_ALIASES[upper];
     if (alias && KPI_EXPLANATIONS[alias]) return alias;
+    for (const key of Object.keys(KPI_EXPLANATIONS)) {
+        const keyUpper = key.toUpperCase();
+        if (upper.includes(keyUpper) || keyUpper.includes(upper)) return key;
+    }
     return null;
 }
 
@@ -232,6 +239,25 @@ const KPI_EXPLANATION_ALIASES = {
     'Severidad Máxima': 'RPN max',
     'Regime Shift (cambio estructural de demanda)': 'Cambio de Régimen',
     'Cambio de Régimen': 'Cambio de Régimen',
+
+    // Operaciones diarias — etiquetas bilingües de las tarjetas
+    'Total Records (Registros de Llamadas)': 'Registros',
+    'Unique Leads (Contactos Únicos)': 'Contactos',
+    'Avg Dial Attempts (Intentos Promedio)': 'Promedio Intentos',
+    'Avg Callback Interval (Demora entre Re-intentos)': 'Avg Callback Interval (min entre intentos)',
+    'First Contact Rate (Tasa de Primer Contacto)': 'First Contact Rate',
+    'First Contact Rate': 'First Contact Rate',
+    'Sweet Spot % (Intentos 1–3)': 'Sweet Spot %',
+    'Sweet Spot %': 'Sweet Spot %',
+    'Dial Efficiency (Eficiencia de Marcación)': 'Dial Efficiency',
+    'Dial Efficiency': 'Dial Efficiency',
+    'Overcontact Index (Llamadas >7 est.)': 'Overcontact Index',
+    'Overcontact Index': 'Overcontact Index',
+    'Tasa de llegada (λ)': 'Tasa de llegada (λ)',
+    'Tiempo de servicio (W)': 'Tiempo de servicio (W)',
+    'Cola estimada (L)': 'Cola estimada (L)',
+    'Presión de staffing': 'Presión de staffing',
+    'Presión staffing': 'Presión de staffing',
 };
 
 const KPI_EXPLANATIONS = {
@@ -450,6 +476,60 @@ const KPI_EXPLANATIONS = {
         definition: 'Prospectos listos para el cierre comercial que no cuentan con tarjetas de crédito/débito o prefieren no ingresarlas en el sistema.',
         interpretation: 'Requieren que los agentes ofrezcan alternativas de pago especiales como transferencias bancarias o depósitos para consolidar el caso sin perder el interés comercial.',
         source: 'Mapeo de transiciones del CRM de ventas vía n8n'
+    },
+    'First Contact Rate': {
+        icon: '🎯',
+        definition: 'Proporción de contactos únicos alcanzados en el primer intento de marcación telefónica.',
+        interpretation: 'Valores altos indican mejor speed-to-lead y menor desperdicio de intentos. Si es bajo, revisa horarios de agentes y velocidad de primera marcación.',
+        source: 'operations.derived.first_contact_rate — CRM vía n8n'
+    },
+    'Sweet Spot %': {
+        icon: '✅',
+        definition: 'Porcentaje de llamadas realizadas dentro de la ventana óptima de 1 a 3 intentos por lead.',
+        interpretation: 'Refleja disciplina operativa saludable. Un valor bajo con mucho sobre-contacto (>7) indica que los agentes insisten demasiado en leads fríos.',
+        source: 'operations.derived.sweet_spot_pct — CRM vía n8n'
+    },
+    'Dial Efficiency': {
+        icon: '📲',
+        definition: 'Proporción de contactos únicos respecto al total de registros de llamada. Mide si cada marcación llega a un lead distinto.',
+        interpretation: 'Valores altos = menos duplicidad. Bajo indica muchas re-marcaciones al mismo prospecto y posible saturación de la base.',
+        source: 'operations.derived.dial_efficiency — CRM vía n8n'
+    },
+    'Overcontact Index': {
+        icon: '⚠️',
+        definition: 'Estimación de llamadas con más de 7 intentos acumulados, umbral donde el retorno marginal de contacto cae drásticamente.',
+        interpretation: 'Valores altos señalan desgaste de la base y tiempo de agentes mal invertido. Prioriza leads nuevos sobre re-intentos excesivos.',
+        source: 'operations.derived.overcontact_index — CRM vía n8n'
+    },
+    'Tasa de llegada (λ)': {
+        icon: '📥',
+        definition: 'Tasa de llegada (λ): volumen de leads nuevos por hora, derivado del promedio diario dividido entre 24.',
+        interpretation: 'Base del modelo de colas (Little\'s Law). A mayor λ, se requieren más agentes o menor tiempo de servicio para evitar colas.',
+        source: 'operations.littles_law.arrival_rate_per_hour'
+    },
+    'Tiempo de servicio (W)': {
+        icon: '⏱️',
+        definition: 'Tiempo de servicio (W): minutos promedio que un agente dedica a cada interacción telefónica.',
+        interpretation: 'W alto aumenta la cola estimada (L = λ × W) si no se ajusta la capacidad de staffing.',
+        source: 'operations.littles_law.avg_service_minutes'
+    },
+    'Cola estimada (L)': {
+        icon: '📋',
+        definition: 'Cola estimada (L): número de leads en sistema esperando atención, calculado con la ley de Little (L = λ × W).',
+        interpretation: 'Valores elevados anticipan saturación del call center si no hay refuerzo de personal.',
+        source: 'operations.littles_law.estimated_queue_leads'
+    },
+    'Utilización': {
+        icon: '⚙️',
+        definition: 'Porcentaje de utilización de la capacidad operativa: qué fracción del máximo de leads/día que el equipo puede atender está siendo demandada.',
+        interpretation: 'Por encima de 85% hay riesgo de colas y tiempos de espera prolongados para nuevos leads.',
+        source: 'operations.littles_law.utilization_pct'
+    },
+    'Presión de staffing': {
+        icon: '👥',
+        definition: 'Indicador de presión de personal: compara la demanda proyectada contra la capacidad disponible de agentes.',
+        interpretation: 'Estado Crítica o Presión implica gap de leads sin atender mañana; OK indica cobertura suficiente.',
+        source: 'operations.littles_law.staffing_pressure'
     }
 };
 
@@ -475,14 +555,13 @@ function setKpiModalContent({ title, subtitle, value, definition, interpretation
 function openKpiModal(label, value) {
     const explainKey = resolveKpiExplanationKey(label);
     const explain = explainKey ? KPI_EXPLANATIONS[explainKey] : null;
-    if (!explain) return;
 
     setKpiModalContent({
         title: label,
-        value,
-        definition: explain.definition,
-        interpretation: explain.interpretation,
-        source: explain.source,
+        value: value != null && value !== '' ? value : '—',
+        definition: explain?.definition || 'Indicador operativo del call center registrado en el periodo analizado.',
+        interpretation: explain?.interpretation || 'Compara el valor actual con los umbrales operativos recomendados para decidir si requiere acción.',
+        source: explain?.source || 'CRM integrado vía n8n — operations',
     });
 }
 
@@ -1022,11 +1101,13 @@ async function loadBOS() {
         if (typeof enrichFunnelMarkovStddev === 'function') {
             enrichFunnelMarkovStddev(json.data);
         }
+        ensureFunnelDerivedMetrics(json.data);
         dashboardData = json.data;
+        dashboardHistory = json.history || null;
         clearComparableModelsCache();
         clearTermCache();
         document.getElementById('loading').style.display = 'none';
-        renderBOS(dashboardData);
+        renderBOS(dashboardData, dashboardHistory);
 
     } catch (err) {
         // Render premium connection error page with SVG warning icon instead of emoji
@@ -1041,10 +1122,174 @@ async function loadBOS() {
 }
 
 // =====================================================================
+//  PHASE 2 — History / compare / sparkline / Little's Law
+// =====================================================================
+
+const COMPARE_METRICS = [
+    { key: 'health_score', label: 'SHS', suffix: '' },
+    { key: 'total_leads', label: 'Leads', suffix: '' },
+    { key: 'overcontact_pct', label: 'Sobre-contacto', suffix: '%' },
+    { key: 'conversion_pct', label: 'Conversión', suffix: '%' },
+    { key: 'global_cpl', label: 'CPL', prefix: '$' },
+    { key: 'mase', label: 'MASE', suffix: '' },
+];
+
+function formatCompareDelta(d, prefix = '', suffix = '') {
+    if (!d || d.delta == null) return '—';
+    const sign = d.delta > 0 ? '+' : '';
+    const arrow = d.direction === 'up' ? '↑' : d.direction === 'down' ? '↓' : '→';
+    return `${arrow} ${prefix}${sign}${d.delta}${suffix}`;
+}
+
+function compareDeltaColor(d) {
+    if (!d || d.direction === 'flat') return 'var(--text-muted)';
+    return d.direction === 'up' ? 'var(--green)' : 'var(--red)';
+}
+
+function renderDashboardCompareStrip(history) {
+    const el = document.getElementById('dashboard-compare-strip');
+    const emptyEl = document.getElementById('dashboard-history-empty');
+    if (!el) return;
+
+    const compare = history?.compare;
+    if (!compare?.available) {
+        el.style.display = 'none';
+        el.innerHTML = '';
+        if (emptyEl) {
+            emptyEl.style.display = history && (history.entry_count || 0) < 2 ? 'block' : 'none';
+        }
+        return;
+    }
+
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    const prevDate = compare.previous_generated_at
+        ? new Date(compare.previous_generated_at).toLocaleString('es-MX', {
+            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+        })
+        : '';
+
+    const chips = COMPARE_METRICS.map((m) => {
+        const d = compare.deltas?.[m.key];
+        if (!d) return '';
+        return `
+            <div style="padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);min-width:100px;">
+                <div style="font-size:10px;color:var(--text-dim);margin-bottom:2px;">${m.label}</div>
+                <div style="font-size:13px;font-weight:700;color:${compareDeltaColor(d)};">
+                    ${formatCompareDelta(d, m.prefix || '', m.suffix || '')}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    el.style.display = 'block';
+    el.className = 'card';
+    el.innerHTML = `
+        <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--text-muted);">
+            Vs ejecución anterior${prevDate ? ` <span style="font-weight:500;margin-left:8px;">(${prevDate})</span>` : ''}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">${chips}</div>
+    `;
+}
+
+function renderLittlesLawCards(ops) {
+    const el = document.getElementById('operations-littles-law-cards');
+    if (!el) return;
+
+    const ll = ops?.littles_law || {};
+    if (!ll.available) {
+        el.style.display = 'none';
+        el.innerHTML = '';
+        return;
+    }
+
+    const pressureLabel = ll.staffing_pressure === 'critical' ? 'Crítica'
+        : ll.staffing_pressure === 'pressure' ? 'Presión' : 'OK';
+
+    const cards = [
+        { label: 'Tasa de llegada (λ)', value: `${Number(ll.arrival_rate_per_hour).toFixed(2)} leads/h`, sub: 'Promedio diario / 24', color: 'blue' },
+        { label: 'Tiempo de servicio (W)', value: `${Number(ll.avg_service_minutes).toFixed(1)} min`, sub: 'Duración media', color: 'blue' },
+        { label: 'Cola estimada (L)', value: Number(ll.estimated_queue_leads).toFixed(1), sub: 'λ × W', color: 'gold' },
+        { label: 'Utilización', value: `${ll.utilization_pct}%`, sub: `Capacidad: ${ll.capacity_leads_per_day || '—'} leads/día`, color: ll.utilization_pct > 85 ? 'red' : 'green' },
+        { label: 'Presión staffing', value: pressureLabel, sub: ll.staffing_gap_tomorrow > 0 ? `Gap mañana: +${ll.staffing_gap_tomorrow}` : 'Sin gap', color: ll.staffing_pressure === 'critical' ? 'red' : ll.staffing_pressure === 'pressure' ? 'gold' : 'green' },
+    ];
+
+    el.style.display = 'grid';
+    el.innerHTML = cards.map((c, i) => {
+        const escapedLabel = c.label.replace(/'/g, "\\'");
+        const escapedValue = String(c.value).replace(/'/g, "\\'");
+        return `
+        <div class="card stat-card-${c.color} card-animate" style="animation-delay:${i * 0.03}s;cursor:pointer;"
+            onclick="openKpiModal('${escapedLabel}', '${escapedValue}')">
+            <div class="card-stat-label">${c.label}</div>
+            <div class="card-stat-value">${c.value}</div>
+            <div class="card-stat-sub">${c.sub}</div>
+        </div>
+    `;
+    }).join('');
+}
+
+function alertFingerprintLegacy(a) {
+    return String(a?.metric || a?.id || '').trim();
+}
+
+function classifyAlertRecurrence(a) {
+    const diff = dashboardHistory?.compare?.alerts || { new: [], recurrent: [], resolved: [] };
+    const fp = alertFingerprintLegacy(a);
+    if (diff.new?.includes(fp)) return 'new';
+    if (diff.recurrent?.includes(fp)) return 'recurrent';
+    return null;
+}
+
+function filterAlertsRecurrence(type) {
+    currentRecurrenceFilter = type;
+    document.querySelectorAll('#alerts-recurrence-filters .filter-pill').forEach((btn) => {
+        btn.classList.toggle('active', btn.getAttribute('data-recurrence') === type);
+    });
+    renderAlertsResolvedPanel();
+    filterAlerts(currentAlertFilter);
+}
+
+function renderAlertsRecurrenceFilters(history) {
+    const el = document.getElementById('alerts-recurrence-filters');
+    if (!el) return;
+    el.style.display = history?.compare?.available ? 'flex' : 'none';
+}
+
+function renderAlertsResolvedPanel() {
+    const panel = document.getElementById('alerts-resolved-panel');
+    if (!panel) return;
+    const resolved = dashboardHistory?.compare?.alerts?.resolved || [];
+    if (!resolved.length || currentRecurrenceFilter !== 'resolved') {
+        panel.style.display = 'none';
+        panel.innerHTML = '';
+        return;
+    }
+    panel.style.display = 'block';
+    panel.innerHTML = `
+        <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px;">Alertas resueltas (ya no activas)</div>
+        <ul style="margin:0;padding-left:20px;color:var(--text-muted);font-size:13px;">
+            ${resolved.map((fp) => `<li>${fp}</li>`).join('')}
+        </ul>
+    `;
+}
+
+function renderReportsQaBadge(data) {
+    const qa = data?.meta?.narrative_qa;
+    const badge = qa?.passed === true
+        ? '<span class="custom-badge custom-badge-success" style="margin-left:8px;font-size:10px;">Narrativa validada</span>'
+        : '';
+    document.querySelectorAll('#tab-reports .report-info h4').forEach((h4) => {
+        const base = h4.textContent.replace(/\s*Narrativa validada\s*/g, '').trim();
+        h4.innerHTML = base + badge;
+    });
+}
+
+// =====================================================================
 //  CORE RENDERER ENGINE
 // =====================================================================
 
-function renderBOS(data) {
+function renderBOS(data, history) {
     renderedTabs.clear();
     renderedTabs.add('dashboard');
 
@@ -1102,6 +1347,8 @@ function renderBOS(data) {
         const numVal = document.getElementById('health-num-val');
         if (numVal) numVal.textContent = data.system.health_score;
     }
+
+    renderDashboardCompareStrip(history || dashboardHistory);
 
     // 2. Render KPIs in Dashboard Tab
     const kpisGrid = document.getElementById('dashboard-kpis');
@@ -1221,6 +1468,36 @@ function renderBOS(data) {
                 value: String(data.operations.call_metrics.call_rank.avg),
                 label: 'Intentos Promedio',
                 sub: 'Marcaciones por lead (umbral: 7)',
+            });
+        }
+        const derived = data.operations.derived;
+        if (derived?.first_contact_rate != null) {
+            cleanedKpis.push({
+                value: (derived.first_contact_rate * 100).toFixed(1) + '%',
+                label: 'First Contact Rate',
+                sub: 'Primer intento / únicos',
+            });
+        }
+        if (derived?.sweet_spot_pct != null) {
+            cleanedKpis.push({
+                value: derived.sweet_spot_pct.toFixed(1) + '%',
+                label: 'Sweet Spot %',
+                sub: 'Intentos 1–3',
+            });
+        }
+        const economics = data.derived?.economics;
+        if (economics?.roas_proxy != null && data.investment?.total_spend > 0) {
+            cleanedKpis.push({
+                value: economics.roas_proxy.toFixed(2),
+                label: 'ROAS Proxy',
+                sub: 'Ingreso est. / gasto',
+            });
+        }
+        if (economics?.breakeven_cpl_gap != null) {
+            cleanedKpis.push({
+                value: '$' + economics.breakeven_cpl_gap.toFixed(2),
+                label: 'Breakeven CPL Gap',
+                sub: economics.breakeven_cpl != null ? `Umbral: $${economics.breakeven_cpl}` : 'Global',
             });
         }
     }
@@ -1353,6 +1630,8 @@ function renderBOS(data) {
         }
     });
 
+    renderReportsQaBadge(data);
+
     // 10. Update Sync Date in top header
     const genDate = new Date(data.meta.generated_at);
     document.getElementById('last-update').textContent = `Sincronizado: ${genDate.toLocaleDateString('es-MX')} a las ${genDate.toLocaleTimeString('es-MX')}`;
@@ -1361,13 +1640,6 @@ function renderBOS(data) {
 // =====================================================================
 //  RENDER FUNNEL & MARKOV TAB DETAILS
 // =====================================================================
-
-const FUNNEL_MARKOV_DISPLAY = [
-    { state: 'Conectado - Interesado', conversion: 35.24, loss: 64.76, steps: 5.4, stddev: 1.8 },
-    { state: 'Reactivación', conversion: 20.00, loss: 80.00, steps: 7.2, stddev: 2.1 },
-    { state: 'En Llamada', conversion: 14.15, loss: 85.85, steps: 8.9, stddev: 3.2 },
-    { state: 'Pre-Cerrado (Sin tarjeta)', conversion: 13.01, loss: 86.99, steps: 11.5, stddev: 3.9 },
-];
 
 const FUNNEL_PREVIEW_COUNT = 3;
 
@@ -1439,6 +1711,8 @@ function renderFunnelFeedersList(data, feeders) {
                 metaRight: `${cnt} consultas agendadas`,
                 onClick: `openFeederModal('${(f.from || '').replace(/'/g, "\\'")}', '${pct.toFixed(2)}%', ${cnt})`,
                 delay: (idx * 0.02) + 0.12,
+                rank: idx + 1,
+                variant: 'feeder',
             });
         }).join('');
     } else {
@@ -1472,6 +1746,8 @@ function renderFunnelLeaksList(data, leaks) {
                 metaRight: `${leakCnt} leads perdidos`,
                 onClick: `openLeakModal('${(l.from || '').replace(/'/g, "\\'")}', '${(l.to || '').replace(/'/g, "\\'")}', '${leakPct.toFixed(2)}%', ${leakCnt})`,
                 delay: (idx * 0.02) + 0.12,
+                rank: idx + 1,
+                variant: 'leak',
             });
         }).join('');
     } else {
@@ -1502,6 +1778,19 @@ function renderFunnelMarkovGroupFilters(statesData) {
     `).join('');
 }
 
+function getFunnelRankBadge(rank) {
+    if (rank === 1) return '<span class="funnel-rank funnel-rank--gold" title="Mayor participación">1</span>';
+    if (rank === 2) return '<span class="funnel-rank funnel-rank--silver">2</span>';
+    if (rank === 3) return '<span class="funnel-rank funnel-rank--bronze">3</span>';
+    return `<span class="funnel-rank">${rank}</span>`;
+}
+
+function getMarkovConvTier(pct) {
+    if (pct >= 25) return 'funnel-markov-row--high';
+    if (pct >= 12) return 'funnel-markov-row--mid';
+    return 'funnel-markov-row--low';
+}
+
 function renderFunnelMarkovTable(statesData) {
     const showAdvanced = funnelUiState.markovAdvanced;
     const filtered = filterMarkovByGroup(statesData, funnelUiState.markovGroup);
@@ -1511,12 +1800,13 @@ function renderFunnelMarkovTable(statesData) {
     if (head) {
         head.innerHTML = `
             <tr>
+                <th class="funnel-markov-th-rank">#</th>
                 <th>Estado inicial</th>
-                <th style="text-align: right;">Prob. de conversión</th>
+                <th class="funnel-markov-th-metric">Prob. de conversión</th>
                 ${showAdvanced ? `
-                    <th style="text-align: right;">Prob. de no convertir</th>
-                    <th style="text-align: right;">Toques promedio</th>
-                    <th style="text-align: right;">Variabilidad</th>
+                    <th class="funnel-markov-th-metric">Prob. de no convertir</th>
+                    <th class="funnel-markov-th-metric">Toques promedio</th>
+                    <th class="funnel-markov-th-metric">Variabilidad</th>
                 ` : ''}
             </tr>
         `;
@@ -1524,27 +1814,50 @@ function renderFunnelMarkovTable(statesData) {
 
     if (!probBody) return;
 
-    const colSpan = showAdvanced ? 5 : 2;
+    const colSpan = showAdvanced ? 6 : 3;
     const emptyMessage = statesData.length > 0
         ? 'Sin estados en este grupo para el periodo actual'
         : 'Sin estados con actividad de conversión en este periodo';
 
     probBody.innerHTML = filtered.length > 0
-        ? filtered.map(s => `
-            <tr>
-                <td style="font-weight: 600; color: white;">
-                    <div>${s.state}</div>
-                    ${s.rawState && s.rawState !== s.state ? `<div class="funnel-list-item-subtitle">Estado CRM: ${s.rawState}</div>` : ''}
+        ? filtered.map((s, idx) => {
+            const rank = idx + 1;
+            const tier = getMarkovConvTier(s.conversion);
+            const barW = Math.min(Math.max(s.conversion, 0), 100);
+            const groupAttr = s.group ? ` data-group="${s.group}"` : '';
+            return `
+            <tr class="funnel-markov-row ${tier} card-animate" style="animation-delay: ${(idx * 0.03).toFixed(2)}s;">
+                <td class="funnel-markov-rank-cell">${getFunnelRankBadge(rank)}</td>
+                <td>
+                    <div class="funnel-markov-state">
+                        <span class="funnel-markov-state-dot"${groupAttr}></span>
+                        <div class="funnel-markov-state-copy">
+                            <div class="funnel-markov-state-name">${s.state}</div>
+                            ${s.rawState && s.rawState !== s.state ? `<div class="funnel-markov-state-raw">Estado CRM: ${s.rawState}</div>` : ''}
+                        </div>
+                    </div>
                 </td>
-                <td style="text-align: right; color: var(--green); font-weight: bold;">${s.conversion.toFixed(2)}%</td>
+                <td class="funnel-markov-metric-cell">
+                    <div class="funnel-markov-metric funnel-markov-metric--conv">
+                        <span class="funnel-markov-pct">${s.conversion.toFixed(2)}%</span>
+                        <div class="funnel-markov-mini-bar" aria-hidden="true"><span style="width: ${barW.toFixed(1)}%;"></span></div>
+                    </div>
+                </td>
                 ${showAdvanced ? `
-                    <td style="text-align: right; color: var(--text-muted);">${s.loss.toFixed(2)}%</td>
-                    <td style="text-align: right; font-family: var(--mono); color: white;">${s.steps.toFixed(1)}</td>
-                    <td style="text-align: right; font-family: var(--mono); color: var(--text-dim);">${s.stddev > 0 ? s.stddev.toFixed(1) : '—'}</td>
+                    <td class="funnel-markov-metric-cell">
+                        <span class="funnel-markov-pill funnel-markov-pill--loss">${s.loss.toFixed(2)}%</span>
+                    </td>
+                    <td class="funnel-markov-metric-cell">
+                        <span class="funnel-markov-pill funnel-markov-pill--mono">${s.steps.toFixed(1)}</span>
+                    </td>
+                    <td class="funnel-markov-metric-cell">
+                        <span class="funnel-markov-pill funnel-markov-pill--dim">${s.stddev > 0 ? s.stddev.toFixed(1) : '—'}</span>
+                    </td>
                 ` : ''}
             </tr>
-        `).join('')
-        : `<tr><td colspan="${colSpan}" style="text-align: center; color: var(--text-dim); padding: 24px;">${emptyMessage}</td></tr>`;
+        `;
+        }).join('')
+        : `<tr><td colspan="${colSpan}" class="funnel-markov-empty">${emptyMessage}</td></tr>`;
 }
 
 function syncFunnelMarkovAccordion() {
@@ -1622,7 +1935,8 @@ function resolveFunnelFeeders(data) {
 
     return (data.system?.alerts || [])
         .filter((a) => (a.title || '').includes('Feeder a conversion'))
-        .map(parseFeederAlert);
+        .map(parseFeederAlert)
+        .sort((a, b) => b.pct - a.pct);
 }
 
 function isLeakDestination(to) {
@@ -1660,6 +1974,37 @@ function resolveFunnelLeaks(data) {
         .sort((a, b) => b.pct - a.pct);
 }
 
+function resolveFunnelRevenuePerConversion(data) {
+    return Number(data?.meta?.config?.revenue_per_conversion) || 1200;
+}
+
+/** Calcula ingreso en riesgo si n8n no lo envió (leads en fugas × valor por conversión). */
+function resolveFunnelRevenueAtRisk(data) {
+    const funnel = data?.funnel;
+    if (!funnel) return null;
+    const fromPayload = funnel.total_revenue_at_risk;
+    if (fromPayload != null && Number.isFinite(Number(fromPayload))) {
+        return Number(fromPayload);
+    }
+    const revenuePer = resolveFunnelRevenuePerConversion(data);
+    const leaks = resolveFunnelLeaks(data);
+    if (!leaks.length) return null;
+    return leaks.reduce((sum, l) => sum + (Number(l.cnt) || 0) * revenuePer, 0);
+}
+
+function ensureFunnelDerivedMetrics(data) {
+    if (!data?.funnel) return data;
+    const funnel = data.funnel;
+    if (!Array.isArray(funnel.leaks) || !funnel.leaks.length) {
+        funnel.leaks = resolveFunnelLeaks(data);
+    }
+    if (funnel.total_revenue_at_risk == null) {
+        const risk = resolveFunnelRevenueAtRisk(data);
+        if (risk != null) funnel.total_revenue_at_risk = risk;
+    }
+    return data;
+}
+
 function resolveFunnelMarkovStates(data) {
     const absorption = data?.funnel?.absorption_probabilities;
     if (Array.isArray(absorption) && absorption.length) {
@@ -1682,18 +2027,7 @@ function resolveFunnelMarkovStates(data) {
                 .sort((a, b) => b.conversion - a.conversion)
         );
     }
-    return filterVisibleMarkovRows(
-        FUNNEL_MARKOV_DISPLAY.map((row) => {
-            const raw = row.state || '';
-            const cleaned = cleanTechnicalTerms(raw);
-            return {
-                ...row,
-                rawState: raw,
-                state: formatMarkovStateLabel(raw, cleanTechnicalTerms),
-                group: resolveMarkovGroup(raw, cleaned),
-            };
-        })
-    );
+    return [];
 }
 
 function renderFunnelListItem(options) {
@@ -1707,49 +2041,53 @@ function renderFunnelListItem(options) {
         metaRight,
         onClick,
         delay = 0,
+        rank = 0,
+        variant = 'feeder',
     } = options;
     const safePct = Math.max(0, Number(pct) || 0);
     const barWidth = Math.min(safePct, 100);
     const clickAttr = onClick ? `onclick="${onClick}"` : '';
     const subtitleHtml = subtitle
-        ? `<span class="funnel-list-item-subtitle">${subtitle}</span>`
+        ? `<span class="funnel-data-row-sub">${subtitle}</span>`
         : '';
+    const rankHtml = rank > 0 ? getFunnelRankBadge(rank) : '';
     return `
-        <div class="funnel-list-item card-animate" ${clickAttr} style="animation-delay: ${delay}s;">
-            <div class="funnel-list-item-head">
-                <div class="funnel-list-item-title-wrap">
-                    <span class="funnel-list-item-title">${title}</span>
-                    ${subtitleHtml}
+        <div class="funnel-data-row funnel-data-row--${variant} card-animate" ${clickAttr} style="animation-delay: ${delay}s;" role="button" tabindex="0">
+            ${rankHtml}
+            <div class="funnel-data-row-main">
+                <div class="funnel-data-row-head">
+                    <div class="funnel-data-row-titles">
+                        <span class="funnel-data-row-title">${title}</span>
+                        ${subtitleHtml}
+                    </div>
+                    <span class="funnel-data-row-pct progress-bar-val" style="color: ${color};" data-value="${safePct.toFixed(2)}%">${safePct.toFixed(2)}%</span>
                 </div>
-                <span class="funnel-list-item-pct progress-bar-val" style="color: ${color};" data-value="${safePct.toFixed(2)}%">${safePct.toFixed(2)}%</span>
-            </div>
-            <div class="funnel-list-item-bar">
-                <div class="funnel-list-item-bar-fill progress-bar-fill" data-pct="${barWidth}" style="width: 0%; background: ${barColor};"></div>
-            </div>
-            <div class="funnel-list-item-meta">
-                <span>${metaLeft}</span>
-                <span>${metaRight}</span>
+                <div class="funnel-data-row-bar">
+                    <div class="funnel-data-row-bar-fill progress-bar-fill" data-pct="${barWidth}" style="width: 0%; background: ${barColor};"></div>
+                </div>
+                <div class="funnel-data-row-foot">
+                    <span class="funnel-data-chip">${metaLeft}</span>
+                    <span class="funnel-data-chip funnel-data-chip--value">${metaRight}</span>
+                </div>
             </div>
         </div>
     `;
 }
 
 function renderFunnelDetails(data) {
-    const leadKPI = data.kpis.find(k => k.label.includes('leads') || k.label.includes('Leads'));
-    const totalLeads = leadKPI ? parseInt(leadKPI.value.replace(/,/g, '')) : 11113;
-
-    const consults = data.funnel.transitions
-        .filter(t => t.to === 'Consult Booked' || t.to === 'absorption')
-        .reduce((acc, curr) => acc + curr.cnt, 0) || 684;
+    ensureFunnelDerivedMetrics(data);
 
     const conversionRate = data.funnel?.conversion_pct != null
         ? Number(data.funnel.conversion_pct).toFixed(2)
-        : ((consults / totalLeads) * 100).toFixed(2);
+        : data.funnel?.global_conversion_pct != null
+            ? Number(data.funnel.global_conversion_pct).toFixed(2)
+            : '—';
 
     const funnelConvVal = document.getElementById('funnel-conv-pct');
     if (funnelConvVal) {
-        funnelConvVal.setAttribute('data-value', `${conversionRate}%`);
-        parseAndAnimate(funnelConvVal, `${conversionRate}%`);
+        const display = conversionRate === '—' ? '—' : `${conversionRate}%`;
+        funnelConvVal.setAttribute('data-value', display);
+        parseAndAnimate(funnelConvVal, display);
     }
 
     const targetLabel = document.getElementById('funnel-target-label');
@@ -1759,20 +2097,26 @@ function renderFunnelDetails(data) {
 
     const leaks = resolveFunnelLeaks(data);
 
-    const totalLostLeads = leaks.reduce((acc, curr) => acc + (Number(curr.cnt) || 0), 0);
-    const caseValue = 1200;
-    const revenueAtRisk = totalLostLeads * caseValue;
-    const riskRevenueFormatted = `$${revenueAtRisk.toLocaleString('es-MX')}`;
+    const revenueAtRisk = resolveFunnelRevenueAtRisk(data);
+    const riskRevenueFormatted = revenueAtRisk != null
+        ? `$${revenueAtRisk.toLocaleString('es-MX')}`
+        : '—';
 
     const narrative = document.getElementById('funnel-narrative-subtitle');
     if (narrative) {
-        narrative.innerHTML = `De cada 100 leads, <strong>${conversionRate}</strong> llegan a consulta. Hay <strong>${riskRevenueFormatted}</strong> en riesgo por fugas detectadas.`;
+        narrative.innerHTML = conversionRate === '—'
+            ? `Sin tasa de conversión calculada para este periodo.`
+            : `De cada 100 leads, <strong>${conversionRate}</strong> llegan a consulta. Hay <strong>${riskRevenueFormatted}</strong> en riesgo por fugas detectadas.`;
     }
 
     const riskRevVal = document.getElementById('funnel-risk-revenue');
     if (riskRevVal) {
-        riskRevVal.setAttribute('data-value', riskRevenueFormatted);
-        parseAndAnimate(riskRevVal, riskRevenueFormatted);
+        if (revenueAtRisk == null) {
+            riskRevVal.textContent = '—';
+        } else {
+            riskRevVal.setAttribute('data-value', riskRevenueFormatted);
+            parseAndAnimate(riskRevVal, riskRevenueFormatted);
+        }
     }
 
     const feederAlerts = resolveFunnelFeeders(data);
@@ -1790,6 +2134,37 @@ function renderFunnelDetails(data) {
 
     renderFunnelFeedersList(data, feederAlerts);
     renderFunnelLeaksList(data, leaks);
+
+    const trapStates = Array.isArray(data.funnel?.trap_states) ? data.funnel.trap_states : [];
+    const trapPanel = document.getElementById('funnel-trap-states-panel');
+    if (trapPanel) {
+        if (trapStates.length > 0) {
+            trapPanel.style.display = 'block';
+            trapPanel.innerHTML = `
+                <div class="chart-title" style="margin-bottom: 12px;">
+                    <span class="dot" style="background: var(--amber);"></span>
+                    Estados trampa (leads estancados)
+                </div>
+                <div class="funnel-scroll-list">
+                    ${trapStates.slice(0, 8).map((trap, idx) => renderFunnelListItem({
+                        title: shortenFunnelLabel(cleanTechnicalTerms(trap.state || '—')),
+                        subtitle: trap.reason || 'Bajo avance hacia conversión',
+                        pct: Math.min(Number(trap.loss_rate) || 0, 100),
+                        color: 'var(--amber)',
+                        barColor: 'var(--amber)',
+                        metaLeft: `Auto-loop: ${trap.self_loop_pct ?? '—'}%`,
+                        metaRight: `${trap.total_cnt || 0} leads`,
+                        delay: idx * 0.02,
+                        rank: idx + 1,
+                        variant: 'leak',
+                    })).join('')}
+                </div>
+            `;
+        } else {
+            trapPanel.style.display = 'none';
+            trapPanel.innerHTML = '';
+        }
+    }
 
     const statesData = resolveFunnelMarkovStates(data);
     const advancedToggle = document.getElementById('funnel-markov-advanced-toggle');
@@ -2817,12 +3192,15 @@ function renderAlertsCentre(alerts) {
     const tableBody = document.getElementById('alerts-centre-table-body');
     if (!statsGrid || !tableBody) return;
 
+    renderAlertsRecurrenceFilters(dashboardHistory);
+
     // Calculate aggregated metrics
     const total = alerts.length;
     const criticalCount = alerts.filter(a => a.severity === 'critical').length;
     const warningCount = alerts.filter(a => a.severity === 'warning').length;
     const infoCount = alerts.filter(a => a.severity === 'info').length;
     const maxRpn = alerts.length > 0 ? Math.max(...alerts.map(a => a.rpn_score || 0)) : 0;
+    const recurrentCount = alerts.filter((a) => classifyAlertRecurrence(a) === 'recurrent').length;
 
     statsGrid.innerHTML = `
         <div class="card stat-card-gold card-animate" style="animation-delay: 0.03s;"
@@ -2849,6 +3227,13 @@ function renderAlertsCentre(alerts) {
             <div class="card-stat-value" id="alert-stat-warning-info" data-value="${warningCount + infoCount}">0</div>
             <div class="card-stat-sub">Desviaciones menores</div>
         </div>
+        ${dashboardHistory?.compare?.available ? `
+        <div class="card stat-card-gold card-animate" style="animation-delay: 0.15s;"
+            onclick="openKpiModal('Alertas Recurrentes', '${recurrentCount}')">
+            <div class="card-stat-label">Alertas Recurrentes</div>
+            <div class="card-stat-value" id="alert-stat-recurrent" data-value="${recurrentCount}">0</div>
+            <div class="card-stat-sub">vs ejecución anterior</div>
+        </div>` : ''}
     `;
 
     // Trigger animations for alerts stats
@@ -2856,14 +3241,17 @@ function renderAlertsCentre(alerts) {
     parseAndAnimate(document.getElementById('alert-stat-critical'), criticalCount);
     parseAndAnimate(document.getElementById('alert-stat-max-rpn'), maxRpn);
     parseAndAnimate(document.getElementById('alert-stat-warning-info'), warningCount + infoCount);
+    const recurrentEl = document.getElementById('alert-stat-recurrent');
+    if (recurrentEl) parseAndAnimate(recurrentEl, recurrentCount);
 
+    renderAlertsResolvedPanel();
     // Apply Filter state
     filterAlerts(currentAlertFilter);
 }
 
 function filterAlerts(severityType) {
     currentAlertFilter = severityType;
-    document.querySelectorAll('.filter-pill').forEach(btn => {
+    document.querySelectorAll('#alerts-severity-filters .filter-pill').forEach(btn => {
         if (btn.getAttribute('data-filter') === severityType) {
             btn.classList.add('active');
         } else {
@@ -2879,6 +3267,14 @@ function filterAlerts(severityType) {
         filtered = allAlerts;
     } else {
         filtered = allAlerts.filter(a => a.severity === severityType);
+    }
+
+    if (currentRecurrenceFilter === 'new') {
+        filtered = filtered.filter((a) => classifyAlertRecurrence(a) === 'new');
+    } else if (currentRecurrenceFilter === 'recurrent') {
+        filtered = filtered.filter((a) => classifyAlertRecurrence(a) === 'recurrent');
+    } else if (currentRecurrenceFilter === 'resolved') {
+        filtered = [];
     }
 
     // Sort by severity (RPN score descending)
@@ -2908,13 +3304,19 @@ function renderAlertsTableList(filteredList) {
         const rpnPct = Math.min(((a.rpn_score || 0) / maxRpn) * 100, 100);
         const rpnColor = a.severity === 'critical' ? 'var(--red)' : a.severity === 'warning' ? 'var(--amber)' : 'var(--gold)';
         const badgeLabel = a.severity === 'critical' ? 'Crítica' : a.severity === 'warning' ? 'Precaución' : 'Informativa';
+        const recurrence = classifyAlertRecurrence(a);
+        const recurrenceBadge = recurrence === 'new'
+            ? '<span class="custom-badge custom-badge-success" style="margin-left:8px;font-size:10px;">Nueva</span>'
+            : recurrence === 'recurrent'
+                ? '<span class="custom-badge custom-badge-warning" style="margin-left:8px;font-size:10px;">Recurrente</span>'
+                : '';
 
         return `
             <tr style="animation: fadeIn 0.3s ease-out;">
                 <td>
                     <span class="custom-badge custom-badge-${a.severity === 'critical' ? 'critical' : a.severity === 'warning' ? 'warning' : 'success'}">${badgeLabel}</span>
                 </td>
-                <td style="font-weight: 600; color: white;">${formatAlertTitle(a)}</td>
+                <td style="font-weight: 600; color: white;">${formatAlertTitle(a)}${recurrenceBadge}</td>
                 <td style="font-family: var(--mono); font-weight: 600; color: var(--gold); text-align: right;">${formatAlertObservedValue(a)}</td>
                 <td style="font-family: var(--mono); color: var(--text-muted); text-align: right;">${formatAlertThreshold(a.threshold, a)}</td>
                 <td>
@@ -3599,6 +4001,24 @@ function renderOperationsTab(data, options = {}) {
     const ops = data.operations;
     const call = ops.call_metrics || {};
     const dist = ops.contact_distribution || {};
+    const derived = ops.derived || {};
+    const capacity = derived.forecast_vs_capacity || {};
+
+    // Capacity badge
+    const capacityBadge = document.getElementById('operations-capacity-badge');
+    if (capacityBadge) {
+        if (capacity.available) {
+            const label = capacity.label === 'critical' ? 'Presión crítica'
+                : capacity.label === 'pressure' ? 'Bajo presión' : 'Capacidad OK';
+            capacityBadge.style.display = 'block';
+            capacityBadge.innerHTML = `<strong>Forecast vs capacidad:</strong> ${label} — pronóstico ${capacity.forecast_value} vs promedio ${capacity.avg_daily} (ratio ${capacity.ratio})`;
+        } else {
+            capacityBadge.style.display = 'none';
+            capacityBadge.innerHTML = '';
+        }
+    }
+
+    renderLittlesLawCards(ops);
 
     // 1. Populate KPI Cards
     const kpiCardsEl = document.getElementById('operations-kpi-cards');
@@ -3610,7 +4030,40 @@ function renderOperationsTab(data, options = {}) {
 
         const intervalPair = formatDurationPair(intervalAvg, INTERVAL_CALLBACK_SLA_MIN);
 
-        const kpis = [
+        const kpis = [];
+        if (derived.first_contact_rate != null) {
+            kpis.push({
+                label: 'First Contact Rate (Tasa de Primer Contacto)',
+                value: (derived.first_contact_rate * 100).toFixed(1) + '%',
+                sub: '1.er intento / únicos',
+                color: 'green',
+            });
+        }
+        if (derived.sweet_spot_pct != null) {
+            kpis.push({
+                label: 'Sweet Spot % (Intentos 1–3)',
+                value: derived.sweet_spot_pct.toFixed(1) + '%',
+                sub: 'Intentos 1–3',
+                color: 'green',
+            });
+        }
+        if (derived.dial_efficiency != null) {
+            kpis.push({
+                label: 'Dial Efficiency (Eficiencia de Marcación)',
+                value: (derived.dial_efficiency * 100).toFixed(1) + '%',
+                sub: 'Únicos / registros',
+                color: 'blue',
+            });
+        }
+        if (derived.overcontact_index != null) {
+            kpis.push({
+                label: 'Overcontact Index (Llamadas >7 est.)',
+                value: Math.round(derived.overcontact_index).toLocaleString('es-MX'),
+                sub: 'Llamadas >7 est.',
+                color: 'red',
+            });
+        }
+        kpis.push(
             {
                 label: 'Total Records (Registros de Llamadas)',
                 value: totalRecords.toLocaleString(),
@@ -3635,13 +4088,13 @@ function renderOperationsTab(data, options = {}) {
                 sub: `objetivo: ≤${intervalPair.threshold.text}`,
                 color: intervalAvg > 1440 ? 'red' : 'blue'
             }
-        ];
+        );
 
         kpiCardsEl.innerHTML = kpis.map((kpi, idx) => {
             const escapedLabel = kpi.label.replace(/'/g, "\\'");
             const escapedValue = String(kpi.value).replace(/'/g, "\\'");
             return `
-                <div class="card stat-card-${kpi.color} card-animate" style="animation-delay: ${idx * 0.025}s;"
+                <div class="card stat-card-${kpi.color} card-animate" style="animation-delay: ${idx * 0.025}s;cursor:pointer;"
                     onclick="openKpiModal('${escapedLabel}', '${escapedValue}')">
                     <div class="card-stat-label">${kpi.label}</div>
                     <div class="card-stat-value" id="ops-kpi-val-${idx}">${kpi.value}</div>

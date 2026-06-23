@@ -13,13 +13,6 @@ import {
 
 const FUNNEL_PREVIEW_COUNT = 3;
 
-const STATIC_PROBABILITIES = [
-  { state: "Conectado - Interesado", conversion: 35.24, loss: 64.76, steps: 5.4, stddev: 1.8 },
-  { state: "Reactivación", conversion: 20.00, loss: 80.00, steps: 7.2, stddev: 2.1 },
-  { state: "En Llamada", conversion: 14.15, loss: 85.85, steps: 8.9, stddev: 3.2 },
-  { state: "Pre-Cerrado (Sin tarjeta)", conversion: 13.01, loss: 86.99, steps: 11.5, stddev: 3.9 }
-];
-
 const CRM_TRANSLATIONS = {
   'PreClosed – Cash Only': 'Pre-Cierre (Solo Efectivo)',
   'PreClosed - Cash Only': 'Pre-Cierre (Solo Efectivo)',
@@ -230,10 +223,22 @@ function resolveFunnelFeeders(funnel, alerts) {
   }
   return (alerts || [])
     .filter((a) => a.title?.includes('Feeder a conversion'))
-    .map(parseFeederFromAlert);
+    .map(parseFeederFromAlert)
+    .sort((a, b) => b.pct - a.pct);
 }
 
-function resolveFunnelLeaks(transitions) {
+function resolveFunnelLeaks(funnel, transitions) {
+  const leaks = funnel?.leaks;
+  if (Array.isArray(leaks) && leaks.length) {
+    return leaks
+      .map((l) => ({
+        from: l.from || 'Origen',
+        to: l.to || 'Destino',
+        pct: Number(l.pct) || 0,
+        cnt: Number(l.cnt) || 0,
+      }))
+      .sort((a, b) => b.pct - a.pct);
+  }
   return (transitions || [])
     .filter((t) => isLeakDestination(t.to))
     .map((t) => ({
@@ -245,23 +250,26 @@ function resolveFunnelLeaks(transitions) {
     .sort((a, b) => b.pct - a.pct);
 }
 
+function resolveFunnelRevenueAtRisk(funnel, transitions, meta) {
+  if (funnel?.total_revenue_at_risk != null && Number.isFinite(Number(funnel.total_revenue_at_risk))) {
+    return Number(funnel.total_revenue_at_risk);
+  }
+  const revenuePer = Number(meta?.config?.revenue_per_conversion) || 1200;
+  const leaks = resolveFunnelLeaks(funnel, transitions);
+  if (!leaks.length) return null;
+  return leaks.reduce((sum, l) => sum + (Number(l.cnt) || 0) * revenuePer, 0);
+}
+
 function resolveFunnelMarkovStates(funnel) {
   const absorption = funnel?.absorption_probabilities;
-  if (Array.isArray(absorption) && absorption.length) {
-    return filterVisibleMarkovRows(
-      absorption
-        .map(mapProbabilityRow)
-        .filter((p) => p.conversion > 0)
-        .sort((a, b) => b.conversion - a.conversion)
-    );
+  if (!Array.isArray(absorption) || !absorption.length) {
+    return [];
   }
   return filterVisibleMarkovRows(
-    STATIC_PROBABILITIES.map((p) => ({
-      ...p,
-      rawState: p.state,
-      state: formatMarkovStateLabel(p.state, cleanStateName),
-      group: resolveMarkovGroup(p.state, cleanStateName(p.state)),
-    }))
+    absorption
+      .map(mapProbabilityRow)
+      .filter((p) => p.conversion > 0)
+      .sort((a, b) => b.conversion - a.conversion)
   );
 }
 
@@ -324,32 +332,45 @@ function buildLeakModalContent(leakRow) {
   };
 }
 
-function FunnelListItem({ headLeft, headSub, headRight, headColor, barColor, barWidth, metaLeft, metaRight, onClick }) {
+function FunnelListItem({ headLeft, headSub, headRight, headColor, barColor, barWidth, metaLeft, metaRight, onClick, rank, variant = 'feeder' }) {
+  const rankBadge = rank === 1
+    ? <span className="funnel-rank funnel-rank--gold" title="Mayor participación">1</span>
+    : rank === 2
+      ? <span className="funnel-rank funnel-rank--silver">2</span>
+      : rank === 3
+        ? <span className="funnel-rank funnel-rank--bronze">3</span>
+        : rank > 0
+          ? <span className="funnel-rank">{rank}</span>
+          : null;
+
   return (
     <div
-      className="funnel-list-item card-animate"
+      className={`funnel-data-row funnel-data-row--${variant} card-animate`}
       onClick={onClick}
       style={{ cursor: onClick ? 'pointer' : 'default' }}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick(e); } : undefined}
     >
-      <div className="funnel-list-item-head">
-        <div className="funnel-list-item-title-wrap">
-          <span className="funnel-list-item-title">{headLeft}</span>
-          {headSub ? <span className="funnel-list-item-subtitle">{headSub}</span> : null}
+      {rankBadge}
+      <div className="funnel-data-row-main">
+        <div className="funnel-data-row-head">
+          <div className="funnel-data-row-titles">
+            <span className="funnel-data-row-title">{headLeft}</span>
+            {headSub ? <span className="funnel-data-row-sub">{headSub}</span> : null}
+          </div>
+          <span className="funnel-data-row-pct" style={{ color: headColor }}>{headRight}</span>
         </div>
-        <span className="funnel-list-item-pct" style={{ color: headColor }}>{headRight}</span>
-      </div>
-      <div className="funnel-list-item-bar">
-        <div
-          className="funnel-list-item-bar-fill"
-          style={{ width: `${barWidth}%`, background: barColor }}
-        />
-      </div>
-      <div className="funnel-list-item-meta">
-        <span>{metaLeft}</span>
-        <span>{metaRight}</span>
+        <div className="funnel-data-row-bar">
+          <div
+            className="funnel-data-row-bar-fill"
+            style={{ width: `${barWidth}%`, background: barColor }}
+          />
+        </div>
+        <div className="funnel-data-row-foot">
+          <span className="funnel-data-chip">{metaLeft}</span>
+          <span className="funnel-data-chip funnel-data-chip--value">{metaRight}</span>
+        </div>
       </div>
     </div>
   );
@@ -372,7 +393,7 @@ function FunnelListSection({
 
   return (
     <motion.div
-      className="card"
+      className={`card funnel-panel funnel-panel--${dotColor === 'var(--green)' ? 'feeders' : 'leaks'}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
@@ -380,6 +401,11 @@ function FunnelListSection({
       <div className="chart-title">
         <span className="dot" style={{ background: dotColor }} />
         {title}
+      </div>
+      <div className={`funnel-data-thead funnel-data-thead--${dotColor === 'var(--green)' ? 'feeders' : 'leaks'}`} aria-hidden="true">
+        <span className="funnel-data-th funnel-data-th--rank">#</span>
+        <span className="funnel-data-th funnel-data-th--main">{dotColor === 'var(--green)' ? 'Estado / ruta' : 'Transición / fuga'}</span>
+        <span className="funnel-data-th funnel-data-th--pct">%</span>
       </div>
       <div className={`funnel-scroll-list${expanded ? '' : ' funnel-scroll-list--preview'}`}>
         {items.length > 0 ? (
@@ -428,23 +454,20 @@ export default function FunnelPage() {
   const funnel = data.funnel || {};
   const transitions = funnel.transitions || [];
 
-  const leadKPI = (data.kpis || []).find(k => k.label.includes('leads') || k.label.includes('Leads'));
-  const totalLeads = leadKPI ? parseInt(String(leadKPI.value).replace(/[^0-9]/g, '')) : 10978;
-
-  const consults = transitions
-    .filter(t => t.to === 'Consult Booked' || t.to === 'absorption')
-    .reduce((acc, curr) => acc + curr.cnt, 0) || 684;
-
   const conversionRate = funnel.conversion_pct != null
     ? Number(funnel.conversion_pct).toFixed(2)
-    : (totalLeads > 0 ? ((consults / totalLeads) * 100).toFixed(2) : '6.23');
-  const convPct = `${conversionRate}%`;
+    : funnel.global_conversion_pct != null
+      ? Number(funnel.global_conversion_pct).toFixed(2)
+      : '—';
+  const convPct = conversionRate === '—' ? '—' : `${conversionRate}%`;
 
-  const leaks = resolveFunnelLeaks(transitions);
-  const totalLostLeads = leaks.reduce((acc, curr) => acc + curr.cnt, 0);
-  const caseValue = 1200;
-  const revenueAtRisk = totalLostLeads * caseValue;
-  const riskRevenue = `$${revenueAtRisk.toLocaleString('es-MX')}`;
+  const leaks = resolveFunnelLeaks(funnel, transitions);
+  const revenueAtRisk = resolveFunnelRevenueAtRisk(funnel, transitions, data.meta);
+  const riskRevenue = revenueAtRisk != null
+    ? `$${revenueAtRisk.toLocaleString('es-MX')}`
+    : '—';
+
+  const trapStates = Array.isArray(funnel.trap_states) ? funnel.trap_states : [];
 
   const feeders = resolveFunnelFeeders(funnel, data.system?.alerts);
   const finalProbabilities = resolveFunnelMarkovStates(funnel);
@@ -553,6 +576,8 @@ export default function FunnelPage() {
                 barWidth={pct}
                 metaLeft="Participación en conversiones"
                 metaRight={`${count} consultas agendadas`}
+                rank={i + 1}
+                variant="feeder"
                 onClick={() => setModal({ open: true, ...buildFeederModalContent(f) })}
               />
             );
@@ -583,12 +608,46 @@ export default function FunnelPage() {
                 barWidth={pct}
                 metaLeft="Leads afectados"
                 metaRight={`${count} leads perdidos`}
+                rank={i + 1}
+                variant="leak"
                 onClick={() => setModal({ open: true, ...buildLeakModalContent(l) })}
               />
             );
           }}
         />
       </div>
+
+      {trapStates.length > 0 && (
+        <motion.div
+          className="card funnel-panel funnel-panel--leaks"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          style={{ marginTop: 'var(--gap-bento)' }}
+        >
+          <div className="chart-title">
+            <span className="dot" style={{ background: 'var(--amber)' }} />
+            Estados trampa (leads estancados)
+          </div>
+          <div className="funnel-scroll-list">
+            {trapStates.slice(0, 8).map((trap, i) => (
+              <FunnelListItem
+                key={trap.state || i}
+                headLeft={shortenFunnelLabel(cleanStateName(trap.state || '—'))}
+                headSub={trap.reason || 'Bajo avance hacia conversión'}
+                headRight={`${trap.total_cnt || 0} leads`}
+                headColor="var(--amber)"
+                barColor="var(--amber)"
+                barWidth={Math.min(Number(trap.loss_rate) || 0, 100)}
+                metaLeft={`Auto-loop: ${trap.self_loop_pct ?? '—'}%`}
+                metaRight={`Conv: ${trap.conversion_rate ?? '—'}%`}
+                rank={i + 1}
+                variant="leak"
+              />
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       <div className="funnel-accordion" style={{ marginTop: 'var(--gap-bento)' }}>
         <button
@@ -624,50 +683,73 @@ export default function FunnelPage() {
                 ))}
               </div>
             )}
-            <div className="custom-table-container">
-              <table className="custom-table">
+            <div className="funnel-markov-table-wrap custom-table-container">
+              <table className="custom-table funnel-markov-table">
                 <thead>
                   <tr>
+                    <th className="funnel-markov-th-rank">#</th>
                     <th>Estado inicial</th>
-                    <th style={{ textAlign: 'right' }}>Prob. de conversión</th>
+                    <th className="funnel-markov-th-metric">Prob. de conversión</th>
                     {markovShowAdvanced && (
                       <>
-                        <th style={{ textAlign: 'right' }}>Prob. de no convertir</th>
-                        <th style={{ textAlign: 'right' }}>Toques promedio</th>
-                        <th style={{ textAlign: 'right' }}>Variabilidad</th>
+                        <th className="funnel-markov-th-metric">Prob. de no convertir</th>
+                        <th className="funnel-markov-th-metric">Toques promedio</th>
+                        <th className="funnel-markov-th-metric">Variabilidad</th>
                       </>
                     )}
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredMarkovRows.length > 0 ? filteredMarkovRows.map((p, i) => (
-                    <tr key={`${p.rawState || p.state}-${i}`}>
-                      <td style={{ fontWeight: 600, color: 'white' }}>
-                        <div>{p.state}</div>
-                        {p.rawState && p.rawState !== p.state ? (
-                          <div className="funnel-list-item-subtitle">Estado CRM: {p.rawState}</div>
-                        ) : null}
+                  {filteredMarkovRows.length > 0 ? filteredMarkovRows.map((p, i) => {
+                    const tier = p.conversion >= 25 ? 'funnel-markov-row--high' : p.conversion >= 12 ? 'funnel-markov-row--mid' : 'funnel-markov-row--low';
+                    const barW = Math.min(Math.max(p.conversion, 0), 100);
+                    const rank = i + 1;
+                    return (
+                    <tr key={`${p.rawState || p.state}-${i}`} className={`funnel-markov-row ${tier}`}>
+                      <td className="funnel-markov-rank-cell">
+                        {rank === 1 ? <span className="funnel-rank funnel-rank--gold">1</span>
+                          : rank === 2 ? <span className="funnel-rank funnel-rank--silver">2</span>
+                          : rank === 3 ? <span className="funnel-rank funnel-rank--bronze">3</span>
+                          : <span className="funnel-rank">{rank}</span>}
                       </td>
-                      <td style={{ textAlign: 'right', color: 'var(--green)', fontWeight: 'bold' }}>
-                        {formatProb(p.conversion)}
+                      <td>
+                        <div className="funnel-markov-state">
+                          <span className="funnel-markov-state-dot" data-group={p.group || undefined} />
+                          <div className="funnel-markov-state-copy">
+                            <div className="funnel-markov-state-name">{p.state}</div>
+                            {p.rawState && p.rawState !== p.state ? (
+                              <div className="funnel-markov-state-raw">Estado CRM: {p.rawState}</div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="funnel-markov-metric-cell">
+                        <div className="funnel-markov-metric funnel-markov-metric--conv">
+                          <span className="funnel-markov-pct">{formatProb(p.conversion)}</span>
+                          <div className="funnel-markov-mini-bar" aria-hidden="true">
+                            <span style={{ width: `${barW}%` }} />
+                          </div>
+                        </div>
                       </td>
                       {markovShowAdvanced && (
                         <>
-                          <td style={{ textAlign: 'right', color: 'var(--text-muted)' }}>
-                            {formatProb(p.loss)}
+                          <td className="funnel-markov-metric-cell">
+                            <span className="funnel-markov-pill funnel-markov-pill--loss">{formatProb(p.loss)}</span>
                           </td>
-                          <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', color: 'white' }}>
-                            {formatSteps(p.steps)}
+                          <td className="funnel-markov-metric-cell">
+                            <span className="funnel-markov-pill funnel-markov-pill--mono">{formatSteps(p.steps)}</span>
                           </td>
-                          <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', color: 'var(--text-dim)' }}>
-                            {p.stddev > 0 ? formatSteps(p.stddev) : '—'}
+                          <td className="funnel-markov-metric-cell">
+                            <span className="funnel-markov-pill funnel-markov-pill--dim">
+                              {p.stddev > 0 ? formatSteps(p.stddev) : '—'}
+                            </span>
                           </td>
                         </>
                       )}
                     </tr>
-                  )) : (
+                  );}) : (
                     <tr>
-                      <td colSpan={markovShowAdvanced ? 5 : 2} style={{ textAlign: 'center', color: 'var(--text-dim)', padding: 24 }}>
+                      <td colSpan={markovShowAdvanced ? 6 : 3} className="funnel-markov-empty">
                         {finalProbabilities.length > 0
                           ? 'Sin estados en este grupo para el periodo actual'
                           : 'Sin estados con actividad de conversión en este periodo'}
