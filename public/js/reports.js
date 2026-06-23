@@ -351,7 +351,7 @@
         const relevantSections = {
             executive: ['ESTADO GENERAL', 'QUE ESTA PASANDO', 'QUE ESTÁ PASANDO', 'DONDE SE PIERDE DINERO', 'DÓNDE SE PIERDE DINERO', 'DECISIONES RECOMENDADAS', 'CONCLUSION', 'CONCLUSIÓN'],
             manager: ['QUE CAMBIO HOY', 'LO QUE FUNCIONA BIEN', 'PROBLEMAS DEL FUNNEL', 'PLAN DEL DIA', 'PLAN DEL DÍA', 'KPIS A VIGILAR', 'ALERTA ESPECIAL'],
-            analyst: ['RESUMEN DE FUENTES Y CALIDAD', 'HALLAZGOS CLAVE', 'SUPUESTOS Y LIMITACIONES', 'ALERTAS TECNICAS', 'ALERTAS TÉCNICAS', 'ANALISIS SUGERIDOS', 'ANÁLISIS SUGERIDOS', 'DATOS CLAVE EN TABLA', 'CONCLUSION', 'CONCLUSIÓN'],
+            analyst: ['RESUMEN DE FUENTES Y CALIDAD', 'HALLAZGOS CLAVE', 'SUPUESTOS Y LIMITACIONES', 'ALERTAS TECNICAS', 'ALERTAS TÉCNICAS', 'DATOS CLAVE EN TABLA', 'CONCLUSION', 'CONCLUSIÓN'],
             operations: ['PLAN DEL DIA', 'PLAN DEL DÍA', 'ALERTA ESPECIAL', 'PROBLEMAS DEL FUNNEL', 'ESTADO GENERAL']
         };
         const audienceSections = relevantSections[audience] || [];
@@ -608,36 +608,6 @@
         </table></div>`;
     }
 
-    function buildSuggestedAnalysesHtml(payload) {
-        const inv = payload.investment || {};
-        const ops = payload.operations || {};
-        const blocks = [];
-
-        if (inv.campaigns?.length) {
-            blocks.push(`
-                <p class="report-subsection-title"><strong>1. Eficiencia de CPL por campaña</strong></p>
-                <p>Hipótesis: mayor gasto no implica menor CPL. Cruza <code>inversiones_campanas</code> (gasto) con <code>leads_por_campana</code> (volumen por fecha) para comparar ${inv.campaign_count} campañas activas y detectar saturación de pauta.</p>
-            `);
-        }
-
-        if (ops.contact_distribution?.overcontact_pct != null) {
-            blocks.push(`
-                <p class="report-subsection-title"><strong>2. Impacto de intentos &gt; 7 en conversión</strong></p>
-                <p>Hipótesis: leads con más de 7 intentos convierten peor. Segmenta <code>llamadas_agregadas</code> por rango de intentos usando el sobre-contacto actual (${formatNumber(ops.contact_distribution.overcontact_pct, 2)}%).</p>
-            `);
-        }
-
-        if (payload.forecast?.seasonal_indices?.length && ops.daily_volumes?.length) {
-            blocks.push(`
-                <p class="report-subsection-title"><strong>3. Correlación estacional vs volumen diario</strong></p>
-                <p>Hipótesis: días con índice &gt; 1.0 concentran más leads. Une <code>llegadas</code> con <code>indices_estacionales</code> por día de semana y valida con correlación de Pearson.</p>
-            `);
-        }
-
-        if (!blocks.length) return '';
-        return blocks.join('');
-    }
-
     function buildSpecialAlertHtml(payload) {
         const alerts = (payload.system?.alerts || [])
             .filter((a) => a.severity === 'critical' || a.severity === 'warning');
@@ -775,13 +745,59 @@
         `;
     }
 
+    function removeSuggestedAnalysesSection(contentBlock) {
+        if (!contentBlock) return;
+
+        const keys = ['ANALISIS SUGERIDOS', 'ANÁLISIS SUGERIDOS'];
+        const children = Array.from(contentBlock.children);
+        let hiding = false;
+        let prevHr = null;
+
+        children.forEach((child) => {
+            const isHeading = child.classList?.contains('report-section-title')
+                || child.tagName === 'H2' || child.tagName === 'H3'
+                || (child.tagName === 'P' && child.querySelector('strong:only-child'))
+                || (child.tagName === 'P' && (
+                    child.style.fontWeight === '800' || child.style.fontWeight === 'bold'
+                    || child.getAttribute('style')?.includes('font-weight:800')
+                    || child.getAttribute('style')?.includes('font-weight: 800')
+                ));
+
+            if (child.tagName === 'HR' || child.classList?.contains('report-section-divider')) {
+                if (!hiding) prevHr = child;
+                return;
+            }
+
+            if (isHeading) {
+                const headingText = child.textContent.trim().toUpperCase().replace(/[ÁÉÍÓÚ]/g, (m) => (
+                    { Á: 'A', É: 'E', Í: 'I', Ó: 'O', Ú: 'U' }[m]
+                ));
+                const isSuggested = keys.some((k) => headingText.includes(k));
+
+                if (isSuggested) {
+                    if (prevHr) prevHr.style.display = 'none';
+                    hiding = true;
+                    child.style.display = 'none';
+                    prevHr = null;
+                    return;
+                }
+
+                if (hiding) hiding = false;
+                prevHr = null;
+            }
+
+            if (hiding) {
+                child.style.display = 'none';
+            }
+        });
+    }
+
     function rebuildAnalystNarrative(contentBlock, payload) {
         const sections = [
             { title: 'Resumen de fuentes y calidad', html: buildSourcesSummaryHtml(payload) },
             { title: 'Hallazgos clave', html: buildKeyFindingsHtml(payload) },
             { title: 'Supuestos y limitaciones', html: buildAssumptionsHtml(payload) },
             { title: 'Alertas técnicas', html: buildAlertsTechnicalTableHtml(payload) },
-            { title: 'Análisis sugeridos', html: buildSuggestedAnalysesHtml(payload) },
             { title: 'Datos clave en tabla', html: (() => {
                 const metrics = buildKeyMetrics(payload);
                 return metrics.length ? buildMetricsTableHtml(metrics) : '';
@@ -865,12 +881,7 @@
                 });
             }
 
-            if (!sectionExists(contentBlock, ['ANALISIS SUGERIDOS', 'ANÁLISIS SUGERIDOS'])) {
-                const analyses = buildSuggestedAnalysesHtml(payload);
-                if (analyses) {
-                    appendReportSection(contentBlock, 'Análisis sugeridos', analyses);
-                }
-            }
+            removeSuggestedAnalysesSection(contentBlock);
         }
 
         if (audience === 'manager' || audience === 'operations') {
