@@ -612,6 +612,12 @@ app.get('/api/dashboard', async (req, res) => {
 
       applyServerEnrichment(data);
 
+      try {
+        fs.writeFileSync(payloadPath, JSON.stringify(data, null, 2), 'utf-8');
+      } catch (persistErr) {
+        console.warn('[Dashboard] No se pudo persistir funnel enriquecido:', persistErr.message);
+      }
+
       const history = buildHistoryResponse(data, DATA_DIR);
 
       res.json({ success: true, data, history });

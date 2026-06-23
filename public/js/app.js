@@ -317,14 +317,14 @@ const KPI_EXPLANATIONS = {
     },
     'Conversion global': {
         icon: '🎯',
-        definition: 'Global CVR: porcentaje de leads que avanzan a la etapa clave del embudo (p. ej. consulta reservada) vs total de entradas.',
+        definition: 'Porcentaje de consultas agendadas respecto al total de leads del periodo (operations.total_leads). Incluye todas las variantes de Consult Booked.',
         interpretation: '> 5% suele ser fuerte en este sector; < 3.5% sugiere fuga temprana o leads no calificados por creativo/audiencia.',
-        source: 'funnel.global_conversion_pct'
+        source: 'funnel.conversion_pct — (consultas agendadas ÷ leads totales del periodo) × 100'
     },
     'Revenue at Risk': {
         icon: '💸',
-        definition: 'Revenue at Risk: valoración del opportunity cost de leads perdidos en el funnel, con case value assumption (p. ej. $1,200 USD).',
-        interpretation: 'Proxy del costo de ineficiencia operativa. Reducirlo vía mejor speed-to-lead y menos over-dialing mejora revenue sin subir ad spend.',
+        definition: 'Estimación del costo de oportunidad por fugas: suma de eventos de fuga (top N) × valor por conversión configurado (p. ej. $1,200 USD). No es ingreso contable ni cuenta leads únicos.',
+        interpretation: 'Proxy de ineficiencia operativa. Sirve para comparar periodos y priorizar fugas de alto volumen, no como cifra financiera exacta.',
         source: 'funnel.total_revenue_at_risk'
     },
     'Cambio semanal': {
@@ -365,15 +365,15 @@ const KPI_EXPLANATIONS = {
     },
     'Tasa Global de Conversión': {
         icon: '🎯',
-        definition: 'El porcentaje total de leads o prospectos que logran reservar una consulta o avanzar exitosamente a la fase clave del embudo, medido contra el total de leads entrantes en el sistema.',
-        interpretation: 'Una tasa superior al 5% es excelente para este sector. Por debajo de 3.5% sugiere una fuga importante de prospectos en el primer contacto o que la publicidad atrae leads no calificados.',
-        source: 'Cálculo: (Consultas reservadas ÷ Leads totales) × 100 — Motor PulseMkt desde n8n'
+        definition: 'Porcentaje de consultas agendadas respecto al total de leads del periodo analizado (operations.total_leads).',
+        interpretation: 'Una tasa superior al 5% es excelente para este sector. Por debajo de 3.5% sugiere fuga importante o leads poco calificados.',
+        source: 'funnel.conversion_pct — consultas agendadas ÷ leads totales del periodo'
     },
     'Ingresos en Riesgo Estimados': {
         icon: '💸',
-        definition: 'Valoración financiera del costo de oportunidad que representan los leads perdidos (no interesados, sin respuesta, cortadas o números incorrectos) asumiendo un valor promedio de caso de $1,200 USD.',
-        interpretation: 'Representa el impacto de la ineficiencia del call center. Reducir esta cifra optimizando las llamadas incrementa de manera directa los ingresos facturados sin aumentar el presupuesto.',
-        source: 'Cálculo: Leads perdidos × Valor de caso promedio ($1,200) — Motor PulseMkt'
+        definition: 'Estimación: eventos de fuga del periodo × $1,200 USD (valor configurable). No es ingreso real ni leads únicos.',
+        interpretation: 'Indicador relativo de oportunidad perdida por fugas. Útil para priorizar mejoras operativas.',
+        source: 'funnel.total_revenue_at_risk'
     },
     'Pronóstico Mañana': {
         icon: '🔮',
@@ -572,10 +572,10 @@ function openFeederModal(rawFrom, pct, cnt) {
 
     setKpiModalContent({
         title: displayName,
-        value: pct,
-        definition: `Ruta de conversión desde "${displayName}". Los leads que pasan por esta etapa logran una consulta agendada.`,
-        interpretation: `Participa con el ${pctNum.toFixed(2)}% de las conversiones del periodo, con ${count} consultas agendadas atribuidas a esta ruta.`,
-        source: 'Mapeo de transiciones del CRM vía n8n',
+        value: `${count} consultas`,
+        definition: `Ruta hacia consulta agendada desde "${displayName}". El ${pctNum.toFixed(2)}% de los leads que salen de este estado pasan a consulta en el siguiente paso.`,
+        interpretation: `En este periodo se registraron ${count} consultas agendadas atribuidas a esta ruta (todas las variantes de Consult Booked).`,
+        source: 'funnel.feeders — transiciones del CRM',
     });
 }
 
@@ -588,10 +588,10 @@ function openLeakModal(from, to, pct, cnt) {
     setKpiModalContent({
         title: leak.title,
         subtitle: leak.subtitle,
-        value: pct,
+        value: `${count} leads`,
         definition: `Punto de fuga: los leads que vienen de ${origin} acaban en ${leak.title} y abandonan el embudo.`,
-        interpretation: `El ${pctNum.toFixed(2)}% de los leads en esta transición se pierden (${count} leads afectados). Conviene revisar tiempos de respuesta y calidad del contacto en ${origin}.`,
-        source: 'Análisis de transición de estados del CRM',
+        interpretation: `El ${pctNum.toFixed(2)}% de las salidas desde ${origin} van a esta fuga (${count} eventos en el periodo).`,
+        source: 'funnel.leaks — transiciones del CRM',
     });
 }
 
@@ -1098,6 +1098,9 @@ async function loadBOS() {
         }
 
         normalizeOperationalAlerts(json.data);
+        if (typeof enrichFunnelClientData === 'function') {
+            enrichFunnelClientData(json.data);
+        }
         if (typeof enrichFunnelMarkovStddev === 'function') {
             enrichFunnelMarkovStddev(json.data);
         }
@@ -1652,23 +1655,49 @@ const funnelUiState = {
 };
 
 function buildFunnelInsight(feeders, leaks) {
-    const topFeeder = feeders[0];
+    const topFeederByVolume = feeders[0];
+    const topFeederByEfficiency = feeders.slice().sort((a, b) => (Number(b.pct) || 0) - (Number(a.pct) || 0))[0];
     const topLeak = leaks[0];
-    if (!topFeeder && !topLeak) return '';
+    if (!topFeederByVolume && !topLeak) return '';
 
     const parts = [];
-    if (topFeeder) {
-        const state = shortenFunnelLabel(cleanTechnicalTerms(topFeeder.from || 'Origen'));
-        const pct = Number(topFeeder.pct) || 0;
-        parts.push(`Tu mejor ruta es <strong>${state}</strong> (${pct.toFixed(1)}% de las conversiones).`);
+    if (topFeederByVolume) {
+        const state = shortenFunnelLabel(cleanTechnicalTerms(topFeederByVolume.from || 'Origen'));
+        const cnt = Number(topFeederByVolume.cnt) || 0;
+        parts.push(`Mayor volumen de consultas: <strong>${state}</strong> (${cnt} consultas en el periodo).`);
+    }
+    if (topFeederByEfficiency && topFeederByEfficiency.from !== topFeederByVolume?.from) {
+        const effState = shortenFunnelLabel(cleanTechnicalTerms(topFeederByEfficiency.from || 'Origen'));
+        const effPct = Number(topFeederByEfficiency.pct) || 0;
+        parts.push(`Mayor eficiencia: <strong>${effState}</strong> (${effPct.toFixed(1)}% pasan a consulta desde ese estado).`);
     }
     if (topLeak) {
         const leak = formatLeakDisplay(topLeak.from, topLeak.to);
         const cnt = Number(topLeak.cnt) || 0;
         const pct = Number(topLeak.pct) || 0;
-        parts.push(`La fuga más relevante: <strong>${leak.title}</strong> (${leak.subtitle.replace('Origen: ', '')}) — ${pct.toFixed(1)}%, ${cnt} leads.`);
+        parts.push(`Fuga con más impacto: <strong>${leak.title}</strong> (${leak.subtitle.replace('Origen: ', '')}) — ${cnt} leads (${pct.toFixed(1)}% de esa transición).`);
     }
     return parts.join(' ');
+}
+
+function formatFunnelPeriodMeta(data) {
+    const generatedAt = data?.meta?.generated_at;
+    const lookback = data?.meta?.config?.lookback_days;
+    const totalLeads = Number(data?.operations?.total_leads) || 0;
+    const parts = [];
+
+    if (generatedAt) {
+        try {
+            const date = new Date(generatedAt);
+            parts.push(`Datos al ${date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}`);
+        } catch (_) {
+            parts.push(`Periodo: ${generatedAt}`);
+        }
+    }
+    if (lookback) parts.push(`${lookback} días`);
+    if (totalLeads > 0) parts.push(`${totalLeads.toLocaleString('es-MX')} leads`);
+
+    return parts.join(' · ');
 }
 
 function renderFunnelListToggle(listId, items, expanded, noun) {
@@ -1707,8 +1736,8 @@ function renderFunnelFeedersList(data, feeders) {
                 pct,
                 color: 'var(--green)',
                 barColor: 'var(--green)',
-                metaLeft: 'Participación en conversiones',
-                metaRight: `${cnt} consultas agendadas`,
+                metaLeft: 'Eficiencia de la ruta',
+                metaRight: `${cnt} consultas · ${pct.toFixed(1)}%`,
                 onClick: `openFeederModal('${(f.from || '').replace(/'/g, "\\'")}', '${pct.toFixed(2)}%', ${cnt})`,
                 delay: (idx * 0.02) + 0.12,
                 rank: idx + 1,
@@ -1930,25 +1959,19 @@ function resolveFunnelFeeders(data) {
                 pct: Number(f.pct) || 0,
                 cnt: Number(f.cnt) || 0,
             }))
-            .sort((a, b) => b.pct - a.pct);
+            .sort((a, b) => b.cnt - a.cnt);
     }
 
     return (data.system?.alerts || [])
         .filter((a) => (a.title || '').includes('Feeder a conversion'))
         .map(parseFeederAlert)
-        .sort((a, b) => b.pct - a.pct);
+        .sort((a, b) => b.cnt - a.cnt);
 }
 
 function isLeakDestination(to) {
-    const t = String(to || '').toLowerCase();
-    return t.includes('not interested')
-        || t.includes('no answer')
-        || t.includes('hung up')
-        || t.includes('wrong number')
-        || t.includes('busy')
-        || t.includes('lost')
-        || t.includes('voicemail')
-        || t.includes('distrust');
+    return typeof isFunnelLossState === 'function'
+        ? isFunnelLossState(to, 'Consult Booked')
+        : false;
 }
 
 function resolveFunnelLeaks(data) {
@@ -1961,7 +1984,7 @@ function resolveFunnelLeaks(data) {
                 pct: Number(l.pct) || 0,
                 cnt: Number(l.cnt) || 0,
             }))
-            .sort((a, b) => b.pct - a.pct);
+            .sort((a, b) => b.cnt - a.cnt);
     }
     return (data.funnel?.transitions || [])
         .filter((t) => isLeakDestination(t.to))
@@ -1971,7 +1994,7 @@ function resolveFunnelLeaks(data) {
             pct: Number(t.pct) || 0,
             cnt: Number(t.cnt) || 0,
         }))
-        .sort((a, b) => b.pct - a.pct);
+        .sort((a, b) => b.cnt - a.cnt);
 }
 
 function resolveFunnelRevenuePerConversion(data) {
@@ -2083,6 +2106,9 @@ function renderFunnelDetails(data) {
             ? Number(data.funnel.global_conversion_pct).toFixed(2)
             : '—';
 
+    const totalLeads = Number(data.operations?.total_leads) || 0;
+    const revenuePer = resolveFunnelRevenuePerConversion(data);
+
     const funnelConvVal = document.getElementById('funnel-conv-pct');
     if (funnelConvVal) {
         const display = conversionRate === '—' ? '—' : `${conversionRate}%`;
@@ -2095,6 +2121,19 @@ function renderFunnelDetails(data) {
         targetLabel.textContent = `Objetivo: ${cleanTechnicalTerms(data.funnel.conversion_target)}`;
     }
 
+    const periodMeta = document.getElementById('funnel-period-meta');
+    if (periodMeta) {
+        const periodText = formatFunnelPeriodMeta(data);
+        periodMeta.textContent = periodText || '';
+        periodMeta.style.display = periodText ? 'block' : 'none';
+    }
+
+    const enrichChip = document.getElementById('funnel-enrich-chip');
+    if (enrichChip) {
+        const showEnrich = data.meta?._enriched_funnel === true;
+        enrichChip.style.display = showEnrich ? 'inline-flex' : 'none';
+    }
+
     const leaks = resolveFunnelLeaks(data);
 
     const revenueAtRisk = resolveFunnelRevenueAtRisk(data);
@@ -2104,9 +2143,13 @@ function renderFunnelDetails(data) {
 
     const narrative = document.getElementById('funnel-narrative-subtitle');
     if (narrative) {
-        narrative.innerHTML = conversionRate === '—'
-            ? `Sin tasa de conversión calculada para este periodo.`
-            : `De cada 100 leads, <strong>${conversionRate}</strong> llegan a consulta. Hay <strong>${riskRevenueFormatted}</strong> en riesgo por fugas detectadas.`;
+        if (conversionRate === '—') {
+            narrative.innerHTML = 'Sin tasa de conversión calculada para este periodo.';
+        } else if (totalLeads > 0) {
+            narrative.innerHTML = `En este periodo (<strong>${totalLeads.toLocaleString('es-MX')} leads</strong>), <strong>${conversionRate}%</strong> llegaron a consulta agendada. Ingreso en riesgo estimado: <strong>${riskRevenueFormatted}</strong> (fugas × $${revenuePer.toLocaleString('es-MX')}; no es ingreso real).`;
+        } else {
+            narrative.innerHTML = `Tasa de conversión del periodo: <strong>${conversionRate}%</strong>. Ingreso en riesgo estimado: <strong>${riskRevenueFormatted}</strong> (fugas × $${revenuePer.toLocaleString('es-MX')}).`;
+        }
     }
 
     const riskRevVal = document.getElementById('funnel-risk-revenue');

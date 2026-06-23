@@ -1070,6 +1070,26 @@ body.light-mode .metric-badge-bad {
     font-weight: 700;
 }
 
+.funnel-period-meta {
+    color: var(--text-muted);
+    opacity: 0.9;
+}
+
+.funnel-enrich-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--amber);
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    border-radius: 999px;
+    padding: 3px 10px;
+    margin-bottom: 8px;
+}
+
 .funnel-expand-btn {
     display: block;
     width: 100%;

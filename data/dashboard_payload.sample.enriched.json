@@ -4,7 +4,7 @@
     "version": "7.0",
     "execution_id": "exec_1779999833707",
     "_enriched_funnel": true,
-    "_enriched_at": "2026-06-22T16:33:30.232Z",
+    "_enriched_at": "2026-06-23T17:03:51.046Z",
     "_enriched_operations": true
   },
   "system": {
@@ -1277,7 +1277,7 @@
     ]
   },
   "funnel": {
-    "conversion_pct": 2.43,
+    "conversion_pct": 8.54,
     "conversion_target": "Consult Booked",
     "transitions": [
       {
@@ -4991,49 +4991,64 @@
     ],
     "feeders": [
       {
-        "from": "PreClosed – Cash Only",
-        "pct": 34.91,
-        "cnt": 37
-      },
-      {
-        "from": "PreClosed Reactivación",
-        "pct": 20,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed - No Card",
-        "pct": 13.1,
-        "cnt": 65
+        "from": "EN LLAMADA",
+        "pct": 2.12,
+        "cnt": 412
       },
       {
         "from": "PreClosed - No Money - No Job",
-        "pct": 9.52,
-        "cnt": 102
+        "pct": 10.64,
+        "cnt": 114
       },
       {
-        "from": "PreClosed - Busy",
-        "pct": 6.71,
-        "cnt": 31
+        "from": "PreClosed - No Card",
+        "pct": 15.32,
+        "cnt": 76
+      },
+      {
+        "from": "Busy - Callback",
+        "pct": 1.32,
+        "cnt": 69
+      },
+      {
+        "from": "No Answer",
+        "pct": 0.57,
+        "cnt": 52
       },
       {
         "from": "PreClosed - Needs to be Approved",
-        "pct": 6.34,
-        "cnt": 40
+        "pct": 7.29,
+        "cnt": 46
       },
       {
-        "from": "PreClosed - No Price",
-        "pct": 6.25,
-        "cnt": 2
+        "from": "PreClosed - Busy",
+        "pct": 9.52,
+        "cnt": 44
+      },
+      {
+        "from": "PreClosed – Cash Only",
+        "pct": 39.62,
+        "cnt": 42
+      },
+      {
+        "from": "Pre Closed PROMO",
+        "pct": 25,
+        "cnt": 17
+      },
+      {
+        "from": "Connected Voicemail",
+        "pct": 0.34,
+        "cnt": 16
       },
       {
         "from": "PreClosed Opportunity",
-        "pct": 5.88,
-        "cnt": 3
+        "pct": 27.45,
+        "cnt": 14
       },
       {
-        "from": "PreClosed - Indirect Client",
-        "pct": 5.26,
-        "cnt": 1
+        "from": "New Lead",
+        "pct": 0.06,
+        "cnt": 13
       },
       {
         "from": "PreClosed - Hung Up",
@@ -5041,283 +5056,62 @@
         "cnt": 10
       },
       {
+        "from": "Consult Booked",
+        "pct": 44.44,
+        "cnt": 8
+      },
+      {
+        "from": "Connected - Not Interested",
+        "pct": 2.17,
+        "cnt": 4
+      },
+      {
+        "from": "Hung Up",
+        "pct": 0.2,
+        "cnt": 4
+      },
+      {
+        "from": "OutReach Primer Intento",
+        "pct": 1.02,
+        "cnt": 3
+      },
+      {
         "from": "PreClosed - Distrust",
         "pct": 2.16,
         "cnt": 3
       },
       {
-        "from": "EN LLAMADA",
-        "pct": 1.96,
-        "cnt": 381
-      },
-      {
-        "from": "Pre Closed PROMO",
-        "pct": 1.47,
-        "cnt": 1
-      },
-      {
-        "from": "Busy - Callback",
-        "pct": 1.2,
-        "cnt": 63
-      },
-      {
         "from": "PreClosed - No Answer",
-        "pct": 0.71,
-        "cnt": 1
-      },
-      {
-        "from": "Connected - Not Interested",
-        "pct": 0.54,
-        "cnt": 1
-      },
-      {
-        "from": "No Answer",
-        "pct": 0.52,
-        "cnt": 48
-      },
-      {
-        "from": "OutReach Primer Intento",
-        "pct": 0.34,
-        "cnt": 1
-      },
-      {
-        "from": "Connected Voicemail",
-        "pct": 0.31,
-        "cnt": 15
-      },
-      {
-        "from": "Hung Up",
-        "pct": 0.1,
+        "pct": 1.43,
         "cnt": 2
       },
       {
-        "from": "New Lead",
-        "pct": 0.05,
-        "cnt": 12
-      }
-    ],
-    "leaks": [
-      {
-        "from": "Alivio Vendido",
-        "to": "Connected Voicemail",
-        "pct": 66.67,
-        "cnt": 4
-      },
-      {
-        "from": "Busy - Callback",
-        "to": "No Answer",
-        "pct": 48.85,
-        "cnt": 2562
-      },
-      {
-        "from": "PreClosed - Distrust",
-        "to": "Connected - Not Interested",
-        "pct": 42.45,
-        "cnt": 59
-      },
-      {
-        "from": "PreClosed - Needs to be Approved",
-        "to": "Connected - Not Interested",
-        "pct": 41.84,
-        "cnt": 264
+        "from": "PreClosed - No Price",
+        "pct": 6.25,
+        "cnt": 2
       },
       {
         "from": "PreClosed Reactivación",
-        "to": "Connected - Not Interested",
         "pct": 40,
         "cnt": 2
       },
       {
-        "from": "Recovery No Answer",
-        "to": "No Answer",
-        "pct": 40,
-        "cnt": 2
+        "from": "Duplicate Lead",
+        "pct": 0.99,
+        "cnt": 1
       },
       {
-        "from": "PreClosed - Hung Up",
-        "to": "Connected - Not Interested",
-        "pct": 39.56,
-        "cnt": 127
-      },
-      {
-        "from": "Reconversion Lead",
-        "to": "Duplicate Lead",
-        "pct": 37.5,
-        "cnt": 3
-      },
-      {
-        "from": "Hung Up",
-        "to": "No Answer",
-        "pct": 36.33,
-        "cnt": 715
-      },
+        "from": "PreClosed - Indirect Client",
+        "pct": 5.26,
+        "cnt": 1
+      }
+    ],
+    "leaks": [
       {
         "from": "EN LLAMADA",
         "to": "No Answer",
         "pct": 33.96,
         "cnt": 6607
-      },
-      {
-        "from": "Abierto",
-        "to": "No Answer",
-        "pct": 33.33,
-        "cnt": 2
-      },
-      {
-        "from": "Alivio Vendido",
-        "to": "Busy - Callback",
-        "pct": 33.33,
-        "cnt": 2
-      },
-      {
-        "from": "Connected Voicemail",
-        "to": "No Answer",
-        "pct": 30.3,
-        "cnt": 1446
-      },
-      {
-        "from": "Pre Closed PROMO",
-        "to": "Connected - Not Interested",
-        "pct": 29.41,
-        "cnt": 20
-      },
-      {
-        "from": "PreClosed Opportunity",
-        "to": "Connected - Not Interested",
-        "pct": 29.41,
-        "cnt": 15
-      },
-      {
-        "from": "Wrong Number",
-        "to": "No Answer",
-        "pct": 28.71,
-        "cnt": 29
-      },
-      {
-        "from": "PreClosed - Prefers to go to the office",
-        "to": "Connected - Not Interested",
-        "pct": 28.57,
-        "cnt": 10
-      },
-      {
-        "from": "PreClosed - No Money - No Job",
-        "to": "Connected - Not Interested",
-        "pct": 28.48,
-        "cnt": 305
-      },
-      {
-        "from": "PreClosed - No Card",
-        "to": "Connected - Not Interested",
-        "pct": 24.6,
-        "cnt": 122
-      },
-      {
-        "from": "Leads Opportunity",
-        "to": "Connected - Not Interested",
-        "pct": 23.08,
-        "cnt": 3
-      },
-      {
-        "from": "Leads Opportunity",
-        "to": "Duplicate Lead",
-        "pct": 23.08,
-        "cnt": 3
-      },
-      {
-        "from": "No Answer",
-        "to": "Connected Voicemail",
-        "pct": 22.63,
-        "cnt": 2081
-      },
-      {
-        "from": "PreClosed - Busy",
-        "to": "Connected - Not Interested",
-        "pct": 22.29,
-        "cnt": 103
-      },
-      {
-        "from": "Indirect Client",
-        "to": "Connected - Not Interested",
-        "pct": 22.22,
-        "cnt": 4
-      },
-      {
-        "from": "Indirect Client",
-        "to": "Hung Up",
-        "pct": 22.22,
-        "cnt": 4
-      },
-      {
-        "from": "PreClosed - Indirect Client",
-        "to": "Connected - Not Interested",
-        "pct": 21.05,
-        "cnt": 4
-      },
-      {
-        "from": "Duplicate Lead",
-        "to": "No Answer",
-        "pct": 20.79,
-        "cnt": 21
-      },
-      {
-        "from": "Wrong Number",
-        "to": "Connected Voicemail",
-        "pct": 20.79,
-        "cnt": 21
-      },
-      {
-        "from": "OutReach Segundo Intento",
-        "to": "Connected - Not Interested",
-        "pct": 20,
-        "cnt": 2
-      },
-      {
-        "from": "PreClosed - No Answer",
-        "to": "No Answer",
-        "pct": 20,
-        "cnt": 28
-      },
-      {
-        "from": "PreClosed Reactivación",
-        "to": "PreClosed - Busy",
-        "pct": 20,
-        "cnt": 1
-      },
-      {
-        "from": "Recovery No Answer",
-        "to": "Connected Voicemail",
-        "pct": 20,
-        "cnt": 1
-      },
-      {
-        "from": "Recovery No Answer",
-        "to": "Hung Up",
-        "pct": 20,
-        "cnt": 1
-      },
-      {
-        "from": "Recovery No Answer",
-        "to": "PreClosed - No Answer",
-        "pct": 20,
-        "cnt": 1
-      },
-      {
-        "from": "No Answer",
-        "to": "Busy - Callback",
-        "pct": 18.92,
-        "cnt": 1740
-      },
-      {
-        "from": "Hot Transfer Cancn",
-        "to": "No Answer",
-        "pct": 17.39,
-        "cnt": 4
-      },
-      {
-        "from": "Hung Up",
-        "to": "Connected Voicemail",
-        "pct": 17.12,
-        "cnt": 337
       },
       {
         "from": "EN LLAMADA",
@@ -5326,136 +5120,52 @@
         "cnt": 3309
       },
       {
-        "from": "Abierto",
-        "to": "Busy - Callback",
-        "pct": 16.67,
-        "cnt": 1
-      },
-      {
-        "from": "Abierto",
-        "to": "Connected Voicemail",
-        "pct": 16.67,
-        "cnt": 1
-      },
-      {
-        "from": "Indirect Client",
-        "to": "Busy - Callback",
-        "pct": 16.67,
-        "cnt": 3
-      },
-      {
-        "from": "New Lead Primer Intento",
-        "to": "PreClosed - Distrust",
-        "pct": 16.67,
-        "cnt": 2
-      },
-      {
-        "from": "Hung Up",
-        "to": "Connected - Not Interested",
-        "pct": 16.01,
-        "cnt": 315
-      },
-      {
-        "from": "PreClosed - Indirect Client",
-        "to": "PreClosed - Busy",
-        "pct": 15.79,
-        "cnt": 3
-      },
-      {
-        "from": "Connected - Not Interested",
-        "to": "Connected Voicemail",
-        "pct": 15.76,
-        "cnt": 29
-      },
-      {
-        "from": "Connected Voicemail",
-        "to": "Busy - Callback",
-        "pct": 15.57,
-        "cnt": 743
-      },
-      {
-        "from": "Leads Opportunity",
-        "to": "No Answer",
-        "pct": 15.38,
-        "cnt": 2
-      },
-      {
-        "from": "Connected - Not Interested",
-        "to": "No Answer",
-        "pct": 15.22,
-        "cnt": 28
-      },
-      {
-        "from": "Wrong Number",
-        "to": "Duplicate Lead",
-        "pct": 14.85,
-        "cnt": 15
-      },
-      {
-        "from": "PreClosed - No Answer",
-        "to": "Connected - Not Interested",
-        "pct": 14.29,
-        "cnt": 20
-      },
-      {
         "from": "EN LLAMADA",
         "to": "Busy - Callback",
         "pct": 14.24,
         "cnt": 2770
       },
       {
-        "from": "Hung Up",
-        "to": "Busy - Callback",
-        "pct": 13.92,
-        "cnt": 274
-      },
-      {
         "from": "Busy - Callback",
-        "to": "Connected Voicemail",
-        "pct": 12.55,
-        "cnt": 658
-      },
-      {
-        "from": "Connected - Not Interested",
-        "to": "Busy - Callback",
-        "pct": 12.5,
-        "cnt": 23
-      },
-      {
-        "from": "PreClosed - No Price",
-        "to": "Connected - Not Interested",
-        "pct": 12.5,
-        "cnt": 4
-      },
-      {
-        "from": "PreClosed - No Price",
-        "to": "PreClosed - Busy",
-        "pct": 12.5,
-        "cnt": 4
-      },
-      {
-        "from": "Reconversion Lead",
-        "to": "Busy - Callback",
-        "pct": 12.5,
-        "cnt": 1
-      },
-      {
-        "from": "Reconversion Lead",
-        "to": "Connected - Not Interested",
-        "pct": 12.5,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed - Prefers to go to the office",
-        "to": "PreClosed - Distrust",
-        "pct": 11.43,
-        "cnt": 4
-      },
-      {
-        "from": "Indirect Client",
         "to": "No Answer",
-        "pct": 11.11,
-        "cnt": 2
+        "pct": 48.85,
+        "cnt": 2562
+      },
+      {
+        "from": "No Answer",
+        "to": "Connected Voicemail",
+        "pct": 22.63,
+        "cnt": 2081
+      },
+      {
+        "from": "No Answer",
+        "to": "Busy - Callback",
+        "pct": 18.92,
+        "cnt": 1740
+      },
+      {
+        "from": "New Lead",
+        "to": "No Answer",
+        "pct": 7.63,
+        "cnt": 1671
+      },
+      {
+        "from": "Connected Voicemail",
+        "to": "No Answer",
+        "pct": 30.3,
+        "cnt": 1446
+      },
+      {
+        "from": "EN LLAMADA",
+        "to": "Connected - Not Interested",
+        "pct": 5.69,
+        "cnt": 1108
+      },
+      {
+        "from": "EN LLAMADA",
+        "to": "Wrong Number",
+        "pct": 5.29,
+        "cnt": 1030
       },
       {
         "from": "No Answer",
@@ -5464,16 +5174,10 @@
         "cnt": 1019
       },
       {
-        "from": "PreClosed - No Answer",
-        "to": "PreClosed - Busy",
-        "pct": 10.71,
-        "cnt": 15
-      },
-      {
-        "from": "OutReach Primer Intento",
-        "to": "Connected - Not Interested",
-        "pct": 10.58,
-        "cnt": 31
+        "from": "EN LLAMADA",
+        "to": "Hung Up",
+        "pct": 5.19,
+        "cnt": 1009
       },
       {
         "from": "No Answer",
@@ -5482,40 +5186,40 @@
         "cnt": 972
       },
       {
-        "from": "PreClosed - Indirect Client",
-        "to": "PreClosed - Hung Up",
-        "pct": 10.53,
-        "cnt": 2
+        "from": "Connected Voicemail",
+        "to": "Busy - Callback",
+        "pct": 15.57,
+        "cnt": 743
       },
       {
-        "from": "Pre Closed PROMO",
-        "to": "PreClosed - Busy",
-        "pct": 10.29,
-        "cnt": 7
+        "from": "Hung Up",
+        "to": "No Answer",
+        "pct": 36.33,
+        "cnt": 715
       },
       {
-        "from": "PreClosed - Distrust",
-        "to": "PreClosed - Busy",
-        "pct": 10.07,
-        "cnt": 14
+        "from": "Busy - Callback",
+        "to": "Connected Voicemail",
+        "pct": 12.55,
+        "cnt": 658
       },
       {
-        "from": "OutReach Segundo Intento",
-        "to": "Duplicate Lead",
-        "pct": 10,
-        "cnt": 1
+        "from": "No Answer",
+        "to": "Wrong Number",
+        "pct": 6.01,
+        "cnt": 553
       },
       {
-        "from": "PreClosed - No Money - No Job",
-        "to": "PreClosed - Busy",
-        "pct": 9.52,
-        "cnt": 102
+        "from": "New Lead",
+        "to": "Busy - Callback",
+        "pct": 2,
+        "cnt": 438
       },
       {
-        "from": "OutReach Primer Intento",
-        "to": "Duplicate Lead",
-        "pct": 9.22,
-        "cnt": 27
+        "from": "New Lead",
+        "to": "Connected Voicemail",
+        "pct": 1.96,
+        "cnt": 430
       },
       {
         "from": "Connected Voicemail",
@@ -5530,94 +5234,10 @@
         "cnt": 426
       },
       {
-        "from": "Wrong Number",
-        "to": "Connected - Not Interested",
-        "pct": 8.91,
-        "cnt": 9
-      },
-      {
-        "from": "Hot Transfer Cancn",
-        "to": "Hung Up",
-        "pct": 8.7,
-        "cnt": 2
-      },
-      {
-        "from": "PreClosed - Prefers to go to the office",
-        "to": "PreClosed - Busy",
-        "pct": 8.57,
-        "cnt": 3
-      },
-      {
-        "from": "PreClosed – Cash Only",
-        "to": "PreClosed - Busy",
-        "pct": 8.49,
-        "cnt": 9
-      },
-      {
-        "from": "PreClosed - Hung Up",
-        "to": "PreClosed - Busy",
-        "pct": 8.41,
-        "cnt": 27
-      },
-      {
-        "from": "New Lead Primer Intento",
-        "to": "Busy - Callback",
-        "pct": 8.33,
-        "cnt": 1
-      },
-      {
-        "from": "New Lead Primer Intento",
-        "to": "No Answer",
-        "pct": 8.33,
-        "cnt": 1
-      },
-      {
         "from": "Connected Voicemail",
         "to": "Hung Up",
         "pct": 8.11,
         "cnt": 387
-      },
-      {
-        "from": "Duplicate Lead",
-        "to": "Connected Voicemail",
-        "pct": 7.92,
-        "cnt": 8
-      },
-      {
-        "from": "Wrong Number",
-        "to": "Busy - Callback",
-        "pct": 7.92,
-        "cnt": 8
-      },
-      {
-        "from": "Leads Opportunity",
-        "to": "Connected Voicemail",
-        "pct": 7.69,
-        "cnt": 1
-      },
-      {
-        "from": "New Lead",
-        "to": "No Answer",
-        "pct": 7.63,
-        "cnt": 1671
-      },
-      {
-        "from": "Connected - Not Interested",
-        "to": "Wrong Number",
-        "pct": 7.61,
-        "cnt": 14
-      },
-      {
-        "from": "PreClosed – Cash Only",
-        "to": "Connected - Not Interested",
-        "pct": 7.55,
-        "cnt": 8
-      },
-      {
-        "from": "PreClosed - No Card",
-        "to": "PreClosed - Busy",
-        "pct": 7.26,
-        "cnt": 36
       },
       {
         "from": "Busy - Callback",
@@ -5626,22 +5246,16 @@
         "cnt": 349
       },
       {
-        "from": "PreClosed - No Card",
-        "to": "PreClosed - No Answer",
-        "pct": 6.65,
-        "cnt": 33
-      },
-      {
-        "from": "PreClosed - Needs to be Approved",
-        "to": "PreClosed - Busy",
-        "pct": 6.5,
-        "cnt": 41
-      },
-      {
-        "from": "PreClosed - Distrust",
+        "from": "EN LLAMADA",
         "to": "PreClosed - Hung Up",
-        "pct": 6.47,
-        "cnt": 9
+        "pct": 1.77,
+        "cnt": 344
+      },
+      {
+        "from": "Hung Up",
+        "to": "Connected Voicemail",
+        "pct": 17.12,
+        "cnt": 337
       },
       {
         "from": "Busy - Callback",
@@ -5650,382 +5264,28 @@
         "cnt": 334
       },
       {
-        "from": "PreClosed - Busy",
-        "to": "PreClosed - Hung Up",
-        "pct": 6.28,
-        "cnt": 29
-      },
-      {
-        "from": "PreClosed - No Price",
-        "to": "PreClosed - Hung Up",
-        "pct": 6.25,
-        "cnt": 2
+        "from": "Hung Up",
+        "to": "Connected - Not Interested",
+        "pct": 16.01,
+        "cnt": 315
       },
       {
         "from": "PreClosed - No Money - No Job",
-        "to": "PreClosed - Hung Up",
-        "pct": 6.07,
-        "cnt": 65
-      },
-      {
-        "from": "No Answer",
-        "to": "Wrong Number",
-        "pct": 6.01,
-        "cnt": 553
-      },
-      {
-        "from": "Connected - Not Interested",
-        "to": "Duplicate Lead",
-        "pct": 5.98,
-        "cnt": 11
-      },
-      {
-        "from": "PreClosed Opportunity",
-        "to": "PreClosed - Busy",
-        "pct": 5.88,
-        "cnt": 3
-      },
-      {
-        "from": "PreClosed - Busy",
-        "to": "PreClosed - No Answer",
-        "pct": 5.84,
-        "cnt": 27
-      },
-      {
-        "from": "EN LLAMADA",
         "to": "Connected - Not Interested",
-        "pct": 5.69,
-        "cnt": 1108
-      },
-      {
-        "from": "PreClosed – Cash Only",
-        "to": "PreClosed - No Answer",
-        "pct": 5.66,
-        "cnt": 6
-      },
-      {
-        "from": "PreClosed - No Money - No Job",
-        "to": "PreClosed - No Answer",
-        "pct": 5.6,
-        "cnt": 60
-      },
-      {
-        "from": "Consult Booked",
-        "to": "Busy - Callback",
-        "pct": 5.56,
-        "cnt": 1
-      },
-      {
-        "from": "Consult Booked",
-        "to": "Connected Voicemail",
-        "pct": 5.56,
-        "cnt": 1
-      },
-      {
-        "from": "Consult Booked",
-        "to": "Hung Up",
-        "pct": 5.56,
-        "cnt": 1
-      },
-      {
-        "from": "Indirect Client",
-        "to": "Connected Voicemail",
-        "pct": 5.56,
-        "cnt": 1
-      },
-      {
-        "from": "Indirect Client",
-        "to": "Wrong Number",
-        "pct": 5.56,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed - Needs to be Approved",
-        "to": "PreClosed - No Answer",
-        "pct": 5.39,
-        "cnt": 34
-      },
-      {
-        "from": "EN LLAMADA",
-        "to": "Wrong Number",
-        "pct": 5.29,
-        "cnt": 1030
-      },
-      {
-        "from": "PreClosed - Indirect Client",
-        "to": "Wrong Number",
-        "pct": 5.26,
-        "cnt": 1
-      },
-      {
-        "from": "EN LLAMADA",
-        "to": "Hung Up",
-        "pct": 5.19,
-        "cnt": 1009
-      },
-      {
-        "from": "PreClosed - No Answer",
-        "to": "PreClosed - Hung Up",
-        "pct": 5,
-        "cnt": 7
-      },
-      {
-        "from": "PreClosed - Hung Up",
-        "to": "PreClosed - No Answer",
-        "pct": 4.98,
-        "cnt": 16
-      },
-      {
-        "from": "Duplicate Lead",
-        "to": "Connected - Not Interested",
-        "pct": 4.95,
-        "cnt": 5
-      },
-      {
-        "from": "Hot Transfer Cancn",
-        "to": "Connected - Not Interested",
-        "pct": 4.35,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed - Distrust",
-        "to": "PreClosed - No Answer",
-        "pct": 4.32,
-        "cnt": 6
-      },
-      {
-        "from": "PreClosed - No Card",
-        "to": "PreClosed - Hung Up",
-        "pct": 4.03,
-        "cnt": 20
-      },
-      {
-        "from": "OutReach Primer Intento",
-        "to": "Wrong Number",
-        "pct": 3.75,
-        "cnt": 11
-      },
-      {
-        "from": "Connected - Not Interested",
-        "to": "Hung Up",
-        "pct": 3.26,
-        "cnt": 6
-      },
-      {
-        "from": "Connected - Not Interested",
-        "to": "PreClosed - Busy",
-        "pct": 3.26,
-        "cnt": 6
-      },
-      {
-        "from": "PreClosed - No Price",
-        "to": "PreClosed - Distrust",
-        "pct": 3.13,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed - No Price",
-        "to": "PreClosed - No Answer",
-        "pct": 3.13,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed - No Price",
-        "to": "Wrong Number",
-        "pct": 3.13,
-        "cnt": 1
+        "pct": 28.48,
+        "cnt": 305
       },
       {
         "from": "Hung Up",
-        "to": "Wrong Number",
-        "pct": 3,
-        "cnt": 59
-      },
-      {
-        "from": "Duplicate Lead",
-        "to": "Wrong Number",
-        "pct": 2.97,
-        "cnt": 3
-      },
-      {
-        "from": "Pre Closed PROMO",
-        "to": "No Answer",
-        "pct": 2.94,
-        "cnt": 2
-      },
-      {
-        "from": "Pre Closed PROMO",
-        "to": "Wrong Number",
-        "pct": 2.94,
-        "cnt": 2
-      },
-      {
-        "from": "Customer Service Call",
-        "to": "Connected - Not Interested",
-        "pct": 2.86,
-        "cnt": 1
-      },
-      {
-        "from": "Customer Service Call",
-        "to": "Connected Voicemail",
-        "pct": 2.86,
-        "cnt": 1
-      },
-      {
-        "from": "Customer Service Call",
-        "to": "PreClosed - Distrust",
-        "pct": 2.86,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed - Prefers to go to the office",
-        "to": "Connected Voicemail",
-        "pct": 2.86,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed - Prefers to go to the office",
-        "to": "Duplicate Lead",
-        "pct": 2.86,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed - Prefers to go to the office",
-        "to": "PreClosed - No Answer",
-        "pct": 2.86,
-        "cnt": 1
-      },
-      {
-        "from": "OutReach Primer Intento",
         "to": "Busy - Callback",
-        "pct": 2.73,
-        "cnt": 8
-      },
-      {
-        "from": "PreClosed - Busy",
-        "to": "Busy - Callback",
-        "pct": 2.6,
-        "cnt": 12
+        "pct": 13.92,
+        "cnt": 274
       },
       {
         "from": "PreClosed - Needs to be Approved",
-        "to": "PreClosed - Hung Up",
-        "pct": 2.22,
-        "cnt": 14
-      },
-      {
-        "from": "PreClosed - Hung Up",
-        "to": "Wrong Number",
-        "pct": 2.18,
-        "cnt": 7
-      },
-      {
-        "from": "PreClosed - Busy",
-        "to": "PreClosed - Distrust",
-        "pct": 2.16,
-        "cnt": 10
-      },
-      {
-        "from": "PreClosed - Distrust",
-        "to": "Hung Up",
-        "pct": 2.16,
-        "cnt": 3
-      },
-      {
-        "from": "Connected Voicemail",
-        "to": "Duplicate Lead",
-        "pct": 2.14,
-        "cnt": 102
-      },
-      {
-        "from": "PreClosed - No Answer",
-        "to": "Wrong Number",
-        "pct": 2.14,
-        "cnt": 3
-      },
-      {
-        "from": "New Lead",
-        "to": "Busy - Callback",
-        "pct": 2,
-        "cnt": 438
-      },
-      {
-        "from": "Duplicate Lead",
-        "to": "Busy - Callback",
-        "pct": 1.98,
-        "cnt": 2
-      },
-      {
-        "from": "New Lead",
-        "to": "Connected Voicemail",
-        "pct": 1.96,
-        "cnt": 430
-      },
-      {
-        "from": "PreClosed Opportunity",
-        "to": "PreClosed - Hung Up",
-        "pct": 1.96,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed Opportunity",
-        "to": "PreClosed - No Answer",
-        "pct": 1.96,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed Opportunity",
-        "to": "Wrong Number",
-        "pct": 1.96,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed – Cash Only",
-        "to": "PreClosed - Hung Up",
-        "pct": 1.89,
-        "cnt": 2
-      },
-      {
-        "from": "PreClosed - Hung Up",
-        "to": "Hung Up",
-        "pct": 1.87,
-        "cnt": 6
-      },
-      {
-        "from": "EN LLAMADA",
-        "to": "PreClosed - Hung Up",
-        "pct": 1.77,
-        "cnt": 344
-      },
-      {
-        "from": "No Answer",
-        "to": "Duplicate Lead",
-        "pct": 1.64,
-        "cnt": 151
-      },
-      {
-        "from": "Connected - Not Interested",
-        "to": "PreClosed - Hung Up",
-        "pct": 1.63,
-        "cnt": 3
-      },
-      {
-        "from": "Pre Closed PROMO",
-        "to": "Hung Up",
-        "pct": 1.47,
-        "cnt": 1
-      },
-      {
-        "from": "Pre Closed PROMO",
-        "to": "PreClosed - Hung Up",
-        "pct": 1.47,
-        "cnt": 1
-      },
-      {
-        "from": "Hung Up",
-        "to": "PreClosed - Hung Up",
-        "pct": 1.42,
-        "cnt": 28
+        "to": "Connected - Not Interested",
+        "pct": 41.84,
+        "cnt": 264
       },
       {
         "from": "EN LLAMADA",
@@ -6034,88 +5294,10 @@
         "cnt": 263
       },
       {
-        "from": "PreClosed - Hung Up",
-        "to": "PreClosed - Distrust",
-        "pct": 1.25,
-        "cnt": 4
-      },
-      {
-        "from": "Hung Up",
-        "to": "Duplicate Lead",
-        "pct": 1.22,
-        "cnt": 24
-      },
-      {
-        "from": "Busy - Callback",
-        "to": "PreClosed - Hung Up",
-        "pct": 1.16,
-        "cnt": 61
-      },
-      {
         "from": "New Lead",
         "to": "Wrong Number",
         "pct": 1.16,
         "cnt": 254
-      },
-      {
-        "from": "Busy - Callback",
-        "to": "PreClosed - Busy",
-        "pct": 1.09,
-        "cnt": 57
-      },
-      {
-        "from": "Connected - Not Interested",
-        "to": "PreClosed - Distrust",
-        "pct": 1.09,
-        "cnt": 2
-      },
-      {
-        "from": "PreClosed - No Money - No Job",
-        "to": "PreClosed - Distrust",
-        "pct": 1.03,
-        "cnt": 11
-      },
-      {
-        "from": "PreClosed - No Money - No Job",
-        "to": "Wrong Number",
-        "pct": 1.03,
-        "cnt": 11
-      },
-      {
-        "from": "OutReach Primer Intento",
-        "to": "Hung Up",
-        "pct": 1.02,
-        "cnt": 3
-      },
-      {
-        "from": "OutReach Primer Intento",
-        "to": "PreClosed - Busy",
-        "pct": 1.02,
-        "cnt": 3
-      },
-      {
-        "from": "Duplicate Lead",
-        "to": "Hung Up",
-        "pct": 0.99,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed - Needs to be Approved",
-        "to": "PreClosed - Distrust",
-        "pct": 0.95,
-        "cnt": 6
-      },
-      {
-        "from": "PreClosed – Cash Only",
-        "to": "PreClosed - Distrust",
-        "pct": 0.94,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed - Hung Up",
-        "to": "No Answer",
-        "pct": 0.93,
-        "cnt": 3
       },
       {
         "from": "New Lead",
@@ -6125,15 +5307,9 @@
       },
       {
         "from": "No Answer",
-        "to": "PreClosed - Hung Up",
-        "pct": 0.82,
-        "cnt": 75
-      },
-      {
-        "from": "PreClosed - No Card",
-        "to": "Wrong Number",
-        "pct": 0.81,
-        "cnt": 4
+        "to": "Duplicate Lead",
+        "pct": 1.64,
+        "cnt": 151
       },
       {
         "from": "EN LLAMADA",
@@ -6142,10 +5318,58 @@
         "cnt": 148
       },
       {
+        "from": "PreClosed - Hung Up",
+        "to": "Connected - Not Interested",
+        "pct": 39.56,
+        "cnt": 127
+      },
+      {
+        "from": "PreClosed - No Card",
+        "to": "Connected - Not Interested",
+        "pct": 24.6,
+        "cnt": 122
+      },
+      {
+        "from": "PreClosed - Busy",
+        "to": "Connected - Not Interested",
+        "pct": 22.29,
+        "cnt": 103
+      },
+      {
         "from": "Connected Voicemail",
+        "to": "Duplicate Lead",
+        "pct": 2.14,
+        "cnt": 102
+      },
+      {
+        "from": "PreClosed - No Money - No Job",
+        "to": "PreClosed - Busy",
+        "pct": 9.52,
+        "cnt": 102
+      },
+      {
+        "from": "New Lead",
+        "to": "Connected - Not Interested",
+        "pct": 0.43,
+        "cnt": 95
+      },
+      {
+        "from": "EN LLAMADA",
+        "to": "PreClosed - No Answer",
+        "pct": 0.46,
+        "cnt": 90
+      },
+      {
+        "from": "New Lead",
+        "to": "Duplicate Lead",
+        "pct": 0.36,
+        "cnt": 79
+      },
+      {
+        "from": "No Answer",
         "to": "PreClosed - Hung Up",
-        "pct": 0.75,
-        "cnt": 36
+        "pct": 0.82,
+        "cnt": 75
       },
       {
         "from": "No Answer",
@@ -6154,40 +5378,52 @@
         "cnt": 69
       },
       {
-        "from": "PreClosed - Distrust",
-        "to": "Busy - Callback",
-        "pct": 0.72,
-        "cnt": 1
+        "from": "PreClosed - No Money - No Job",
+        "to": "PreClosed - Hung Up",
+        "pct": 6.07,
+        "cnt": 65
       },
       {
-        "from": "PreClosed - Distrust",
+        "from": "Busy - Callback",
+        "to": "PreClosed - Hung Up",
+        "pct": 1.16,
+        "cnt": 61
+      },
+      {
+        "from": "PreClosed - No Money - No Job",
+        "to": "PreClosed - No Answer",
+        "pct": 5.6,
+        "cnt": 60
+      },
+      {
+        "from": "Hung Up",
         "to": "Wrong Number",
-        "pct": 0.72,
-        "cnt": 1
+        "pct": 3,
+        "cnt": 59
       },
       {
-        "from": "PreClosed - No Answer",
-        "to": "Busy - Callback",
-        "pct": 0.71,
-        "cnt": 1
+        "from": "PreClosed - Distrust",
+        "to": "Connected - Not Interested",
+        "pct": 42.45,
+        "cnt": 59
       },
       {
-        "from": "PreClosed - No Answer",
-        "to": "Connected Voicemail",
-        "pct": 0.71,
-        "cnt": 1
+        "from": "Busy - Callback",
+        "to": "PreClosed - Busy",
+        "pct": 1.09,
+        "cnt": 57
       },
       {
-        "from": "PreClosed - No Answer",
-        "to": "Hung Up",
-        "pct": 0.71,
-        "cnt": 1
+        "from": "EN LLAMADA",
+        "to": "Duplicate Lead",
+        "pct": 0.29,
+        "cnt": 56
       },
       {
-        "from": "PreClosed - No Answer",
-        "to": "Recovery No Answer",
-        "pct": 0.71,
-        "cnt": 1
+        "from": "PreClosed - Needs to be Approved",
+        "to": "PreClosed - Busy",
+        "pct": 6.5,
+        "cnt": 41
       },
       {
         "from": "Busy - Callback",
@@ -6196,28 +5432,466 @@
         "cnt": 36
       },
       {
-        "from": "OutReach Primer Intento",
+        "from": "Connected Voicemail",
         "to": "PreClosed - Hung Up",
-        "pct": 0.68,
-        "cnt": 2
+        "pct": 0.75,
+        "cnt": 36
+      },
+      {
+        "from": "PreClosed - No Card",
+        "to": "PreClosed - Busy",
+        "pct": 7.26,
+        "cnt": 36
+      },
+      {
+        "from": "PreClosed - Needs to be Approved",
+        "to": "PreClosed - No Answer",
+        "pct": 5.39,
+        "cnt": 34
+      },
+      {
+        "from": "PreClosed - No Card",
+        "to": "PreClosed - No Answer",
+        "pct": 6.65,
+        "cnt": 33
       },
       {
         "from": "OutReach Primer Intento",
-        "to": "PreClosed - No Answer",
-        "pct": 0.68,
-        "cnt": 2
+        "to": "Connected - Not Interested",
+        "pct": 10.58,
+        "cnt": 31
+      },
+      {
+        "from": "Connected - Not Interested",
+        "to": "Connected Voicemail",
+        "pct": 15.76,
+        "cnt": 29
       },
       {
         "from": "PreClosed - Busy",
+        "to": "PreClosed - Hung Up",
+        "pct": 6.28,
+        "cnt": 29
+      },
+      {
+        "from": "Wrong Number",
         "to": "No Answer",
-        "pct": 0.65,
-        "cnt": 3
+        "pct": 28.71,
+        "cnt": 29
+      },
+      {
+        "from": "Connected - Not Interested",
+        "to": "No Answer",
+        "pct": 15.22,
+        "cnt": 28
+      },
+      {
+        "from": "Hung Up",
+        "to": "PreClosed - Hung Up",
+        "pct": 1.42,
+        "cnt": 28
+      },
+      {
+        "from": "PreClosed - No Answer",
+        "to": "No Answer",
+        "pct": 20,
+        "cnt": 28
+      },
+      {
+        "from": "No Answer",
+        "to": "PreClosed - Distrust",
+        "pct": 0.29,
+        "cnt": 27
+      },
+      {
+        "from": "OutReach Primer Intento",
+        "to": "Duplicate Lead",
+        "pct": 9.22,
+        "cnt": 27
       },
       {
         "from": "PreClosed - Busy",
+        "to": "PreClosed - No Answer",
+        "pct": 5.84,
+        "cnt": 27
+      },
+      {
+        "from": "PreClosed - Hung Up",
+        "to": "PreClosed - Busy",
+        "pct": 8.41,
+        "cnt": 27
+      },
+      {
+        "from": "Busy - Callback",
+        "to": "Duplicate Lead",
+        "pct": 0.46,
+        "cnt": 24
+      },
+      {
+        "from": "Hung Up",
+        "to": "Duplicate Lead",
+        "pct": 1.22,
+        "cnt": 24
+      },
+      {
+        "from": "Connected - Not Interested",
+        "to": "Busy - Callback",
+        "pct": 12.5,
+        "cnt": 23
+      },
+      {
+        "from": "Busy - Callback",
+        "to": "PreClosed - Distrust",
+        "pct": 0.4,
+        "cnt": 21
+      },
+      {
+        "from": "Busy - Callback",
+        "to": "PreClosed - No Answer",
+        "pct": 0.4,
+        "cnt": 21
+      },
+      {
+        "from": "Connected Voicemail",
+        "to": "PreClosed - Busy",
+        "pct": 0.44,
+        "cnt": 21
+      },
+      {
+        "from": "Duplicate Lead",
+        "to": "No Answer",
+        "pct": 20.79,
+        "cnt": 21
+      },
+      {
+        "from": "New Lead",
+        "to": "PreClosed - Busy",
+        "pct": 0.1,
+        "cnt": 21
+      },
+      {
+        "from": "Wrong Number",
+        "to": "Connected Voicemail",
+        "pct": 20.79,
+        "cnt": 21
+      },
+      {
+        "from": "New Lead",
+        "to": "PreClosed - Distrust",
+        "pct": 0.09,
+        "cnt": 20
+      },
+      {
+        "from": "New Lead",
+        "to": "PreClosed - Hung Up",
+        "pct": 0.09,
+        "cnt": 20
+      },
+      {
+        "from": "Pre Closed PROMO",
+        "to": "Connected - Not Interested",
+        "pct": 29.41,
+        "cnt": 20
+      },
+      {
+        "from": "PreClosed - No Answer",
+        "to": "Connected - Not Interested",
+        "pct": 14.29,
+        "cnt": 20
+      },
+      {
+        "from": "PreClosed - No Card",
+        "to": "PreClosed - Hung Up",
+        "pct": 4.03,
+        "cnt": 20
+      },
+      {
+        "from": "PreClosed - Hung Up",
+        "to": "PreClosed - No Answer",
+        "pct": 4.98,
+        "cnt": 16
+      },
+      {
+        "from": "PreClosed - No Answer",
+        "to": "PreClosed - Busy",
+        "pct": 10.71,
+        "cnt": 15
+      },
+      {
+        "from": "PreClosed Opportunity",
+        "to": "Connected - Not Interested",
+        "pct": 29.41,
+        "cnt": 15
+      },
+      {
+        "from": "Wrong Number",
+        "to": "Duplicate Lead",
+        "pct": 14.85,
+        "cnt": 15
+      },
+      {
+        "from": "Connected - Not Interested",
         "to": "Wrong Number",
-        "pct": 0.65,
-        "cnt": 3
+        "pct": 7.61,
+        "cnt": 14
+      },
+      {
+        "from": "No Answer",
+        "to": "PreClosed - No Answer",
+        "pct": 0.15,
+        "cnt": 14
+      },
+      {
+        "from": "PreClosed - Distrust",
+        "to": "PreClosed - Busy",
+        "pct": 10.07,
+        "cnt": 14
+      },
+      {
+        "from": "PreClosed - Needs to be Approved",
+        "to": "PreClosed - Hung Up",
+        "pct": 2.22,
+        "cnt": 14
+      },
+      {
+        "from": "PreClosed - Busy",
+        "to": "Busy - Callback",
+        "pct": 2.6,
+        "cnt": 12
+      },
+      {
+        "from": "Connected - Not Interested",
+        "to": "Duplicate Lead",
+        "pct": 5.98,
+        "cnt": 11
+      },
+      {
+        "from": "Connected Voicemail",
+        "to": "PreClosed - No Answer",
+        "pct": 0.23,
+        "cnt": 11
+      },
+      {
+        "from": "OutReach Primer Intento",
+        "to": "Wrong Number",
+        "pct": 3.75,
+        "cnt": 11
+      },
+      {
+        "from": "PreClosed - No Money - No Job",
+        "to": "PreClosed - Distrust",
+        "pct": 1.03,
+        "cnt": 11
+      },
+      {
+        "from": "PreClosed - No Money - No Job",
+        "to": "Wrong Number",
+        "pct": 1.03,
+        "cnt": 11
+      },
+      {
+        "from": "New Lead",
+        "to": "PreClosed - No Answer",
+        "pct": 0.05,
+        "cnt": 10
+      },
+      {
+        "from": "PreClosed - Busy",
+        "to": "PreClosed - Distrust",
+        "pct": 2.16,
+        "cnt": 10
+      },
+      {
+        "from": "PreClosed - Prefers to go to the office",
+        "to": "Connected - Not Interested",
+        "pct": 28.57,
+        "cnt": 10
+      },
+      {
+        "from": "Busy - Callback",
+        "to": "Recovery No Answer",
+        "pct": 0.17,
+        "cnt": 9
+      },
+      {
+        "from": "PreClosed - Distrust",
+        "to": "PreClosed - Hung Up",
+        "pct": 6.47,
+        "cnt": 9
+      },
+      {
+        "from": "PreClosed – Cash Only",
+        "to": "PreClosed - Busy",
+        "pct": 8.49,
+        "cnt": 9
+      },
+      {
+        "from": "Wrong Number",
+        "to": "Connected - Not Interested",
+        "pct": 8.91,
+        "cnt": 9
+      },
+      {
+        "from": "Duplicate Lead",
+        "to": "Connected Voicemail",
+        "pct": 7.92,
+        "cnt": 8
+      },
+      {
+        "from": "OutReach Primer Intento",
+        "to": "Busy - Callback",
+        "pct": 2.73,
+        "cnt": 8
+      },
+      {
+        "from": "PreClosed – Cash Only",
+        "to": "Connected - Not Interested",
+        "pct": 7.55,
+        "cnt": 8
+      },
+      {
+        "from": "Wrong Number",
+        "to": "Busy - Callback",
+        "pct": 7.92,
+        "cnt": 8
+      },
+      {
+        "from": "Pre Closed PROMO",
+        "to": "PreClosed - Busy",
+        "pct": 10.29,
+        "cnt": 7
+      },
+      {
+        "from": "PreClosed - Hung Up",
+        "to": "Wrong Number",
+        "pct": 2.18,
+        "cnt": 7
+      },
+      {
+        "from": "PreClosed - No Answer",
+        "to": "PreClosed - Hung Up",
+        "pct": 5,
+        "cnt": 7
+      },
+      {
+        "from": "Connected - Not Interested",
+        "to": "Hung Up",
+        "pct": 3.26,
+        "cnt": 6
+      },
+      {
+        "from": "Connected - Not Interested",
+        "to": "PreClosed - Busy",
+        "pct": 3.26,
+        "cnt": 6
+      },
+      {
+        "from": "EN LLAMADA",
+        "to": "Recovery No Answer",
+        "pct": 0.03,
+        "cnt": 6
+      },
+      {
+        "from": "Hung Up",
+        "to": "PreClosed - No Answer",
+        "pct": 0.3,
+        "cnt": 6
+      },
+      {
+        "from": "No Answer",
+        "to": "Recovery Not Interested",
+        "pct": 0.07,
+        "cnt": 6
+      },
+      {
+        "from": "PreClosed - Distrust",
+        "to": "PreClosed - No Answer",
+        "pct": 4.32,
+        "cnt": 6
+      },
+      {
+        "from": "PreClosed - Hung Up",
+        "to": "Hung Up",
+        "pct": 1.87,
+        "cnt": 6
+      },
+      {
+        "from": "PreClosed - Needs to be Approved",
+        "to": "PreClosed - Distrust",
+        "pct": 0.95,
+        "cnt": 6
+      },
+      {
+        "from": "PreClosed – Cash Only",
+        "to": "PreClosed - No Answer",
+        "pct": 5.66,
+        "cnt": 6
+      },
+      {
+        "from": "Connected Voicemail",
+        "to": "PreClosed - Distrust",
+        "pct": 0.1,
+        "cnt": 5
+      },
+      {
+        "from": "Duplicate Lead",
+        "to": "Connected - Not Interested",
+        "pct": 4.95,
+        "cnt": 5
+      },
+      {
+        "from": "PreClosed - No Money - No Job",
+        "to": "Duplicate Lead",
+        "pct": 0.47,
+        "cnt": 5
+      },
+      {
+        "from": "Alivio Vendido",
+        "to": "Connected Voicemail",
+        "pct": 66.67,
+        "cnt": 4
+      },
+      {
+        "from": "Hot Transfer Cancn",
+        "to": "No Answer",
+        "pct": 17.39,
+        "cnt": 4
+      },
+      {
+        "from": "Hung Up",
+        "to": "PreClosed - Busy",
+        "pct": 0.2,
+        "cnt": 4
+      },
+      {
+        "from": "Hung Up",
+        "to": "PreClosed - Distrust",
+        "pct": 0.2,
+        "cnt": 4
+      },
+      {
+        "from": "Indirect Client",
+        "to": "Connected - Not Interested",
+        "pct": 22.22,
+        "cnt": 4
+      },
+      {
+        "from": "Indirect Client",
+        "to": "Hung Up",
+        "pct": 22.22,
+        "cnt": 4
+      },
+      {
+        "from": "PreClosed - Hung Up",
+        "to": "PreClosed - Distrust",
+        "pct": 1.25,
+        "cnt": 4
+      },
+      {
+        "from": "PreClosed - Indirect Client",
+        "to": "Connected - Not Interested",
+        "pct": 21.05,
+        "cnt": 4
       },
       {
         "from": "PreClosed - Needs to be Approved",
@@ -6227,75 +5901,9 @@
       },
       {
         "from": "PreClosed - No Card",
-        "to": "No Answer",
-        "pct": 0.6,
-        "cnt": 3
-      },
-      {
-        "from": "Connected - Not Interested",
-        "to": "Recovery No Answer",
-        "pct": 0.54,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed - Needs to be Approved",
         "to": "Wrong Number",
-        "pct": 0.48,
-        "cnt": 3
-      },
-      {
-        "from": "PreClosed - No Money - No Job",
-        "to": "Duplicate Lead",
-        "pct": 0.47,
-        "cnt": 5
-      },
-      {
-        "from": "Busy - Callback",
-        "to": "Duplicate Lead",
-        "pct": 0.46,
-        "cnt": 24
-      },
-      {
-        "from": "EN LLAMADA",
-        "to": "PreClosed - No Answer",
-        "pct": 0.46,
-        "cnt": 90
-      },
-      {
-        "from": "Connected Voicemail",
-        "to": "PreClosed - Busy",
-        "pct": 0.44,
-        "cnt": 21
-      },
-      {
-        "from": "New Lead",
-        "to": "Connected - Not Interested",
-        "pct": 0.43,
-        "cnt": 95
-      },
-      {
-        "from": "PreClosed - Busy",
-        "to": "Duplicate Lead",
-        "pct": 0.43,
-        "cnt": 2
-      },
-      {
-        "from": "Busy - Callback",
-        "to": "PreClosed - Distrust",
-        "pct": 0.4,
-        "cnt": 21
-      },
-      {
-        "from": "Busy - Callback",
-        "to": "PreClosed - No Answer",
-        "pct": 0.4,
-        "cnt": 21
-      },
-      {
-        "from": "PreClosed - No Card",
-        "to": "Busy - Callback",
-        "pct": 0.4,
-        "cnt": 2
+        "pct": 0.81,
+        "cnt": 4
       },
       {
         "from": "PreClosed - No Money - No Job",
@@ -6304,196 +5912,148 @@
         "cnt": 4
       },
       {
-        "from": "New Lead",
-        "to": "Duplicate Lead",
-        "pct": 0.36,
-        "cnt": 79
-      },
-      {
-        "from": "OutReach Primer Intento",
-        "to": "Connected Voicemail",
-        "pct": 0.34,
-        "cnt": 1
-      },
-      {
-        "from": "OutReach Primer Intento",
-        "to": "No Answer",
-        "pct": 0.34,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed - Needs to be Approved",
-        "to": "Busy - Callback",
-        "pct": 0.32,
-        "cnt": 2
-      },
-      {
-        "from": "PreClosed - Needs to be Approved",
-        "to": "No Answer",
-        "pct": 0.32,
-        "cnt": 2
-      },
-      {
-        "from": "PreClosed - Hung Up",
-        "to": "Busy - Callback",
-        "pct": 0.31,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed - Hung Up",
-        "to": "Recovery Not Interested",
-        "pct": 0.31,
-        "cnt": 1
-      },
-      {
-        "from": "Hung Up",
-        "to": "PreClosed - No Answer",
-        "pct": 0.3,
-        "cnt": 6
-      },
-      {
-        "from": "EN LLAMADA",
-        "to": "Duplicate Lead",
-        "pct": 0.29,
-        "cnt": 56
-      },
-      {
-        "from": "No Answer",
-        "to": "PreClosed - Distrust",
-        "pct": 0.29,
-        "cnt": 27
-      },
-      {
-        "from": "Connected Voicemail",
-        "to": "PreClosed - No Answer",
-        "pct": 0.23,
-        "cnt": 11
-      },
-      {
-        "from": "PreClosed - Busy",
-        "to": "Recovery No Answer",
-        "pct": 0.22,
-        "cnt": 1
-      },
-      {
-        "from": "Hung Up",
-        "to": "PreClosed - Busy",
-        "pct": 0.2,
+        "from": "PreClosed - No Price",
+        "to": "Connected - Not Interested",
+        "pct": 12.5,
         "cnt": 4
       },
       {
-        "from": "Hung Up",
-        "to": "PreClosed - Distrust",
-        "pct": 0.2,
+        "from": "PreClosed - No Price",
+        "to": "PreClosed - Busy",
+        "pct": 12.5,
         "cnt": 4
       },
       {
-        "from": "PreClosed - No Card",
-        "to": "Duplicate Lead",
-        "pct": 0.2,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed - No Card",
-        "to": "Hung Up",
-        "pct": 0.2,
-        "cnt": 1
-      },
-      {
-        "from": "PreClosed - No Card",
+        "from": "PreClosed - Prefers to go to the office",
         "to": "PreClosed - Distrust",
-        "pct": 0.2,
-        "cnt": 1
+        "pct": 11.43,
+        "cnt": 4
       },
       {
-        "from": "PreClosed - No Money - No Job",
-        "to": "Hung Up",
-        "pct": 0.19,
-        "cnt": 2
-      },
-      {
-        "from": "PreClosed - No Money - No Job",
-        "to": "Recovery Not Interested",
-        "pct": 0.19,
-        "cnt": 2
-      },
-      {
-        "from": "Busy - Callback",
-        "to": "Recovery No Answer",
-        "pct": 0.17,
-        "cnt": 9
-      },
-      {
-        "from": "PreClosed - Needs to be Approved",
-        "to": "Connected Voicemail",
-        "pct": 0.16,
-        "cnt": 1
-      },
-      {
-        "from": "No Answer",
-        "to": "PreClosed - No Answer",
-        "pct": 0.15,
-        "cnt": 14
-      },
-      {
-        "from": "Connected Voicemail",
-        "to": "PreClosed - Distrust",
-        "pct": 0.1,
-        "cnt": 5
-      },
-      {
-        "from": "Hung Up",
-        "to": "Recovery No Answer",
-        "pct": 0.1,
-        "cnt": 2
-      },
-      {
-        "from": "New Lead",
-        "to": "PreClosed - Busy",
-        "pct": 0.1,
-        "cnt": 21
-      },
-      {
-        "from": "New Lead",
-        "to": "PreClosed - Distrust",
-        "pct": 0.09,
-        "cnt": 20
-      },
-      {
-        "from": "New Lead",
+        "from": "Connected - Not Interested",
         "to": "PreClosed - Hung Up",
-        "pct": 0.09,
-        "cnt": 20
+        "pct": 1.63,
+        "cnt": 3
       },
       {
-        "from": "PreClosed - No Money - No Job",
+        "from": "Duplicate Lead",
+        "to": "Wrong Number",
+        "pct": 2.97,
+        "cnt": 3
+      },
+      {
+        "from": "Indirect Client",
         "to": "Busy - Callback",
-        "pct": 0.09,
-        "cnt": 1
+        "pct": 16.67,
+        "cnt": 3
       },
       {
-        "from": "No Answer",
-        "to": "Recovery Not Interested",
-        "pct": 0.07,
-        "cnt": 6
+        "from": "Leads Opportunity",
+        "to": "Connected - Not Interested",
+        "pct": 23.08,
+        "cnt": 3
+      },
+      {
+        "from": "Leads Opportunity",
+        "to": "Duplicate Lead",
+        "pct": 23.08,
+        "cnt": 3
       },
       {
         "from": "New Lead",
-        "to": "PreClosed - No Answer",
-        "pct": 0.05,
-        "cnt": 10
-      },
-      {
-        "from": "EN LLAMADA",
         "to": "Recovery No Answer",
-        "pct": 0.03,
-        "cnt": 6
+        "pct": 0.01,
+        "cnt": 3
       },
       {
         "from": "No Answer",
         "to": "Recovery No Answer",
         "pct": 0.03,
         "cnt": 3
+      },
+      {
+        "from": "OutReach Primer Intento",
+        "to": "Hung Up",
+        "pct": 1.02,
+        "cnt": 3
+      },
+      {
+        "from": "OutReach Primer Intento",
+        "to": "PreClosed - Busy",
+        "pct": 1.02,
+        "cnt": 3
+      },
+      {
+        "from": "PreClosed - Busy",
+        "to": "No Answer",
+        "pct": 0.65,
+        "cnt": 3
+      },
+      {
+        "from": "PreClosed - Busy",
+        "to": "Wrong Number",
+        "pct": 0.65,
+        "cnt": 3
+      },
+      {
+        "from": "PreClosed - Distrust",
+        "to": "Hung Up",
+        "pct": 2.16,
+        "cnt": 3
+      },
+      {
+        "from": "PreClosed - Hung Up",
+        "to": "No Answer",
+        "pct": 0.93,
+        "cnt": 3
+      },
+      {
+        "from": "PreClosed - Indirect Client",
+        "to": "PreClosed - Busy",
+        "pct": 15.79,
+        "cnt": 3
+      },
+      {
+        "from": "PreClosed - Needs to be Approved",
+        "to": "Wrong Number",
+        "pct": 0.48,
+        "cnt": 3
+      },
+      {
+        "from": "PreClosed - No Answer",
+        "to": "Wrong Number",
+        "pct": 2.14,
+        "cnt": 3
+      },
+      {
+        "from": "PreClosed - No Card",
+        "to": "No Answer",
+        "pct": 0.6,
+        "cnt": 3
+      },
+      {
+        "from": "PreClosed - Prefers to go to the office",
+        "to": "PreClosed - Busy",
+        "pct": 8.57,
+        "cnt": 3
+      },
+      {
+        "from": "PreClosed Opportunity",
+        "to": "PreClosed - Busy",
+        "pct": 5.88,
+        "cnt": 3
+      },
+      {
+        "from": "Reconversion Lead",
+        "to": "Duplicate Lead",
+        "pct": 37.5,
+        "cnt": 3
+      },
+      {
+        "from": "Abierto",
+        "to": "No Answer",
+        "pct": 33.33,
+        "cnt": 2
       },
       {
         "from": "Abierto (Open)",
@@ -6502,10 +6062,460 @@
         "cnt": 2
       },
       {
-        "from": "New Lead",
+        "from": "Alivio Vendido",
+        "to": "Busy - Callback",
+        "pct": 33.33,
+        "cnt": 2
+      },
+      {
+        "from": "Connected - Not Interested",
+        "to": "PreClosed - Distrust",
+        "pct": 1.09,
+        "cnt": 2
+      },
+      {
+        "from": "Duplicate Lead",
+        "to": "Busy - Callback",
+        "pct": 1.98,
+        "cnt": 2
+      },
+      {
+        "from": "Hot Transfer Cancn",
+        "to": "Hung Up",
+        "pct": 8.7,
+        "cnt": 2
+      },
+      {
+        "from": "Hung Up",
         "to": "Recovery No Answer",
-        "pct": 0.01,
-        "cnt": 3
+        "pct": 0.1,
+        "cnt": 2
+      },
+      {
+        "from": "Indirect Client",
+        "to": "No Answer",
+        "pct": 11.11,
+        "cnt": 2
+      },
+      {
+        "from": "Leads Opportunity",
+        "to": "No Answer",
+        "pct": 15.38,
+        "cnt": 2
+      },
+      {
+        "from": "New Lead Primer Intento",
+        "to": "PreClosed - Distrust",
+        "pct": 16.67,
+        "cnt": 2
+      },
+      {
+        "from": "OutReach Primer Intento",
+        "to": "PreClosed - Hung Up",
+        "pct": 0.68,
+        "cnt": 2
+      },
+      {
+        "from": "OutReach Primer Intento",
+        "to": "PreClosed - No Answer",
+        "pct": 0.68,
+        "cnt": 2
+      },
+      {
+        "from": "OutReach Segundo Intento",
+        "to": "Connected - Not Interested",
+        "pct": 20,
+        "cnt": 2
+      },
+      {
+        "from": "Pre Closed PROMO",
+        "to": "No Answer",
+        "pct": 2.94,
+        "cnt": 2
+      },
+      {
+        "from": "Pre Closed PROMO",
+        "to": "Wrong Number",
+        "pct": 2.94,
+        "cnt": 2
+      },
+      {
+        "from": "PreClosed - Busy",
+        "to": "Duplicate Lead",
+        "pct": 0.43,
+        "cnt": 2
+      },
+      {
+        "from": "PreClosed - Indirect Client",
+        "to": "PreClosed - Hung Up",
+        "pct": 10.53,
+        "cnt": 2
+      },
+      {
+        "from": "PreClosed - Needs to be Approved",
+        "to": "Busy - Callback",
+        "pct": 0.32,
+        "cnt": 2
+      },
+      {
+        "from": "PreClosed - Needs to be Approved",
+        "to": "No Answer",
+        "pct": 0.32,
+        "cnt": 2
+      },
+      {
+        "from": "PreClosed - No Card",
+        "to": "Busy - Callback",
+        "pct": 0.4,
+        "cnt": 2
+      },
+      {
+        "from": "PreClosed - No Money - No Job",
+        "to": "Hung Up",
+        "pct": 0.19,
+        "cnt": 2
+      },
+      {
+        "from": "PreClosed - No Money - No Job",
+        "to": "Recovery Not Interested",
+        "pct": 0.19,
+        "cnt": 2
+      },
+      {
+        "from": "PreClosed - No Price",
+        "to": "PreClosed - Hung Up",
+        "pct": 6.25,
+        "cnt": 2
+      },
+      {
+        "from": "PreClosed – Cash Only",
+        "to": "PreClosed - Hung Up",
+        "pct": 1.89,
+        "cnt": 2
+      },
+      {
+        "from": "PreClosed Reactivación",
+        "to": "Connected - Not Interested",
+        "pct": 40,
+        "cnt": 2
+      },
+      {
+        "from": "Recovery No Answer",
+        "to": "No Answer",
+        "pct": 40,
+        "cnt": 2
+      },
+      {
+        "from": "Abierto",
+        "to": "Busy - Callback",
+        "pct": 16.67,
+        "cnt": 1
+      },
+      {
+        "from": "Abierto",
+        "to": "Connected Voicemail",
+        "pct": 16.67,
+        "cnt": 1
+      },
+      {
+        "from": "Connected - Not Interested",
+        "to": "Recovery No Answer",
+        "pct": 0.54,
+        "cnt": 1
+      },
+      {
+        "from": "Consult Booked",
+        "to": "Busy - Callback",
+        "pct": 5.56,
+        "cnt": 1
+      },
+      {
+        "from": "Consult Booked",
+        "to": "Connected Voicemail",
+        "pct": 5.56,
+        "cnt": 1
+      },
+      {
+        "from": "Consult Booked",
+        "to": "Hung Up",
+        "pct": 5.56,
+        "cnt": 1
+      },
+      {
+        "from": "Customer Service Call",
+        "to": "Connected - Not Interested",
+        "pct": 2.86,
+        "cnt": 1
+      },
+      {
+        "from": "Customer Service Call",
+        "to": "Connected Voicemail",
+        "pct": 2.86,
+        "cnt": 1
+      },
+      {
+        "from": "Customer Service Call",
+        "to": "PreClosed - Distrust",
+        "pct": 2.86,
+        "cnt": 1
+      },
+      {
+        "from": "Duplicate Lead",
+        "to": "Hung Up",
+        "pct": 0.99,
+        "cnt": 1
+      },
+      {
+        "from": "Hot Transfer Cancn",
+        "to": "Connected - Not Interested",
+        "pct": 4.35,
+        "cnt": 1
+      },
+      {
+        "from": "Indirect Client",
+        "to": "Connected Voicemail",
+        "pct": 5.56,
+        "cnt": 1
+      },
+      {
+        "from": "Indirect Client",
+        "to": "Wrong Number",
+        "pct": 5.56,
+        "cnt": 1
+      },
+      {
+        "from": "Leads Opportunity",
+        "to": "Connected Voicemail",
+        "pct": 7.69,
+        "cnt": 1
+      },
+      {
+        "from": "New Lead Primer Intento",
+        "to": "Busy - Callback",
+        "pct": 8.33,
+        "cnt": 1
+      },
+      {
+        "from": "New Lead Primer Intento",
+        "to": "No Answer",
+        "pct": 8.33,
+        "cnt": 1
+      },
+      {
+        "from": "OutReach Primer Intento",
+        "to": "Connected Voicemail",
+        "pct": 0.34,
+        "cnt": 1
+      },
+      {
+        "from": "OutReach Primer Intento",
+        "to": "No Answer",
+        "pct": 0.34,
+        "cnt": 1
+      },
+      {
+        "from": "OutReach Segundo Intento",
+        "to": "Duplicate Lead",
+        "pct": 10,
+        "cnt": 1
+      },
+      {
+        "from": "Pre Closed PROMO",
+        "to": "Hung Up",
+        "pct": 1.47,
+        "cnt": 1
+      },
+      {
+        "from": "Pre Closed PROMO",
+        "to": "PreClosed - Hung Up",
+        "pct": 1.47,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - Busy",
+        "to": "Recovery No Answer",
+        "pct": 0.22,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - Distrust",
+        "to": "Busy - Callback",
+        "pct": 0.72,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - Distrust",
+        "to": "Wrong Number",
+        "pct": 0.72,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - Hung Up",
+        "to": "Busy - Callback",
+        "pct": 0.31,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - Hung Up",
+        "to": "Recovery Not Interested",
+        "pct": 0.31,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - Indirect Client",
+        "to": "Wrong Number",
+        "pct": 5.26,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - Needs to be Approved",
+        "to": "Connected Voicemail",
+        "pct": 0.16,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - No Answer",
+        "to": "Busy - Callback",
+        "pct": 0.71,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - No Answer",
+        "to": "Connected Voicemail",
+        "pct": 0.71,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - No Answer",
+        "to": "Hung Up",
+        "pct": 0.71,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - No Answer",
+        "to": "Recovery No Answer",
+        "pct": 0.71,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - No Card",
+        "to": "Duplicate Lead",
+        "pct": 0.2,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - No Card",
+        "to": "Hung Up",
+        "pct": 0.2,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - No Card",
+        "to": "PreClosed - Distrust",
+        "pct": 0.2,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - No Money - No Job",
+        "to": "Busy - Callback",
+        "pct": 0.09,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - No Price",
+        "to": "PreClosed - Distrust",
+        "pct": 3.13,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - No Price",
+        "to": "PreClosed - No Answer",
+        "pct": 3.13,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - No Price",
+        "to": "Wrong Number",
+        "pct": 3.13,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - Prefers to go to the office",
+        "to": "Connected Voicemail",
+        "pct": 2.86,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - Prefers to go to the office",
+        "to": "Duplicate Lead",
+        "pct": 2.86,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed - Prefers to go to the office",
+        "to": "PreClosed - No Answer",
+        "pct": 2.86,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed – Cash Only",
+        "to": "PreClosed - Distrust",
+        "pct": 0.94,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed Opportunity",
+        "to": "PreClosed - Hung Up",
+        "pct": 1.96,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed Opportunity",
+        "to": "PreClosed - No Answer",
+        "pct": 1.96,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed Opportunity",
+        "to": "Wrong Number",
+        "pct": 1.96,
+        "cnt": 1
+      },
+      {
+        "from": "PreClosed Reactivación",
+        "to": "PreClosed - Busy",
+        "pct": 20,
+        "cnt": 1
+      },
+      {
+        "from": "Reconversion Lead",
+        "to": "Busy - Callback",
+        "pct": 12.5,
+        "cnt": 1
+      },
+      {
+        "from": "Reconversion Lead",
+        "to": "Connected - Not Interested",
+        "pct": 12.5,
+        "cnt": 1
+      },
+      {
+        "from": "Recovery No Answer",
+        "to": "Connected Voicemail",
+        "pct": 20,
+        "cnt": 1
+      },
+      {
+        "from": "Recovery No Answer",
+        "to": "Hung Up",
+        "pct": 20,
+        "cnt": 1
+      },
+      {
+        "from": "Recovery No Answer",
+        "to": "PreClosed - No Answer",
+        "pct": 20,
+        "cnt": 1
       }
     ],
     "trap_states": [
@@ -6738,226 +6748,10 @@
     ],
     "revenue_at_risk": [
       {
-        "from": "Alivio Vendido",
-        "to": "Connected Voicemail",
-        "cnt": 4,
-        "value": 4800
-      },
-      {
-        "from": "Busy - Callback",
-        "to": "No Answer",
-        "cnt": 2562,
-        "value": 3074400
-      },
-      {
-        "from": "PreClosed - Distrust",
-        "to": "Connected - Not Interested",
-        "cnt": 59,
-        "value": 70800
-      },
-      {
-        "from": "PreClosed - Needs to be Approved",
-        "to": "Connected - Not Interested",
-        "cnt": 264,
-        "value": 316800
-      },
-      {
-        "from": "PreClosed Reactivación",
-        "to": "Connected - Not Interested",
-        "cnt": 2,
-        "value": 2400
-      },
-      {
-        "from": "Recovery No Answer",
-        "to": "No Answer",
-        "cnt": 2,
-        "value": 2400
-      },
-      {
-        "from": "PreClosed - Hung Up",
-        "to": "Connected - Not Interested",
-        "cnt": 127,
-        "value": 152400
-      },
-      {
-        "from": "Reconversion Lead",
-        "to": "Duplicate Lead",
-        "cnt": 3,
-        "value": 3600
-      },
-      {
-        "from": "Hung Up",
-        "to": "No Answer",
-        "cnt": 715,
-        "value": 858000
-      },
-      {
         "from": "EN LLAMADA",
         "to": "No Answer",
         "cnt": 6607,
         "value": 7928400
-      },
-      {
-        "from": "Abierto",
-        "to": "No Answer",
-        "cnt": 2,
-        "value": 2400
-      },
-      {
-        "from": "Alivio Vendido",
-        "to": "Busy - Callback",
-        "cnt": 2,
-        "value": 2400
-      },
-      {
-        "from": "Connected Voicemail",
-        "to": "No Answer",
-        "cnt": 1446,
-        "value": 1735200
-      },
-      {
-        "from": "Pre Closed PROMO",
-        "to": "Connected - Not Interested",
-        "cnt": 20,
-        "value": 24000
-      },
-      {
-        "from": "PreClosed Opportunity",
-        "to": "Connected - Not Interested",
-        "cnt": 15,
-        "value": 18000
-      },
-      {
-        "from": "Wrong Number",
-        "to": "No Answer",
-        "cnt": 29,
-        "value": 34800
-      },
-      {
-        "from": "PreClosed - Prefers to go to the office",
-        "to": "Connected - Not Interested",
-        "cnt": 10,
-        "value": 12000
-      },
-      {
-        "from": "PreClosed - No Money - No Job",
-        "to": "Connected - Not Interested",
-        "cnt": 305,
-        "value": 366000
-      },
-      {
-        "from": "PreClosed - No Card",
-        "to": "Connected - Not Interested",
-        "cnt": 122,
-        "value": 146400
-      },
-      {
-        "from": "Leads Opportunity",
-        "to": "Connected - Not Interested",
-        "cnt": 3,
-        "value": 3600
-      },
-      {
-        "from": "Leads Opportunity",
-        "to": "Duplicate Lead",
-        "cnt": 3,
-        "value": 3600
-      },
-      {
-        "from": "No Answer",
-        "to": "Connected Voicemail",
-        "cnt": 2081,
-        "value": 2497200
-      },
-      {
-        "from": "PreClosed - Busy",
-        "to": "Connected - Not Interested",
-        "cnt": 103,
-        "value": 123600
-      },
-      {
-        "from": "Indirect Client",
-        "to": "Connected - Not Interested",
-        "cnt": 4,
-        "value": 4800
-      },
-      {
-        "from": "Indirect Client",
-        "to": "Hung Up",
-        "cnt": 4,
-        "value": 4800
-      },
-      {
-        "from": "PreClosed - Indirect Client",
-        "to": "Connected - Not Interested",
-        "cnt": 4,
-        "value": 4800
-      },
-      {
-        "from": "Duplicate Lead",
-        "to": "No Answer",
-        "cnt": 21,
-        "value": 25200
-      },
-      {
-        "from": "Wrong Number",
-        "to": "Connected Voicemail",
-        "cnt": 21,
-        "value": 25200
-      },
-      {
-        "from": "OutReach Segundo Intento",
-        "to": "Connected - Not Interested",
-        "cnt": 2,
-        "value": 2400
-      },
-      {
-        "from": "PreClosed - No Answer",
-        "to": "No Answer",
-        "cnt": 28,
-        "value": 33600
-      },
-      {
-        "from": "PreClosed Reactivación",
-        "to": "PreClosed - Busy",
-        "cnt": 1,
-        "value": 1200
-      },
-      {
-        "from": "Recovery No Answer",
-        "to": "Connected Voicemail",
-        "cnt": 1,
-        "value": 1200
-      },
-      {
-        "from": "Recovery No Answer",
-        "to": "Hung Up",
-        "cnt": 1,
-        "value": 1200
-      },
-      {
-        "from": "Recovery No Answer",
-        "to": "PreClosed - No Answer",
-        "cnt": 1,
-        "value": 1200
-      },
-      {
-        "from": "No Answer",
-        "to": "Busy - Callback",
-        "cnt": 1740,
-        "value": 2088000
-      },
-      {
-        "from": "Hot Transfer Cancn",
-        "to": "No Answer",
-        "cnt": 4,
-        "value": 4800
-      },
-      {
-        "from": "Hung Up",
-        "to": "Connected Voicemail",
-        "cnt": 337,
-        "value": 404400
       },
       {
         "from": "EN LLAMADA",
@@ -6966,46 +6760,70 @@
         "value": 3970800
       },
       {
-        "from": "Abierto",
+        "from": "EN LLAMADA",
         "to": "Busy - Callback",
-        "cnt": 1,
-        "value": 1200
+        "cnt": 2770,
+        "value": 3324000
       },
       {
-        "from": "Abierto",
+        "from": "Busy - Callback",
+        "to": "No Answer",
+        "cnt": 2562,
+        "value": 3074400
+      },
+      {
+        "from": "No Answer",
         "to": "Connected Voicemail",
-        "cnt": 1,
-        "value": 1200
+        "cnt": 2081,
+        "value": 2497200
       },
       {
-        "from": "Indirect Client",
+        "from": "No Answer",
         "to": "Busy - Callback",
-        "cnt": 3,
-        "value": 3600
+        "cnt": 1740,
+        "value": 2088000
       },
       {
-        "from": "New Lead Primer Intento",
-        "to": "PreClosed - Distrust",
-        "cnt": 2,
-        "value": 2400
+        "from": "New Lead",
+        "to": "No Answer",
+        "cnt": 1671,
+        "value": 2005200
       },
       {
-        "from": "Hung Up",
+        "from": "Connected Voicemail",
+        "to": "No Answer",
+        "cnt": 1446,
+        "value": 1735200
+      },
+      {
+        "from": "EN LLAMADA",
         "to": "Connected - Not Interested",
-        "cnt": 315,
-        "value": 378000
+        "cnt": 1108,
+        "value": 1329600
       },
       {
-        "from": "PreClosed - Indirect Client",
-        "to": "PreClosed - Busy",
-        "cnt": 3,
-        "value": 3600
+        "from": "EN LLAMADA",
+        "to": "Wrong Number",
+        "cnt": 1030,
+        "value": 1236000
       },
       {
-        "from": "Connected - Not Interested",
-        "to": "Connected Voicemail",
-        "cnt": 29,
-        "value": 34800
+        "from": "No Answer",
+        "to": "Connected - Not Interested",
+        "cnt": 1019,
+        "value": 1222800
+      },
+      {
+        "from": "EN LLAMADA",
+        "to": "Hung Up",
+        "cnt": 1009,
+        "value": 1210800
+      },
+      {
+        "from": "No Answer",
+        "to": "Hung Up",
+        "cnt": 972,
+        "value": 1166400
       },
       {
         "from": "Connected Voicemail",
@@ -7014,32 +6832,224 @@
         "value": 891600
       },
       {
-        "from": "Leads Opportunity",
+        "from": "Hung Up",
         "to": "No Answer",
-        "cnt": 2,
-        "value": 2400
+        "cnt": 715,
+        "value": 858000
       },
       {
-        "from": "Connected - Not Interested",
-        "to": "No Answer",
-        "cnt": 28,
-        "value": 33600
+        "from": "Busy - Callback",
+        "to": "Connected Voicemail",
+        "cnt": 658,
+        "value": 789600
       },
       {
-        "from": "Wrong Number",
-        "to": "Duplicate Lead",
-        "cnt": 15,
-        "value": 18000
+        "from": "No Answer",
+        "to": "Wrong Number",
+        "cnt": 553,
+        "value": 663600
       },
       {
-        "from": "PreClosed - No Answer",
+        "from": "New Lead",
+        "to": "Busy - Callback",
+        "cnt": 438,
+        "value": 525600
+      },
+      {
+        "from": "New Lead",
+        "to": "Connected Voicemail",
+        "cnt": 430,
+        "value": 516000
+      },
+      {
+        "from": "Connected Voicemail",
         "to": "Connected - Not Interested",
-        "cnt": 20,
-        "value": 24000
+        "cnt": 427,
+        "value": 512400
+      },
+      {
+        "from": "Connected Voicemail",
+        "to": "Wrong Number",
+        "cnt": 426,
+        "value": 511200
+      },
+      {
+        "from": "Connected Voicemail",
+        "to": "Hung Up",
+        "cnt": 387,
+        "value": 464400
+      },
+      {
+        "from": "Busy - Callback",
+        "to": "Connected - Not Interested",
+        "cnt": 349,
+        "value": 418800
+      },
+      {
+        "from": "EN LLAMADA",
+        "to": "PreClosed - Hung Up",
+        "cnt": 344,
+        "value": 412800
+      },
+      {
+        "from": "Hung Up",
+        "to": "Connected Voicemail",
+        "cnt": 337,
+        "value": 404400
+      },
+      {
+        "from": "Busy - Callback",
+        "to": "Hung Up",
+        "cnt": 334,
+        "value": 400800
+      },
+      {
+        "from": "Hung Up",
+        "to": "Connected - Not Interested",
+        "cnt": 315,
+        "value": 378000
+      },
+      {
+        "from": "PreClosed - No Money - No Job",
+        "to": "Connected - Not Interested",
+        "cnt": 305,
+        "value": 366000
+      },
+      {
+        "from": "Hung Up",
+        "to": "Busy - Callback",
+        "cnt": 274,
+        "value": 328800
+      },
+      {
+        "from": "PreClosed - Needs to be Approved",
+        "to": "Connected - Not Interested",
+        "cnt": 264,
+        "value": 316800
+      },
+      {
+        "from": "EN LLAMADA",
+        "to": "PreClosed - Busy",
+        "cnt": 263,
+        "value": 315600
+      },
+      {
+        "from": "New Lead",
+        "to": "Wrong Number",
+        "cnt": 254,
+        "value": 304800
+      },
+      {
+        "from": "New Lead",
+        "to": "Hung Up",
+        "cnt": 182,
+        "value": 218400
+      },
+      {
+        "from": "No Answer",
+        "to": "Duplicate Lead",
+        "cnt": 151,
+        "value": 181200
+      },
+      {
+        "from": "EN LLAMADA",
+        "to": "PreClosed - Distrust",
+        "cnt": 148,
+        "value": 177600
+      },
+      {
+        "from": "PreClosed - Hung Up",
+        "to": "Connected - Not Interested",
+        "cnt": 127,
+        "value": 152400
+      },
+      {
+        "from": "PreClosed - No Card",
+        "to": "Connected - Not Interested",
+        "cnt": 122,
+        "value": 146400
+      },
+      {
+        "from": "PreClosed - Busy",
+        "to": "Connected - Not Interested",
+        "cnt": 103,
+        "value": 123600
+      },
+      {
+        "from": "Connected Voicemail",
+        "to": "Duplicate Lead",
+        "cnt": 102,
+        "value": 122400
+      },
+      {
+        "from": "PreClosed - No Money - No Job",
+        "to": "PreClosed - Busy",
+        "cnt": 102,
+        "value": 122400
+      },
+      {
+        "from": "New Lead",
+        "to": "Connected - Not Interested",
+        "cnt": 95,
+        "value": 114000
+      },
+      {
+        "from": "EN LLAMADA",
+        "to": "PreClosed - No Answer",
+        "cnt": 90,
+        "value": 108000
+      },
+      {
+        "from": "New Lead",
+        "to": "Duplicate Lead",
+        "cnt": 79,
+        "value": 94800
+      },
+      {
+        "from": "No Answer",
+        "to": "PreClosed - Hung Up",
+        "cnt": 75,
+        "value": 90000
+      },
+      {
+        "from": "No Answer",
+        "to": "PreClosed - Busy",
+        "cnt": 69,
+        "value": 82800
+      },
+      {
+        "from": "PreClosed - No Money - No Job",
+        "to": "PreClosed - Hung Up",
+        "cnt": 65,
+        "value": 78000
+      },
+      {
+        "from": "Busy - Callback",
+        "to": "PreClosed - Hung Up",
+        "cnt": 61,
+        "value": 73200
+      },
+      {
+        "from": "PreClosed - No Money - No Job",
+        "to": "PreClosed - No Answer",
+        "cnt": 60,
+        "value": 72000
+      },
+      {
+        "from": "Hung Up",
+        "to": "Wrong Number",
+        "cnt": 59,
+        "value": 70800
+      },
+      {
+        "from": "PreClosed - Distrust",
+        "to": "Connected - Not Interested",
+        "cnt": 59,
+        "value": 70800
       }
     ],
-    "global_conversion_pct": 2.43,
-    "total_revenue_at_risk": 25351200
+    "total_revenue_at_risk": 44266800,
+    "global_conversion_pct": 8.54
   },
   "operations": {
     "total_leads": 11181,
@@ -7464,9 +7474,9 @@
       "conversions_estimated": 955,
       "revenue_estimated": 1146000,
       "roas_proxy": 0.3152,
-      "breakeven_cpl": 29.16,
-      "breakeven_cpl_gap": 295.99,
-      "conversion_pct_used": 2.43
+      "breakeven_cpl": 102.48,
+      "breakeven_cpl_gap": 222.67,
+      "conversion_pct_used": 8.54
     }
   }
 }

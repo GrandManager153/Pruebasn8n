@@ -17,7 +17,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
 
     <!-- Custom Extracted Stylesheets -->
-    <link rel="stylesheet" href="/css/styles.css?v=14">
+    <link rel="stylesheet" href="/css/styles.css?v=15">
 </head>
 
 <body>
@@ -189,8 +189,10 @@
                             <h2 style="font-size: 18px; font-weight: 800; color: white; margin: 0;">¿Cómo van las conversiones?</h2>
                             <span class="custom-badge custom-badge-success" id="funnel-target-label">Objetivo</span>
                         </div>
+                        <p class="text-muted funnel-period-meta" id="funnel-period-meta" style="font-size: 12px; margin: 0 0 8px; display: none;"></p>
+                        <span class="funnel-enrich-chip" id="funnel-enrich-chip" style="display: none;">Métricas enriquecidas localmente</span>
                         <p class="text-muted v-mb-4" style="font-size: 13.5px;" id="funnel-narrative-subtitle">
-                            De cada 100 leads, <strong>0</strong> llegan a consulta. Hay <strong>$0</strong> en riesgo por fugas detectadas.
+                            Cargando métricas del embudo…
                         </p>
                         <div class="v-grid-1-1">
                             <div class="card card-animate"
@@ -562,9 +564,11 @@
     </div>
 
     <!-- Application Script Logic Linked Externally -->
+    <script src="/js/funnel-loss-states.js?v=1"></script>
+    <script src="/js/enrich-funnel-client.js?v=1"></script>
     <script src="/js/funnel-markov-groups.js?v=3"></script>
     <script src="/js/markov-stddev-enrich.js?v=1"></script>
-    <script src="/js/app.js?v=25" defer></script>
+    <script src="/js/app.js?v=27" defer></script>
 </body>
 
 </html>
