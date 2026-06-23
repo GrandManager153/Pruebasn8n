@@ -1378,7 +1378,6 @@ body.embedded .info-section .info-body {
         overflow: visible !important;
     }
 
-<<<<<<< HEAD
     .chevron {
         display: none !important;
     }
@@ -1571,8 +1570,6 @@ body.embedded .info-section .info-body {
         font-style: italic;
     }
 
-=======
->>>>>>> Implementacion_Python
     .report-chart-card {
         background: var(--bg-card) !important;
         border-color: var(--border) !important;

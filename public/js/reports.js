@@ -1294,8 +1294,6 @@
         });
     }
 
-<<<<<<< HEAD
-=======
     function applyPageBreaks() {
         // Print layout uses CSS (#alertas / #acciones). Clear legacy classes if present.
         document.querySelectorAll('.print-page-break').forEach((el) => {
@@ -1303,7 +1301,6 @@
         });
     }
 
->>>>>>> Implementacion_Python
     // ── Inicialización ──
     function initReportAnimations() {
         initTheme();

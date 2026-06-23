@@ -578,7 +578,6 @@ app.get('/api/dashboard', async (req, res) => {
 
       ensureTrainTestSplit(data);
 
-<<<<<<< HEAD
       const hadEmptyMarkov = !data?.funnel?.absorption_probabilities || data.funnel.absorption_probabilities.length === 0;
       const hadNoStddev = data?.funnel?.absorption_probabilities && data.funnel.absorption_probabilities.length > 0 && !data.funnel.absorption_probabilities.some(row => Number(row.step_stddev) > 0);
 
@@ -615,13 +614,6 @@ app.get('/api/dashboard', async (req, res) => {
             console.warn('  [Background] ML enrichment failed:', enrichErr.message);
           });
       }
-=======
-      applyServerEnrichment(data);
-
-      const history = buildHistoryResponse(data, DATA_DIR);
-
-      res.json({ success: true, data, history });
->>>>>>> 7a62b5e69f8266159c555aee07b90a729752a59e
     } else {
       res.status(404).json({ success: false, message: 'No hay datos de dashboard disponibles aún. Ejecuta el workflow de n8n.' });
     }

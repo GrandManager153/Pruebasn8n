@@ -120,10 +120,7 @@ function enrichFunnelMarkovStddev(data) {
 }
 
 module.exports = {
-<<<<<<< HEAD
     buildMarkovFromTransitions,
     computeMarkovAnalysis,
-=======
->>>>>>> 7a62b5e69f8266159c555aee07b90a729752a59e
     enrichFunnelMarkovStddev,
 };
