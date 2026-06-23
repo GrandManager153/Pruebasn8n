@@ -357,9 +357,10 @@
         const audienceSections = relevantSections[audience] || [];
         
         children.forEach(child => {
-            const isHeading = child.tagName === 'H2' || child.tagName === 'H3' || 
-                              (child.tagName === 'P' && child.querySelector('strong')) ||
-                              (child.tagName === 'P' && (child.style.fontWeight === '800' || child.style.fontWeight === 'bold' || 
+            const isHeading = child.classList?.contains('report-section-title')
+                              || child.tagName === 'H2' || child.tagName === 'H3' 
+                              || (child.tagName === 'P' && child.querySelector('strong:only-child'))
+                              || (child.tagName === 'P' && (child.style.fontWeight === '800' || child.style.fontWeight === 'bold' || 
                                child.getAttribute('style')?.includes('font-weight:800') || child.getAttribute('style')?.includes('font-weight: 800')));
                                
             if (isHeading) {
@@ -614,27 +615,27 @@
 
         if (inv.campaigns?.length) {
             blocks.push(`
-                <p><strong>1. Eficiencia de CPL por campaña</strong></p>
+                <p class="report-subsection-title"><strong>1. Eficiencia de CPL por campaña</strong></p>
                 <p>Hipótesis: mayor gasto no implica menor CPL. Cruza <code>inversiones_campanas</code> (gasto) con <code>leads_por_campana</code> (volumen por fecha) para comparar ${inv.campaign_count} campañas activas y detectar saturación de pauta.</p>
             `);
         }
 
         if (ops.contact_distribution?.overcontact_pct != null) {
             blocks.push(`
-                <p><strong>2. Impacto de intentos &gt; 7 en conversión</strong></p>
+                <p class="report-subsection-title"><strong>2. Impacto de intentos &gt; 7 en conversión</strong></p>
                 <p>Hipótesis: leads con más de 7 intentos convierten peor. Segmenta <code>llamadas_agregadas</code> por rango de intentos usando el sobre-contacto actual (${formatNumber(ops.contact_distribution.overcontact_pct, 2)}%).</p>
             `);
         }
 
         if (payload.forecast?.seasonal_indices?.length && ops.daily_volumes?.length) {
             blocks.push(`
-                <p><strong>3. Correlación estacional vs volumen diario</strong></p>
+                <p class="report-subsection-title"><strong>3. Correlación estacional vs volumen diario</strong></p>
                 <p>Hipótesis: días con índice &gt; 1.0 concentran más leads. Une <code>llegadas</code> con <code>indices_estacionales</code> por día de semana y valida con correlación de Pearson.</p>
             `);
         }
 
         if (!blocks.length) return '';
-        return blocks.join('<br/>');
+        return blocks.join('');
     }
 
     function buildSpecialAlertHtml(payload) {
@@ -804,24 +805,20 @@
 
         const isFirst = options.isFirst || contentBlock.children.length === 0;
 
-        const br = document.createElement('br');
-        const hr = document.createElement('hr');
-        hr.style.cssText = 'border:none;border-top:1px solid var(--border);margin:16px 0';
+        if (!isFirst) {
+            const hr = document.createElement('hr');
+            hr.className = 'report-section-divider';
+            contentBlock.appendChild(hr);
+        }
 
         const heading = document.createElement('p');
-        heading.style.cssText = 'font-size:16px;font-weight:800;margin:20px 0 10px;color:var(--brand-gold)';
-        heading.textContent = title;
+        heading.className = 'report-section-title';
+        heading.innerHTML = `<strong>${escapeHtml(title)}</strong>`;
 
         const container = document.createElement('div');
         container.innerHTML = html;
 
-        if (!isFirst) {
-            contentBlock.appendChild(br);
-            contentBlock.appendChild(hr);
-            contentBlock.appendChild(document.createElement('br'));
-        }
         contentBlock.appendChild(heading);
-        contentBlock.appendChild(document.createElement('br'));
         Array.from(container.childNodes).forEach((node) => contentBlock.appendChild(node));
     }
 
@@ -831,7 +828,14 @@
 
         if (audience === 'analyst') {
             if (isEmptyOrBrokenNarrative(contentBlock)) {
-                rebuildAnalystNarrative(contentBlock, payload);
+                if (payload) {
+                    rebuildAnalystNarrative(contentBlock, payload);
+                } else {
+                    contentBlock.innerHTML = `
+                        <p class="report-section-title"><strong>Narrativa no disponible</strong></p>
+                        <p>El motor de IA no entregó contenido para este informe. Vuelve a ejecutar el flujo n8n o verifica la conexión del payload.</p>
+                    `;
+                }
                 return;
             }
 
@@ -894,10 +898,239 @@
         });
     }
 
+    function normalizeKpis(kpis) {
+        if (!kpis) return [];
+        return Array.isArray(kpis) ? kpis : Object.values(kpis);
+    }
+
+    function kpiValueColorAttr(color) {
+        if (color === 'red') return ' style="color:#e53e3e"';
+        if (color === 'green') return ' style="color:#38a169"';
+        if (color === 'blue') return ' style="color:#3182ce"';
+        return '';
+    }
+
+    function buildKpiRowHtml(kpis) {
+        return normalizeKpis(kpis).map((kpi) => `
+            <div class="kpi">
+                <div class="kpi-value"${kpiValueColorAttr(kpi.color)}>${escapeHtml(kpi.value ?? '—')}</div>
+                <div class="kpi-label">${escapeHtml(kpi.label ?? '')}</div>
+                <div class="kpi-sub">${escapeHtml(kpi.sub ?? '')}</div>
+            </div>
+        `).join('');
+    }
+
+    function syncKpisFromPayload(payload) {
+        const row = document.querySelector('#narrativa .kpi-row');
+        const kpis = normalizeKpis(payload?.kpis);
+        if (!row || !kpis.length) return;
+        row.innerHTML = buildKpiRowHtml(kpis);
+    }
+
+    function statusBarClass(color) {
+        if (color === 'rojo' || color === 'red') return 'status-red';
+        if (color === 'amarillo' || color === 'yellow') return 'status-yellow';
+        return 'status-green';
+    }
+
+    function syncStatusBarFromPayload(payload) {
+        const status = payload?.system?.status;
+        const sbar = document.querySelector('.sbar');
+        if (!sbar || !status) return;
+
+        const reasons = (status.reasons || []).filter(Boolean).join(' — ')
+            || status.label
+            || 'Sin detalle adicional';
+        const label = (status.label || 'ESTADO DEL SISTEMA').toUpperCase();
+
+        sbar.className = `sbar ${statusBarClass(status.color)}`;
+        sbar.innerHTML = `<span class="sdot"></span>ESTADO: ${escapeHtml(label)} &mdash; ${escapeHtml(reasons)}`;
+    }
+
+    function syncHeroDateFromPayload(payload) {
+        const sub = document.querySelector('.hero .sub');
+        if (!sub || !payload?.meta?.generated_at) return;
+        const generated = new Date(payload.meta.generated_at);
+        if (Number.isNaN(generated.getTime())) return;
+        sub.textContent = generated.toLocaleString('es-MX', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    }
+
+    function alertSeverityStyles(severity) {
+        if (severity === 'critical') {
+            return { badge: 'CRITICO', border: '#e53e3e', bg: '#fff5f5' };
+        }
+        if (severity === 'warning') {
+            return { badge: 'ALERTA', border: '#dd6b20', bg: '#fffaf0' };
+        }
+        return { badge: 'INFO', border: '#3182ce', bg: '#f0f9ff' };
+    }
+
+    function buildAlertCardHtml(alert) {
+        const styles = alertSeverityStyles(alert.severity);
+        const detail = alert.evidence || alert.impact || '';
+        return `
+            <div class="alert-card" style="border-left:4px solid ${styles.border};background:${styles.bg}">
+                <div class="alert-badge" style="background:${styles.border}">${styles.badge}</div>
+                <div class="alert-title">${escapeHtml(alert.title || '')}</div>
+                <div class="alert-detail">${escapeHtml(detail)}</div>
+            </div>
+        `;
+    }
+
+    function buildInfoItemHtml(alert) {
+        const impact = alert.impact || alert.evidence || '';
+        return `
+            <div class="info-item">
+                <strong>${escapeHtml(alert.title || '')}</strong>
+                <span class="info-impact">${escapeHtml(impact)}</span>
+            </div>
+        `;
+    }
+
+    function syncAlertsFromPayload(payload) {
+        const container = document.getElementById('alertas');
+        const alerts = payload?.system?.alerts;
+        if (!container || !Array.isArray(alerts)) return;
+
+        const mainAlerts = alerts.filter((a) => a.severity === 'critical' || a.severity === 'warning');
+        const infoAlerts = alerts.filter((a) => a.severity === 'info');
+
+        let html = mainAlerts.map(buildAlertCardHtml).join('');
+        if (infoAlerts.length) {
+            html += `
+                <div class="info-section open">
+                    <div class="info-header">Información adicional (${infoAlerts.length}) <span class="chevron">+</span></div>
+                    <div class="info-body">${infoAlerts.map(buildInfoItemHtml).join('')}</div>
+                </div>
+            `;
+        }
+        container.innerHTML = html;
+
+        document.querySelectorAll('.tab').forEach((tab) => {
+            if (!tab.textContent.includes('Alertas')) return;
+            let badge = tab.querySelector('.tcount');
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'tcount';
+                tab.appendChild(badge);
+            }
+            badge.textContent = String(mainAlerts.length);
+        });
+    }
+
+    function actionUrgencyStyles(urgency) {
+        if (urgency === 'immediate') {
+            return { label: 'INMEDIATO', color: '#e53e3e' };
+        }
+        return { label: 'ESTA SEMANA', color: '#dd6b20' };
+    }
+
+    function buildActionCardHtml(action, index) {
+        const urgency = actionUrgencyStyles(action.urgency);
+        return `
+            <div class="action-card" style="border-left:4px solid ${urgency.color}">
+                <div class="action-head">
+                    <span class="action-num">${index + 1}</span>
+                    <span class="action-badge" style="background:${urgency.color}">${urgency.label}</span>
+                </div>
+                <div class="action-text">${escapeHtml(action.action || '')}</div>
+                <div class="action-meta"><span>Razón: ${escapeHtml(action.reason || '')}</span></div>
+                <div class="action-meta">
+                    <span>Responsable: ${escapeHtml(action.owner || '—')}</span>
+                    <span>Plazo: ${escapeHtml(action.horizon || '—')}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    function syncActionsFromPayload(payload) {
+        const container = document.getElementById('acciones');
+        const actions = payload?.system?.actions;
+        if (!container || !Array.isArray(actions) || !actions.length) return;
+
+        container.innerHTML = actions.map(buildActionCardHtml).join('');
+
+        document.querySelectorAll('.tab').forEach((tab) => {
+            if (!tab.textContent.includes('Acciones')) return;
+            let badge = tab.querySelector('.tcount');
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'tcount';
+                tab.appendChild(badge);
+            }
+            badge.textContent = String(actions.length);
+        });
+    }
+
+    function syncFooterFromPayload(payload) {
+        const footer = document.querySelector('.footer');
+        if (!footer || !payload?.meta?.generated_at) return;
+        const version = payload.meta.version || '7.0';
+        const execId = payload.meta.execution_id ? ` · ${payload.meta.execution_id}` : '';
+        footer.textContent = `Mkt_BI_IA v${version} · Datos sincronizados · ${payload.meta.generated_at}${execId}`;
+    }
+
+    function extractHtmlGeneratedAt() {
+        const footer = document.querySelector('.footer');
+        const match = footer?.textContent?.match(/(\d{4}-\d{2}-\d{2}T[\d:.]+Z)/);
+        return match?.[1] || window.__BOS_SYNC_META__?.htmlGeneratedAt || null;
+    }
+
+    function formatSyncTimestamp(iso) {
+        if (!iso) return 'fecha desconocida';
+        const date = new Date(iso);
+        if (Number.isNaN(date.getTime())) return iso;
+        return date.toLocaleString('es-MX');
+    }
+
+    function injectStaleNarrativeBanner(audience, payload, htmlGeneratedAt) {
+        const payloadAt = payload?.meta?.generated_at;
+        if (!payloadAt || !htmlGeneratedAt || payloadAt === htmlGeneratedAt) return;
+        if (audience === 'analyst') return;
+
+        const contentBlock = document.querySelector('.content-block');
+        if (!contentBlock || isEmptyOrBrokenNarrative(contentBlock)) return;
+
+        if (document.querySelector('.report-stale-banner')) return;
+
+        const banner = document.createElement('div');
+        banner.className = 'report-stale-banner';
+        banner.innerHTML = `
+            <strong>Narrativa de ejecución anterior.</strong>
+            Los KPIs, alertas y acciones ya reflejan datos del <em>${formatSyncTimestamp(payloadAt)}</em>,
+            pero el texto narrativo proviene del informe generado el <em>${formatSyncTimestamp(htmlGeneratedAt)}</em>.
+            Ejecuta de nuevo el flujo n8n para alinear la narrativa de IA.
+        `;
+        const anchor = document.querySelector('.latex-abstract') || document.querySelector('.sbar') || document.querySelector('.hero');
+        anchor?.insertAdjacentElement('afterend', banner);
+    }
+
+    function syncReportFromPayload(audience, payload) {
+        if (!payload) return;
+
+        const htmlGeneratedAt = extractHtmlGeneratedAt();
+
+        syncHeroDateFromPayload(payload);
+        syncStatusBarFromPayload(payload);
+        syncKpisFromPayload(payload);
+        syncAlertsFromPayload(payload);
+        syncActionsFromPayload(payload);
+        syncFooterFromPayload(payload);
+        injectStaleNarrativeBanner(audience, payload, htmlGeneratedAt);
+    }
+
     function enrichFromPayload(audience) {
         const payload = getPayload();
         if (!payload) return;
 
+        syncReportFromPayload(audience, payload);
         hydrateAlertsTable(payload);
         hydrateMissingSections(audience, payload);
         colorizeSeverityCells();
@@ -1061,14 +1294,26 @@
         });
     }
 
+<<<<<<< HEAD
+=======
+    function applyPageBreaks() {
+        // Print layout uses CSS (#alertas / #acciones). Clear legacy classes if present.
+        document.querySelectorAll('.print-page-break').forEach((el) => {
+            el.classList.remove('print-page-break');
+        });
+    }
+
+>>>>>>> Implementacion_Python
     // ── Inicialización ──
     function initReportAnimations() {
         initTheme();
-        prepareKpiValues();
         injectLatexAbstract();
         
         const audience = getAudience();
         document.body.classList.add(`theme-${audience}`);
+
+        expandInfoSections();
+        enrichFromPayload(audience);
 
         // Analyst report is the full data audit — show all KPIs, narrative, alerts and actions
         if (audience !== 'analyst') {
@@ -1077,8 +1322,7 @@
             filterAlertsAndActionsByAudience(audience);
         }
 
-        expandInfoSections();
-        enrichFromPayload(audience);
+        prepareKpiValues();
         setupEmbeddedPreview();
         injectKpiHelpTooltips();
         injectChartContainers();
@@ -1092,6 +1336,9 @@
         }
 
         renderAllCharts();
+
+        window.__BOS_REPORT_READY__ = true;
+        window.dispatchEvent(new Event('bos-report-ready'));
 
         if (window.parent !== window) {
             window.parent.postMessage('report-resize', '*');

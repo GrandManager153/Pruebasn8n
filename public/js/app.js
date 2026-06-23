@@ -4339,21 +4339,41 @@ function closeReportViewer() {
 
 function printActiveReport() {
     const iframe = document.getElementById('viewer-iframe');
-    if (iframe && iframe.contentWindow) {
+    if (!iframe || !iframe.contentWindow) return;
+
+    const runPrint = () => {
         try {
             iframe.contentWindow.focus();
             iframe.contentWindow.print();
         } catch (err) {
             console.error("No se pudo iniciar la impresión del iframe:", err);
-            // Fallback: abrir en pestaña nueva e iniciar impresión
             const newWindow = window.open(iframe.src, '_blank');
             if (newWindow) {
-                newWindow.onload = () => {
-                    newWindow.print();
-                };
+                newWindow.onload = () => newWindow.print();
             }
         }
+    };
+
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    if (iframe.contentWindow.__BOS_REPORT_READY__) {
+        runPrint();
+        return;
     }
+
+    const onReady = () => {
+        iframe.contentWindow.removeEventListener('bos-report-ready', onReady);
+        runPrint();
+    };
+
+    iframe.contentWindow.addEventListener('bos-report-ready', onReady);
+
+    // Fallback if the report script already ran before we attached the listener
+    setTimeout(() => {
+        if (iframe.contentWindow.__BOS_REPORT_READY__) {
+            iframe.contentWindow.removeEventListener('bos-report-ready', onReady);
+            runPrint();
+        }
+    }, 1200);
 }
 
 // =====================================================================

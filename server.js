@@ -122,6 +122,31 @@ function persistReport(audience, htmlContent) {
   }
 }
 
+function reportPathFor(audience) {
+  return path.join(REPORTS_DIR, `reporte_${audience}.html`);
+}
+
+function reportExistsOnDisk(audience) {
+  try {
+    const reportPath = reportPathFor(audience);
+    return fs.existsSync(reportPath) && fs.statSync(reportPath).size > 0;
+  } catch {
+    return false;
+  }
+}
+
+function readReportHtml(audience) {
+  const reportPath = reportPathFor(audience);
+  if (fs.existsSync(reportPath)) {
+    try {
+      return fs.readFileSync(reportPath, 'utf-8');
+    } catch (err) {
+      console.log(`⚠️ Error leyendo reporte ${audience} desde disco:`, err.message);
+    }
+  }
+  return activeReports[audience] || null;
+}
+
 // =====================================================================
 //  MIDDLEWARE
 // =====================================================================
@@ -240,6 +265,12 @@ function loadDashboardPayload() {
   return null;
 }
 
+function extractHtmlGeneratedAt(htmlContent) {
+  if (!htmlContent || typeof htmlContent !== 'string') return null;
+  const match = htmlContent.match(/(\d{4}-\d{2}-\d{2}T[\d:.]+Z)/);
+  return match ? match[1] : null;
+}
+
 // Inyecta el design system BOS en reportes HTML generados por n8n
 function injectTheme(htmlContent) {
   if (!htmlContent || typeof htmlContent !== 'string') return htmlContent;
@@ -266,18 +297,26 @@ function injectTheme(htmlContent) {
 
   const headAssets = `
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/reports.css?v=8">
+    <link rel="stylesheet" href="/css/reports.css?v=12">
   `;
 
   const payload = loadDashboardPayload();
+  const htmlGeneratedAt = extractHtmlGeneratedAt(output);
+  const payloadGeneratedAt = payload?.meta?.generated_at || null;
+  const syncMeta = {
+    htmlGeneratedAt,
+    payloadGeneratedAt,
+    inSync: !!(htmlGeneratedAt && payloadGeneratedAt && htmlGeneratedAt === payloadGeneratedAt),
+  };
+
   const payloadScript = payload
-    ? `<script>window.__BOS_PAYLOAD__=${JSON.stringify(payload).replace(/</g, '\\u003c')};</script>`
+    ? `<script>window.__BOS_PAYLOAD__=${JSON.stringify(payload).replace(/</g, '\\u003c')};window.__BOS_SYNC_META__=${JSON.stringify(syncMeta).replace(/</g, '\\u003c')};</script>`
     : '';
 
   const bodyScripts = `
     ${payloadScript}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="/js/reports.js?v=8"></script>`;
+    <script src="/js/reports.js?v=12"></script>`;
 
   const ambientBg = `
     <div class="report-ambient" aria-hidden="true">
@@ -313,26 +352,15 @@ function injectTheme(htmlContent) {
 // Servir reportes HTML interactivos
 app.get('/reports/:audience', (req, res) => {
   const audience = req.params.audience;
-  const reportPath = path.join(REPORTS_DIR, `reporte_${audience}.html`);
-  
-  // Read dynamically from disk so manual modifications are instantly visible without restart
-  if (fs.existsSync(reportPath)) {
-    try {
-      const htmlContent = fs.readFileSync(reportPath, 'utf-8');
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-      return res.send(injectTheme(htmlContent));
-    } catch (err) {
-      console.log(`⚠️ Error leyendo reporte ${audience} desde disco:`, err.message);
-    }
-  }
+  const htmlContent = readReportHtml(audience);
 
-  if (activeReports[audience]) {
+  if (htmlContent) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    res.send(injectTheme(activeReports[audience]));
-  } else {
-    res.status(404).send(`
+    return res.send(injectTheme(htmlContent));
+  }
+
+  res.status(404).send(`
       <div style="font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif; text-align: center; padding: 60px; background: #050409; color: #ffffff; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
         <h1 style="color: #ef4444; font-size: 32px; margin-bottom: 16px;">🔬 Reporte No Disponible</h1>
         <p style="color: #94a3b8; font-size: 16px; max-width: 500px; margin-bottom: 24px; line-height: 1.6;">
@@ -346,20 +374,35 @@ app.get('/reports/:audience', (req, res) => {
         </a>
       </div>
     `);
-  }
 });
 
 // Listar reportes disponibles
 app.get('/api/reports', (req, res) => {
+  const payload = loadDashboardPayload();
+  const payloadGeneratedAt = payload?.meta?.generated_at || null;
   const available = {};
-  for (const [audience, content] of Object.entries(activeReports)) {
+  for (const audience of Object.keys(activeReports)) {
+    const onDisk = reportExistsOnDisk(audience);
+    const hasReport = !!(activeReports[audience] || onDisk);
+    let htmlGeneratedAt = null;
+    if (onDisk) {
+      try {
+        const html = fs.readFileSync(reportPathFor(audience), 'utf-8');
+        htmlGeneratedAt = extractHtmlGeneratedAt(html);
+      } catch {
+        htmlGeneratedAt = null;
+      }
+    }
     available[audience] = {
-      available: !!content,
-      url: content ? `/reports/${audience}` : null,
-      savedToDisk: fs.existsSync(path.join(REPORTS_DIR, `reporte_${audience}.html`))
+      available: hasReport,
+      url: hasReport ? `/reports/${audience}` : null,
+      savedToDisk: onDisk,
+      htmlGeneratedAt,
+      payloadGeneratedAt,
+      dataInSync: !!(htmlGeneratedAt && payloadGeneratedAt && htmlGeneratedAt === payloadGeneratedAt),
     };
   }
-  res.json({ reports: available });
+  res.json({ reports: available, payloadGeneratedAt });
 });
 
 // Function to dynamically calculate and inject the backtest series for the statistical models
