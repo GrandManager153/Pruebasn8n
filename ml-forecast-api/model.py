@@ -15,7 +15,6 @@ from features import (
     build_adaptive_target_features,
     build_feature_matrix,
     build_next_features,
-    feature_columns,
     series_to_dataframe,
 )
 
@@ -168,16 +167,15 @@ def _build_holdout_series(
             model.fit(X_train, y_train)
             fitted[name] = model
 
-            train_feat_df = train_df.dropna(subset=feature_columns() + ["value"])
-            for local_idx, row_idx in enumerate(train_feat_df.index):
-                if row_idx < 1 or row_idx >= split_index:
-                    continue
-                row_df = train_df.iloc[: row_idx + 1]
-                X_pred = build_next_features(row_df)
+            # Train zone: in-sample + adaptive features (dense coverage from index 1)
+            for idx in range(1, split_index):
+                X_pred = build_adaptive_target_features(train_df, idx)
                 if X_pred is None:
-                    X_pred = build_adaptive_target_features(train_df, row_idx)
-                if X_pred is not None:
-                    out[name][row_idx] = round(float(model.predict(X_pred)[0]), 2)
+                    continue
+                try:
+                    out[name][idx] = round(float(model.predict(X_pred)[0]), 2)
+                except Exception:
+                    pass
         except Exception:
             continue
 

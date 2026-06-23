@@ -58,6 +58,33 @@ function getForecastChartAnimationOptions(heavy = false) {
     };
 }
 
+function shouldAnimateInvestmentChart() {
+    return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function getInvestmentChartAnimationOptions() {
+    if (!shouldAnimateInvestmentChart()) return false;
+    return {
+        animateRotate: true,
+        animateScale: true,
+        duration: 1100,
+        easing: 'easeOutCubic',
+        delay: (context) => {
+            if (context.type === 'data' && context.mode === 'default') {
+                return context.dataIndex * 80;
+            }
+            return 0;
+        },
+    };
+}
+
+function replayInvestmentChartAnimation() {
+    const chart = charts.campaigns;
+    if (!chart || !shouldAnimateInvestmentChart()) return;
+    chart.reset();
+    chart.update('active');
+}
+
 function scheduleDeferredRender(fn) {
     if (typeof requestIdleCallback === 'function') {
         requestIdleCallback(() => fn(), { timeout: 1500 });
@@ -116,9 +143,13 @@ function ensureTabRendered(tabId) {
             break;
         }
         case 'investment':
-            if (!renderedTabs.has('investment-chart') && dashboardData.investment?.campaigns) {
-                renderCampaignChart(dashboardData.investment.campaigns);
-                renderedTabs.add('investment-chart');
+            if (dashboardData.investment?.campaigns) {
+                if (!renderedTabs.has('investment-chart')) {
+                    renderCampaignChart(dashboardData.investment.campaigns);
+                    renderedTabs.add('investment-chart');
+                } else {
+                    replayInvestmentChartAnimation();
+                }
             }
             break;
         case 'operations':
@@ -2088,10 +2119,11 @@ function renderFunnelListItem(options) {
                 <div class="funnel-data-row-bar">
                     <div class="funnel-data-row-bar-fill progress-bar-fill" data-pct="${barWidth}" style="width: 0%; background: ${barColor};"></div>
                 </div>
+                ${metaLeft || metaRight ? `
                 <div class="funnel-data-row-foot">
-                    <span class="funnel-data-chip">${metaLeft}</span>
-                    <span class="funnel-data-chip funnel-data-chip--value">${metaRight}</span>
-                </div>
+                    ${metaLeft ? `<span class="funnel-data-chip">${metaLeft}</span>` : ''}
+                    ${metaRight ? `<span class="funnel-data-chip funnel-data-chip--value">${metaRight}</span>` : ''}
+                </div>` : ''}
             </div>
         </div>
     `;
@@ -2195,7 +2227,6 @@ function renderFunnelDetails(data) {
                         pct: Math.min(Number(trap.loss_rate) || 0, 100),
                         color: 'var(--amber)',
                         barColor: 'var(--amber)',
-                        metaLeft: `Auto-loop: ${trap.self_loop_pct ?? '—'}%`,
                         metaRight: `${trap.total_cnt || 0} leads`,
                         delay: idx * 0.02,
                         rank: idx + 1,
@@ -2711,17 +2742,21 @@ function modelSeriesCoverage(series) {
     return series.filter((v) => v != null && isFinite(v)).length;
 }
 
-function pickBetterModelSeries(a, b) {
+function holdoutSeriesScore(series, splitIndex) {
+    if (!Array.isArray(series) || splitIndex == null) return modelSeriesCoverage(series);
+    const train = series.slice(0, splitIndex).filter((v) => v != null && isFinite(v)).length;
+    const test = series.slice(splitIndex).filter((v) => v != null && isFinite(v)).length;
+    const bothZones = train > 0 && test > 0 ? 10000 : 0;
+    return bothZones + train + test;
+}
+
+function pickBetterModelSeries(a, b, splitIndex) {
     if (!seriesHasChartPoints(a)) return b;
     if (!seriesHasChartPoints(b)) return a;
-    const covA = modelSeriesCoverage(a);
-    const covB = modelSeriesCoverage(b);
-    if (covB > covA) return b;
-    if (covA > covB) return a;
-    const sparseA = a.some((v) => v == null);
-    const sparseB = b.some((v) => v == null);
-    if (sparseA && !sparseB) return a;
-    if (sparseB && !sparseA) return b;
+    const scoreA = holdoutSeriesScore(a, splitIndex);
+    const scoreB = holdoutSeriesScore(b, splitIndex);
+    if (scoreB > scoreA) return b;
+    if (scoreA > scoreB) return a;
     return a.length >= b.length ? a : b;
 }
 
@@ -2943,7 +2978,11 @@ function buildComparableModels(data) {
     const list = [];
     const f = (data && data.forecast) ? data.forecast : {};
     const chartLen = Array.isArray(f.time_series) ? f.time_series.length : 0;
+    const splitIndex = resolveTrainTestSplit(f)?.split_index ?? null;
+    const mlNames = new Set(ML_MODEL_NAMES.map(normModelName));
+
     (f.backtest_models || []).forEach(m => {
+        if (mlNames.has(normModelName(m.name))) return;
         let series = m.series;
         if (seriesHasChartPoints(series) && chartLen) {
             series = normalizeModelSeries(series, chartLen);
@@ -2962,30 +3001,13 @@ function buildComparableModels(data) {
     const rf = data ? data.forecast_rf : null;
     if (rf && rf.available !== false) {
         const rfName = rf.model_name || 'random_forest';
-        if (!list.some(m => normModelName(m.name) === normModelName(rfName))) {
-            let series = Array.isArray(rf.series) ? rf.series : null;
-            if (!series && Array.isArray(rf.backtest_models)) {
-                const e = rf.backtest_models.find(x => x.name === rfName);
-                if (e && Array.isArray(e.series)) series = e.series;
-            }
-            if (!series) series = buildRfAlignedSeries(data);
-            if (seriesHasChartPoints(series) && chartLen) {
-                series = normalizeModelSeries(series, chartLen);
-            }
-            list.push({
-                name: rfName,
-                mase: rf.mase,
-                mae: (rf.backtest_models || []).find(x => x.name === rfName)?.mae,
-                rmse: (rf.backtest_models || []).find(x => x.name === rfName)?.rmse,
-                series: series,
-                horizons: rf.horizons,
-                forecast_1d: rf.recommended_value ?? rf.horizons?.next_1d?.forecast,
-            });
-        }
         (rf.backtest_models || []).forEach(m => {
             const key = normModelName(m.name);
-            if (ML_MODEL_NAMES.indexOf(key) < 0) return;
+            if (!mlNames.has(key)) return;
             let series = Array.isArray(m.series) ? m.series : null;
+            if (!series && normModelName(m.name) === normModelName(rfName) && Array.isArray(rf.series)) {
+                series = rf.series;
+            }
             if (!series && normModelName(m.name) === normModelName(rfName)) {
                 series = buildRfAlignedSeries(data);
             }
@@ -2994,7 +3016,7 @@ function buildComparableModels(data) {
             }
             const existing = list.find(x => normModelName(x.name) === key);
             if (existing) {
-                existing.series = pickBetterModelSeries(existing.series, series);
+                existing.series = pickBetterModelSeries(existing.series, series, splitIndex);
                 existing.mase = m.mase ?? existing.mase;
                 existing.mae = m.mae ?? existing.mae;
                 existing.rmse = m.rmse ?? existing.rmse;
@@ -3012,6 +3034,25 @@ function buildComparableModels(data) {
                 forecast_1d: m.forecast_1d || null,
             });
         });
+
+        if (!list.some(m => normModelName(m.name) === normModelName(rfName))) {
+            let series = Array.isArray(rf.series) ? rf.series : null;
+            const e = (rf.backtest_models || []).find(x => normModelName(x.name) === normModelName(rfName));
+            if (!series && e && Array.isArray(e.series)) series = e.series;
+            if (!series) series = buildRfAlignedSeries(data);
+            if (seriesHasChartPoints(series) && chartLen) {
+                series = normalizeModelSeries(series, chartLen);
+            }
+            list.push({
+                name: rfName,
+                mase: rf.mase,
+                mae: e?.mae,
+                rmse: e?.rmse,
+                series: series,
+                horizons: rf.horizons,
+                forecast_1d: rf.recommended_value ?? rf.horizons?.next_1d?.forecast,
+            });
+        }
     }
     comparableModelsCache = { source: data, list };
     return list;
@@ -3577,7 +3618,7 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
             pointRadius: 0,
             pointHoverRadius: heavyChart ? 0 : 4,
             fill: false,
-            spanGaps: false,
+            spanGaps: true,
             clip: false,
             _modelName: ov.modelName || null,
         });
@@ -3796,6 +3837,7 @@ function renderCampaignChart(campaigns) {
     const colors = isLight
         ? ['#0284c7', '#84cc16', '#7c3aed', '#ea580c', '#db2777', '#cca43b', '#e11d48']
         : ['#38bdf8', '#a3e635', '#8b5cf6', '#f97316', '#ec4899', '#fbbf24', '#f43f5e'];
+    const animate = shouldAnimateInvestmentChart();
 
     charts.campaigns = new Chart(ctx, {
         type: 'doughnut',
@@ -3806,11 +3848,34 @@ function renderCampaignChart(campaigns) {
                 backgroundColor: colors.slice(0, campaigns.length).map(c => c + '77'),
                 borderColor: colors.slice(0, campaigns.length),
                 borderWidth: 2,
-                hoverOffset: 12
+                borderRadius: 6,
+                spacing: 2,
+                hoverOffset: 14,
+                hoverBorderWidth: 3,
             }]
         },
         options: {
-            animation: getChartAnimationOptions(),
+            animation: getInvestmentChartAnimationOptions(),
+            animations: animate ? {
+                circumference: {
+                    duration: 1100,
+                    easing: 'easeOutCubic',
+                    delay: (context) => (context.type === 'data' ? context.dataIndex * 80 : 0),
+                },
+                numbers: {
+                    type: 'number',
+                    duration: 900,
+                    easing: 'easeOutCubic',
+                },
+            } : undefined,
+            transitions: animate ? {
+                active: {
+                    animation: {
+                        duration: 380,
+                        easing: 'easeOutQuart',
+                    },
+                },
+            } : undefined,
             responsive: true,
             maintainAspectRatio: false,
             cutout: '65%',
