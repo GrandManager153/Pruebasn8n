@@ -5,6 +5,7 @@
 const http = require('http');
 const { enrichLinearForecastModels } = require('./linear-backtest');
 const { computeTrainTestSplit, testZoneCoverage } = require('./train-test-split');
+const { attachForecastTarget } = require('./forecast-target');
 
 const ML_API_BASE = process.env.ML_API_BASE_URL || 'http://127.0.0.1:8000';
 const ML_API_KEY = process.env.ML_API_KEY || process.env.API_KEY || 'mkt-bi-ia-dev-key';
@@ -314,6 +315,7 @@ async function enrichPayloadComplete(payload) {
   }
   payload = attachForecastFieldsToPayload(payload);
   payload = ensureTrainTestSplit(payload);
+  payload = attachForecastTarget(payload);
   return syncRfAlignedSeries(payload);
 }
 
@@ -342,6 +344,7 @@ module.exports = {
   enrichMlModelForecasts,
   attachForecastFieldsToPayload,
   ensureTrainTestSplit,
+  attachForecastTarget,
   resolveBacktestDays,
   buildRfAlignedSeries,
   rfAlignedCoverage,

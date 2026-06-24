@@ -7,7 +7,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const { enrichPayloadComplete, needsMlEnrichment, needsMlModelForecastEnrichment, attachForecastFieldsToPayload, ensureTrainTestSplit } = require('./scripts/ml-enrich-payload');
+const { enrichPayloadComplete, needsMlEnrichment, needsMlModelForecastEnrichment, attachForecastFieldsToPayload, ensureTrainTestSplit, attachForecastTarget } = require('./scripts/ml-enrich-payload');
 const { enrichLinearForecastModels } = require('./scripts/linear-backtest');
 const { enrichOperationalAlerts, formatDurationMinutes } = require('./scripts/enrich-operational-alerts');
 const { enrichFunnelMarkovStddev } = require('./scripts/enrich-funnel-markov-stddev');
@@ -29,6 +29,7 @@ function applyServerEnrichment(data) {
   enrichLittlesLaw(data);
   enrichOperationalAlerts(data);
   enrichFunnelMarkovStddev(data);
+  attachForecastTarget(data);
   return data;
 }
 
@@ -164,7 +165,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Middleware de logging (excluye rutas internas del dashboard)
 app.use((req, res, next) => {
   const excludedPaths = ['/', '/api/logs', '/api/status', '/api/clear-logs'];
-  if (excludedPaths.includes(req.path) || req.path.startsWith('/css') || req.path.startsWith('/js')) {
+// Excluir assets estáticos del logger (evita ruido y payloads enormes en request_logs)
+  if (excludedPaths.includes(req.path) || req.path.startsWith('/css') || req.path.startsWith('/js') || req.path.endsWith('.svg')) {
     return next();
   }
 
@@ -313,8 +315,11 @@ function injectTheme(htmlContent, audience = 'executive') {
 
   const headAssets = `
     ${buildN8nVarStyle(audience)}
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/favicon.svg">
+    <meta name="theme-color" content="#0a1020">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/reports.css?v=13">
+    <link rel="stylesheet" href="/css/reports.css?v=15">
   `;
 
   const payload = loadDashboardPayload();
@@ -333,7 +338,7 @@ function injectTheme(htmlContent, audience = 'executive') {
   const bodyScripts = `
     ${payloadScript}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="/js/reports.js?v=14"></script>`;
+    <script src="/js/reports.js?v=18"></script>`;
 
   const ambientBg = `
     <div class="report-ambient" aria-hidden="true">

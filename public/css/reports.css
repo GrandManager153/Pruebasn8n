@@ -303,8 +303,9 @@ body {
     color: var(--text-main);
 }
 
-/* === Status Bar (Corporate Metadata Box) === */
+/* === Status Bar (hidden — not shown in report pages) === */
 .sbar {
+    display: none !important;
     margin: 25px 0 25px 0 !important;
     padding: 12px 20px !important;
     background: var(--bg-card) !important;
@@ -316,7 +317,6 @@ body {
     font-weight: 600 !important;
     text-align: left;
     box-shadow: var(--soft-shadow) !important;
-    display: flex;
     align-items: center;
 }
 
@@ -1216,20 +1216,43 @@ body.embedded .info-section .info-body {
         background: var(--bg-card) !important;
         border: 1px solid var(--border) !important;
         box-shadow: none !important;
+        padding: 12px 16px !important;
+        margin-bottom: 10px !important;
     }
 
-    .latex-abstract h4 {
-        color: var(--brand-gold) !important;
-        border-bottom-color: var(--border) !important;
+    .hero {
+        margin-bottom: 10px !important;
+        padding-top: 10px !important;
+    }
+
+    .hero h1 {
+        font-size: 22px !important;
+        margin-bottom: 4px !important;
+    }
+
+    .sbar {
+        margin-bottom: 10px !important;
+        padding: 8px 12px !important;
+    }
+
+    #narrativa::before,
+    #alertas::before,
+    #acciones::before {
+        margin-bottom: 10px !important;
     }
 
     .kpi-row {
-        page-break-inside: auto !important;
-        break-inside: auto !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
         display: grid !important;
         grid-template-columns: repeat(4, 1fr) !important;
-        gap: 8px 0 !important;
-        margin-bottom: 12px !important;
+        gap: 4px 0 !important;
+        margin: 8px 0 10px !important;
+    }
+
+    /* 11+ KPIs: 5 columns → fewer rows, avoids orphan card on next page */
+    .kpi-row.kpi-row--print-compact {
+        grid-template-columns: repeat(5, 1fr) !important;
     }
 
     .kpi {
@@ -1240,6 +1263,11 @@ body.embedded .info-section .info-body {
         border-radius: var(--radius-md) !important;
         box-shadow: none !important;
         border-right: 1px dashed var(--border) !important;
+        padding: 10px 6px !important;
+    }
+
+    .kpi-row.kpi-row--print-compact .kpi {
+        padding: 8px 4px !important;
     }
 
     .kpi:nth-child(4n),
@@ -1247,16 +1275,40 @@ body.embedded .info-section .info-body {
         border-right: none !important;
     }
 
+    .kpi-row.kpi-row--print-compact .kpi {
+        border-right: 1px dashed var(--border) !important;
+    }
+
+    .kpi-row.kpi-row--print-compact .kpi:nth-child(5n),
+    .kpi-row.kpi-row--print-compact .kpi:last-child {
+        border-right: none !important;
+    }
+
     .kpi-value {
         color: var(--metric-value) !important;
+        font-size: 17px !important;
+        margin-bottom: 2px !important;
+    }
+
+    .kpi-row.kpi-row--print-compact .kpi-value {
+        font-size: 15px !important;
     }
 
     .kpi-label {
         color: var(--text-muted) !important;
+        font-size: 8px !important;
+        line-height: 1.2 !important;
     }
 
     .kpi-sub {
         color: var(--text-dim) !important;
+        font-size: 8px !important;
+        line-height: 1.2 !important;
+    }
+
+    .latex-abstract h4 {
+        color: var(--brand-gold) !important;
+        border-bottom-color: var(--border) !important;
     }
 
     p,

@@ -351,7 +351,7 @@
         const relevantSections = {
             executive: ['ESTADO GENERAL', 'QUE ESTA PASANDO', 'QUE ESTÁ PASANDO', 'DONDE SE PIERDE DINERO', 'DÓNDE SE PIERDE DINERO', 'DECISIONES RECOMENDADAS', 'CONCLUSION', 'CONCLUSIÓN'],
             manager: ['QUE CAMBIO HOY', 'LO QUE FUNCIONA BIEN', 'PROBLEMAS DEL FUNNEL', 'PLAN DEL DIA', 'PLAN DEL DÍA', 'KPIS A VIGILAR', 'ALERTA ESPECIAL'],
-            analyst: ['RESUMEN DE FUENTES Y CALIDAD', 'HALLAZGOS CLAVE', 'SUPUESTOS Y LIMITACIONES', 'ALERTAS TECNICAS', 'ALERTAS TÉCNICAS', 'DATOS CLAVE EN TABLA', 'CONCLUSION', 'CONCLUSIÓN'],
+            analyst: ['RESUMEN DE FUENTES Y CALIDAD', 'HALLAZGOS CLAVE', 'SUPUESTOS Y LIMITACIONES', 'DATOS CLAVE EN TABLA', 'CONCLUSION', 'CONCLUSIÓN'],
             operations: ['PLAN DEL DIA', 'PLAN DEL DÍA', 'ALERTA ESPECIAL', 'PROBLEMAS DEL FUNNEL', 'ESTADO GENERAL']
         };
         const audienceSections = relevantSections[audience] || [];
@@ -706,25 +706,6 @@
         `;
     }
 
-    function buildAlertsTechnicalTableHtml(payload) {
-        const alerts = (payload.system?.alerts || []).filter((a) => a.severity !== 'info');
-        if (!alerts.length) return '';
-
-        const rows = alerts.map((alert) => `
-            <tr>
-                <td class="${severityClass(alert.severity)}">${severityLabel(alert.severity)}</td>
-                <td>${alert.rpn_score ?? '—'}</td>
-                <td>${escapeHtml(alert.title || '')}</td>
-                <td>${escapeHtml(formatSupportValue(alert, payload))}</td>
-            </tr>
-        `).join('');
-
-        return `<div class="tbl-wrap"><table>
-            <tr><th>Severidad</th><th>RPN</th><th>Alerta</th><th>Evidencia / soporte</th></tr>
-            ${rows}
-        </table></div>`;
-    }
-
     function buildConclusionHtml(payload) {
         const status = payload.system?.status || {};
         const health = payload.system?.health_score;
@@ -745,51 +726,69 @@
         `;
     }
 
-    function removeSuggestedAnalysesSection(contentBlock) {
-        if (!contentBlock) return;
+    function normalizeHeadingText(text) {
+        return text.trim().toUpperCase().replace(/[ÁÉÍÓÚ]/g, (m) => (
+            { Á: 'A', É: 'E', Í: 'I', Ó: 'O', Ú: 'U' }[m]
+        ));
+    }
 
-        const keys = ['ANALISIS SUGERIDOS', 'ANÁLISIS SUGERIDOS'];
+    function isNarrativeSectionHeading(child) {
+        return child.classList?.contains('report-section-title')
+            || child.tagName === 'H2' || child.tagName === 'H3'
+            || (child.tagName === 'P' && child.querySelector('strong:only-child'))
+            || (child.tagName === 'P' && (
+                child.style.fontWeight === '800' || child.style.fontWeight === 'bold'
+                || child.getAttribute('style')?.includes('font-weight:800')
+                || child.getAttribute('style')?.includes('font-weight: 800')
+            ));
+    }
+
+    function removeNarrativeSectionsByHeading(contentBlock, keys) {
+        if (!contentBlock || !keys?.length) return;
+
+        const normalizedKeys = keys.map(normalizeHeadingText);
         const children = Array.from(contentBlock.children);
-        let hiding = false;
+        let removing = false;
         let prevHr = null;
+        const toRemove = [];
 
         children.forEach((child) => {
-            const isHeading = child.classList?.contains('report-section-title')
-                || child.tagName === 'H2' || child.tagName === 'H3'
-                || (child.tagName === 'P' && child.querySelector('strong:only-child'))
-                || (child.tagName === 'P' && (
-                    child.style.fontWeight === '800' || child.style.fontWeight === 'bold'
-                    || child.getAttribute('style')?.includes('font-weight:800')
-                    || child.getAttribute('style')?.includes('font-weight: 800')
-                ));
-
             if (child.tagName === 'HR' || child.classList?.contains('report-section-divider')) {
-                if (!hiding) prevHr = child;
+                if (removing) toRemove.push(child);
+                else prevHr = child;
                 return;
             }
 
-            if (isHeading) {
-                const headingText = child.textContent.trim().toUpperCase().replace(/[ÁÉÍÓÚ]/g, (m) => (
-                    { Á: 'A', É: 'E', Í: 'I', Ó: 'O', Ú: 'U' }[m]
-                ));
-                const isSuggested = keys.some((k) => headingText.includes(k));
+            if (isNarrativeSectionHeading(child)) {
+                const headingText = normalizeHeadingText(child.textContent);
+                const isTarget = normalizedKeys.some((k) => headingText.includes(k));
 
-                if (isSuggested) {
-                    if (prevHr) prevHr.style.display = 'none';
-                    hiding = true;
-                    child.style.display = 'none';
+                if (isTarget) {
+                    if (prevHr) toRemove.push(prevHr);
+                    removing = true;
+                    toRemove.push(child);
                     prevHr = null;
                     return;
                 }
 
-                if (hiding) hiding = false;
+                if (removing) removing = false;
                 prevHr = null;
             }
 
-            if (hiding) {
-                child.style.display = 'none';
-            }
+            if (removing) toRemove.push(child);
         });
+
+        toRemove.forEach((node) => node.remove());
+    }
+
+    function removeSuggestedAnalysesSection(contentBlock) {
+        removeNarrativeSectionsByHeading(contentBlock, [
+            'ANALISIS SUGERIDOS', 'ANÁLISIS SUGERIDOS', 'ANALISIS SUGERIDO', 'ANÁLISIS SUGERIDO',
+        ]);
+    }
+
+    function removeTechnicalAlertsSection(contentBlock) {
+        removeNarrativeSectionsByHeading(contentBlock, ['ALERTAS TECNICAS', 'ALERTAS TÉCNICAS']);
     }
 
     function rebuildAnalystNarrative(contentBlock, payload) {
@@ -797,7 +796,6 @@
             { title: 'Resumen de fuentes y calidad', html: buildSourcesSummaryHtml(payload) },
             { title: 'Hallazgos clave', html: buildKeyFindingsHtml(payload) },
             { title: 'Supuestos y limitaciones', html: buildAssumptionsHtml(payload) },
-            { title: 'Alertas técnicas', html: buildAlertsTechnicalTableHtml(payload) },
             { title: 'Datos clave en tabla', html: (() => {
                 const metrics = buildKeyMetrics(payload);
                 return metrics.length ? buildMetricsTableHtml(metrics) : '';
@@ -881,6 +879,7 @@
                 });
             }
 
+            removeTechnicalAlertsSection(contentBlock);
             removeSuggestedAnalysesSection(contentBlock);
         }
 
@@ -944,18 +943,10 @@
         return 'status-green';
     }
 
-    function syncStatusBarFromPayload(payload) {
-        const status = payload?.system?.status;
-        const sbar = document.querySelector('.sbar');
-        if (!sbar || !status) return;
-
-        const reasons = (status.reasons || []).filter(Boolean).join(' — ')
-            || status.label
-            || 'Sin detalle adicional';
-        const label = (status.label || 'ESTADO DEL SISTEMA').toUpperCase();
-
-        sbar.className = `sbar ${statusBarClass(status.color)}`;
-        sbar.innerHTML = `<span class="sdot"></span>ESTADO: ${escapeHtml(label)} &mdash; ${escapeHtml(reasons)}`;
+    function syncStatusBarFromPayload() {
+        document.querySelectorAll('.sbar').forEach((sbar) => {
+            sbar.style.display = 'none';
+        });
     }
 
     function syncHeroDateFromPayload(payload) {
@@ -1129,7 +1120,7 @@
         const htmlGeneratedAt = extractHtmlGeneratedAt();
 
         syncHeroDateFromPayload(payload);
-        syncStatusBarFromPayload(payload);
+        syncStatusBarFromPayload();
         syncKpisFromPayload(payload);
         syncAlertsFromPayload(payload);
         syncActionsFromPayload(payload);
@@ -1227,17 +1218,17 @@
             purpose: 'Planificar la capacidad del equipo de call center y dimensionar la carga operativa diaria.'
         },
         'PREVISION DIARIA': {
-            definition: 'El volumen pronosticado de leads que ingresarán el día de mañana.',
+            definition: 'El volumen pronosticado de leads que ingresarán en el día objetivo del pronóstico (primer día después del último dato completo en la serie).',
             source: 'Modelos predictivos de series de tiempo (ej. ensemble_weighted) en la API de ML.',
             purpose: 'Anticipar picos o valles de leads y ajustar la asignación de agentes de venta con antelación.'
         },
         'DAILY FORECAST': {
-            definition: 'El volumen pronosticado de leads que ingresarán el día de mañana.',
+            definition: 'El volumen pronosticado de leads que ingresarán en el día objetivo del pronóstico (primer día después del último dato completo en la serie).',
             source: 'Modelos predictivos de series de tiempo (ej. ensemble_weighted) en la API de ML.',
             purpose: 'Anticipar picos o valles de leads y ajustar la asignación de agentes de venta con antelación.'
         },
         'PREVISION': {
-            definition: 'El volumen pronosticado de leads que ingresarán el día de mañana.',
+            definition: 'El volumen pronosticado de leads que ingresarán en el día objetivo del pronóstico (primer día después del último dato completo en la serie).',
             source: 'Modelos predictivos de series de tiempo (ej. ensemble_weighted) en la API de ML.',
             purpose: 'Anticipar picos o valles de leads y ajustar la asignación de agentes de venta con antelación.'
         },
@@ -1312,6 +1303,17 @@
         });
     }
 
+    function prepareKpiPrintLayout() {
+        const row = document.querySelector('#narrativa .kpi-row');
+        if (!row) return;
+
+        const visibleCount = Array.from(row.querySelectorAll('.kpi')).filter((kpi) => (
+            window.getComputedStyle(kpi).display !== 'none'
+        )).length;
+
+        row.classList.toggle('kpi-row--print-compact', visibleCount >= 11);
+    }
+
     // ── Inicialización ──
     function initReportAnimations() {
         initTheme();
@@ -1329,6 +1331,8 @@
             filterContentByAudience(audience);
             filterAlertsAndActionsByAudience(audience);
         }
+
+        prepareKpiPrintLayout();
 
         prepareKpiValues();
         setupEmbeddedPreview();

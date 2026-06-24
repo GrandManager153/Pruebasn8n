@@ -85,6 +85,47 @@ function replayInvestmentChartAnimation() {
     chart.update('active');
 }
 
+function shouldAnimateOperationsUI() {
+    return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function getOperationsChartAnimationOptions(chartKind = 'default') {
+    if (!shouldAnimateOperationsUI()) return false;
+    const step = chartKind === 'daily' ? 8 : chartKind === 'hourly' ? 10 : 35;
+    const cap = chartKind === 'daily' ? 320 : chartKind === 'hourly' ? 240 : 280;
+    return {
+        duration: chartKind === 'daily' ? 900 : 800,
+        easing: 'easeOutQuart',
+        delay: (context) => {
+            if (context.type !== 'data' || context.mode !== 'default') return 0;
+            const ds = context.chart?.data?.datasets?.[context.datasetIndex];
+            if (ds?.label === 'Promedio Diario') return 0;
+            return Math.min(context.dataIndex * step, cap);
+        },
+    };
+}
+
+function replayOperationsChartsAnimation() {
+    if (!shouldAnimateOperationsUI()) return;
+    ['daily_volume', 'seasonal', 'hourly'].forEach((key) => {
+        const chart = charts[key];
+        if (!chart) return;
+        chart.reset();
+        chart.update('active');
+    });
+}
+
+function replayOperationsKpiAnimation() {
+    if (!shouldAnimateOperationsUI()) return;
+    document.querySelectorAll('#tab-operations [data-ops-value]').forEach((el) => {
+        parseAndAnimate(el, el.getAttribute('data-ops-value'), 700, { scoped: 'operations' });
+    });
+}
+
+function applyOperationsProgressBars(root) {
+    applyProgressBars(root || document.getElementById('tab-operations'), shouldAnimateOperationsUI());
+}
+
 function scheduleDeferredRender(fn) {
     if (typeof requestIdleCallback === 'function') {
         requestIdleCallback(() => fn(), { timeout: 1500 });
@@ -165,6 +206,10 @@ function ensureTabRendered(tabId) {
                     renderHourlyChart(ops.hourly_distribution);
                 }
                 renderedTabs.add('operations-charts');
+            } else if (dashboardData?.operations) {
+                replayOperationsChartsAnimation();
+                replayOperationsKpiAnimation();
+                applyOperationsProgressBars();
             }
             break;
         case 'alerts':
@@ -255,6 +300,10 @@ function resolveKpiExplanationKey(label) {
 const KPI_EXPLANATION_ALIASES = {
     'Salud del Sistema': 'Health Score',
     'Pronóstico Diario': 'Prevision diaria',
+    'Pronóstico de Hoy': 'Pronóstico de Hoy',
+    'Pronóstico de Mañana': 'Pronóstico Mañana',
+    'Pronóstico de mañana': 'Pronóstico Mañana',
+    'Pronóstico de hoy': 'Pronóstico de Hoy',
     'Precisión del Modelo': 'MASE',
     'Costo Promedio por Lead': 'CPL implicito',
     'Inversión Publicitaria': 'Gasto total',
@@ -316,8 +365,8 @@ const KPI_EXPLANATIONS = {
     },
     'Prevision diaria': {
         icon: '🔮',
-        definition: 'Daily Forecast: predicción del modelo sobre cuántos leads se recibirán mañana. Se calcula con time-series models (p. ej. theta_lite) que capturan patrones históricos y estacionalidad.',
-        interpretation: 'El símbolo "~" indica aproximación. Con intervalos de confianza (p. ej. 80%), útil para staffing del call center al día siguiente.',
+        definition: 'Daily Forecast: predicción del modelo sobre cuántos leads se recibirán en el día objetivo del pronóstico (primer día después del último dato completo en la serie). Se calcula con time-series models que capturan patrones históricos y estacionalidad.',
+        interpretation: 'El símbolo "~" indica aproximación. Con intervalos de confianza (p. ej. 80%), útil para staffing del call center en el día pronosticado.',
         source: 'Mejor modelo por MASE en forecast + forecast_rf — recommended_value / next_1d'
     },
     'MASE': {
@@ -364,9 +413,9 @@ const KPI_EXPLANATIONS = {
     },
     'Conversion global': {
         icon: '🎯',
-        definition: 'Porcentaje de consultas agendadas respecto al total de leads del periodo (operations.total_leads). Incluye todas las variantes de Consult Booked.',
-        interpretation: '> 5% suele ser fuerte en este sector; < 3.5% sugiere fuga temprana o leads no calificados por creativo/audiencia.',
-        source: 'funnel.conversion_pct — (consultas agendadas ÷ leads totales del periodo) × 100'
+        definition: 'Consultas agendadas del periodo ÷ total de leads del periodo (operations.total_leads). El numerador suma eventos de transición hacia Consult Booked y variantes, no leads únicos.',
+        interpretation: 'No es el CVR clásico de marketing (3.5–5%). Puede leer más alto porque un lead puede generar más de un evento de consulta en el historial. Úsala para comparar periodos entre sí: sube = más consultas por lead entrante; baja = más fuga.',
+        source: 'funnel.conversion_pct'
     },
     'Revenue at Risk': {
         icon: '💸',
@@ -412,9 +461,9 @@ const KPI_EXPLANATIONS = {
     },
     'Tasa Global de Conversión': {
         icon: '🎯',
-        definition: 'Porcentaje de consultas agendadas respecto al total de leads del periodo analizado (operations.total_leads).',
-        interpretation: 'Una tasa superior al 5% es excelente para este sector. Por debajo de 3.5% sugiere fuga importante o leads poco calificados.',
-        source: 'funnel.conversion_pct — consultas agendadas ÷ leads totales del periodo'
+        definition: 'Consultas agendadas del periodo divididas entre el total de leads del periodo. Incluye variantes Consult Booked (PROMO, HS, etc.).',
+        interpretation: 'No confundir con el rango 3.5–5% del CVR de pauta: esta tasa usa eventos de transición en el numerador. Compara contra tu periodo anterior para ver tendencia.',
+        source: 'funnel.conversion_pct'
     },
     'Ingresos en Riesgo Estimados': {
         icon: '💸',
@@ -424,8 +473,14 @@ const KPI_EXPLANATIONS = {
     },
     'Pronóstico Mañana': {
         icon: '🔮',
-        definition: 'La proyección de la cantidad de leads que entrarán al sistema el día de mañana utilizando el modelo predictivo matemático de la serie temporal (Theta Lite o Random Forest).',
+        definition: 'La proyección de la cantidad de leads que entrarán al sistema mañana utilizando el modelo predictivo matemático de la serie temporal (Theta Lite o Random Forest).',
         interpretation: 'Se utiliza para prever la capacidad de agentes requerida. Si la proyección supera el promedio, se recomienda reforzar el call center para evitar desbordes.',
+        source: 'Modelos predictivos de series temporales (theta_lite / Random Forest) — Forecast API'
+    },
+    'Pronóstico de Hoy': {
+        icon: '🔮',
+        definition: 'La proyección de la cantidad de leads que entrarán al sistema hoy utilizando el modelo predictivo matemático de la serie temporal, con datos completos hasta el último día cerrado.',
+        interpretation: 'Útil para ajustar staffing intradía. Si la proyección supera el promedio, verifica que los agentes puedan atender el volumen esperado.',
         source: 'Modelos predictivos de series temporales (theta_lite / Random Forest) — Forecast API'
     },
     'Pronóstico 7 Días': {
@@ -575,7 +630,7 @@ const KPI_EXPLANATIONS = {
     'Presión de staffing': {
         icon: '👥',
         definition: 'Indicador de presión de personal: compara la demanda proyectada contra la capacidad disponible de agentes.',
-        interpretation: 'Estado Crítica o Presión implica gap de leads sin atender mañana; OK indica cobertura suficiente.',
+        interpretation: 'Estado Crítica o Presión implica gap de leads sin atender en el día pronosticado; OK indica cobertura suficiente.',
         source: 'operations.littles_law.staffing_pressure'
     }
 };
@@ -602,11 +657,17 @@ function setKpiModalContent({ title, subtitle, value, definition, interpretation
 function openKpiModal(label, value) {
     const explainKey = resolveKpiExplanationKey(label);
     const explain = explainKey ? KPI_EXPLANATIONS[explainKey] : null;
+    const ft = dashboardData ? getForecastTarget(dashboardData) : null;
+    const isForecastCard = ft && (
+        label === ft.label_card || label === ft.label_kpi
+        || label === 'Pronóstico Mañana' || label === 'Pronóstico de Hoy' || label === 'Pronóstico de Mañana'
+    );
 
     setKpiModalContent({
         title: label,
+        subtitle: isForecastCard && ft?.subtext ? ft.subtext : undefined,
         value: value != null && value !== '' ? value : '—',
-        definition: explain?.definition || 'Indicador operativo del call center registrado en el periodo analizado.',
+        definition: (isForecastCard && ft?.explanation_es) ? ft.explanation_es : (explain?.definition || 'Indicador operativo del call center registrado en el periodo analizado.'),
         interpretation: explain?.interpretation || 'Compara el valor actual con los umbrales operativos recomendados para decidir si requiere acción.',
         source: explain?.source || 'CRM integrado vía n8n — operations',
     });
@@ -918,7 +979,7 @@ function switchTab(tabId) {
         'investment': 'Inversión y Campañas',
         'operations': 'Operaciones Diarias',
         'alerts': 'Alertas de Operación',
-        'reports': 'Informes Corporativos'
+        'reports': 'Informes Corporativos',
     };
     const sectionTitleEl = document.getElementById('topbar-section-title');
     if (sectionTitleEl) {
@@ -943,10 +1004,12 @@ function animateValue(element, start, end, duration, options = {}) {
         suffix = '',
         decimals = 0,
         useSeparator = false,
-        isTime = false
+        isTime = false,
+        scoped = null,
     } = options;
 
-    if (!shouldAnimateUI() || duration <= 0) {
+    const canAnimate = scoped === 'operations' ? shouldAnimateOperationsUI() : shouldAnimateUI();
+    if (!canAnimate || duration <= 0) {
         if (isTime) {
             const totalMinutes = Math.floor(end);
             const hrs = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
@@ -1013,10 +1076,13 @@ function animateValue(element, start, end, duration, options = {}) {
 }
 
 // Helper to trigger parsing and animation of any numeric string
-function parseAndAnimate(element, rawValue, duration = 700) {
+function parseAndAnimate(element, rawValue, duration = 700, options = {}) {
     if (!element) return;
-    if (!shouldAnimateUI()) duration = 0;
+    const scoped = options.scoped || null;
+    const canAnimate = scoped === 'operations' ? shouldAnimateOperationsUI() : shouldAnimateUI();
+    if (!canAnimate) duration = 0;
     const valueStr = String(rawValue).trim();
+    const animOpts = { scoped };
 
     // Check if it's clock format (e.g., "19:00")
     if (valueStr.includes(':') && !valueStr.includes('$')) {
@@ -1024,7 +1090,7 @@ function parseAndAnimate(element, rawValue, duration = 700) {
         const hours = parseInt(parts[0]) || 0;
         const minutes = parseInt(parts[1]) || 0;
         const totalMins = hours * 60 + minutes;
-        animateValue(element, 0, totalMins, duration, { isTime: true });
+        animateValue(element, 0, totalMins, duration, { isTime: true, ...animOpts });
     } else {
         // Strip $, %, approximate sign (~), commas and spaces
         const stripped = valueStr.replace(/[$\s%,~]/g, '');
@@ -1034,7 +1100,7 @@ function parseAndAnimate(element, rawValue, duration = 700) {
             const parts = stripped.split('/');
             const current = parseFloat(parts[0]) || 0;
             const maxVal = parseFloat(parts[1]) || 100;
-            animateValue(element, 0, current, duration, { suffix: `/${maxVal}` });
+            animateValue(element, 0, current, duration, { suffix: `/${maxVal}`, ...animOpts });
         } else {
             const parsedNumber = parseFloat(stripped) || 0;
 
@@ -1058,7 +1124,8 @@ function parseAndAnimate(element, rawValue, duration = 700) {
                 prefix,
                 suffix,
                 decimals,
-                useSeparator: !isPercentage && useSeparator
+                useSeparator: !isPercentage && useSeparator,
+                ...animOpts,
             });
         }
     }
@@ -1256,27 +1323,39 @@ function renderLittlesLawCards(ops) {
     const pressureLabel = ll.staffing_pressure === 'critical' ? 'Crítica'
         : ll.staffing_pressure === 'pressure' ? 'Presión' : 'OK';
 
+    const ft = dashboardData ? getForecastTarget(dashboardData) : null;
+    const gapLabel = ft?.horizon_offset === 0 ? 'Gap hoy' : 'Gap mañana';
+
     const cards = [
         { label: 'Tasa de llegada (λ)', value: `${Number(ll.arrival_rate_per_hour).toFixed(2)} leads/h`, sub: 'Promedio diario / 24', color: 'blue' },
         { label: 'Tiempo de servicio (W)', value: `${Number(ll.avg_service_minutes).toFixed(1)} min`, sub: 'Duración media', color: 'blue' },
         { label: 'Cola estimada (L)', value: Number(ll.estimated_queue_leads).toFixed(1), sub: 'λ × W', color: 'gold' },
         { label: 'Utilización', value: `${ll.utilization_pct}%`, sub: `Capacidad: ${ll.capacity_leads_per_day || '—'} leads/día`, color: ll.utilization_pct > 85 ? 'red' : 'green' },
-        { label: 'Presión staffing', value: pressureLabel, sub: ll.staffing_gap_tomorrow > 0 ? `Gap mañana: +${ll.staffing_gap_tomorrow}` : 'Sin gap', color: ll.staffing_pressure === 'critical' ? 'red' : ll.staffing_pressure === 'pressure' ? 'gold' : 'green' },
+        { label: 'Presión staffing', value: pressureLabel, sub: ll.staffing_gap_tomorrow > 0 ? `${gapLabel}: +${ll.staffing_gap_tomorrow}` : 'Sin gap', color: ll.staffing_pressure === 'critical' ? 'red' : ll.staffing_pressure === 'pressure' ? 'gold' : 'green', animate: false },
     ];
 
     el.style.display = 'grid';
     el.innerHTML = cards.map((c, i) => {
         const escapedLabel = c.label.replace(/'/g, "\\'");
         const escapedValue = String(c.value).replace(/'/g, "\\'");
+        const canAnimate = c.animate !== false && shouldAnimateOperationsUI();
+        const valueAttr = c.animate !== false ? ` data-ops-value="${escapedValue}"` : '';
+        const displayValue = canAnimate ? '0' : c.value;
         return `
-        <div class="card stat-card-${c.color} card-animate" style="animation-delay:${i * 0.03}s;cursor:pointer;"
+        <div class="card stat-card-${c.color} ops-enter" style="animation-delay:${i * 0.03}s;cursor:pointer;"
             onclick="openKpiModal('${escapedLabel}', '${escapedValue}')">
             <div class="card-stat-label">${c.label}</div>
-            <div class="card-stat-value">${c.value}</div>
+            <div class="card-stat-value"${valueAttr}>${displayValue}</div>
             <div class="card-stat-sub">${c.sub}</div>
         </div>
     `;
     }).join('');
+
+    if (shouldAnimateOperationsUI()) {
+        el.querySelectorAll('[data-ops-value]').forEach((valueEl) => {
+            parseAndAnimate(valueEl, valueEl.getAttribute('data-ops-value'), 700, { scoped: 'operations' });
+        });
+    }
 }
 
 const INVESTMENT_COMPARE_METRICS = [
@@ -1563,15 +1642,6 @@ function renderBOS(data, history) {
     renderedTabs.clear();
     renderedTabs.add('dashboard');
 
-    // Update main horizontal status bar dynamically
-    const mainSbar = document.getElementById('main-sbar');
-    const mainSbarText = document.getElementById('main-sbar-text');
-    if (mainSbar && mainSbarText) {
-        const severityClass = data.system.status.color === 'rojo' ? 'status-red' : data.system.status.color === 'amarillo' ? 'status-yellow' : 'status-green';
-        mainSbar.className = `sbar topbar-status ${severityClass}`;
-        mainSbarText.innerHTML = `ESTADO: ${cleanTechnicalTerms(data.system.status.label).toUpperCase()} &mdash; ${cleanTechnicalTerms(data.system.status.reasons[0] || 'Operación en curso.')}`;
-    }
-
     // 1. Render System Health Hero
     const healthColor = data.system.health_score >= 80 ? 'var(--green)' : data.system.health_score >= 60 ? 'var(--amber)' : 'var(--red)';
     const circumference = 2 * Math.PI * 58;
@@ -1656,9 +1726,11 @@ function renderBOS(data, history) {
             }
 
             let formattedName = bestModelName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            const ft = getForecastTarget(data);
             k.value = `~${bestModelVal}`;
             sub = `${formattedName} | ${bestConfidence.replace(/\b\w/g, c => c.toUpperCase())}`;
-            label = 'Pronóstico Diario';
+            if (ft?.subtext) sub += ` · ${ft.subtext}`;
+            label = ft?.label_kpi || 'Pronóstico Diario';
         }
         if (k.label === 'MASE') {
             let bestModelName = 'Random Forest';
@@ -2423,36 +2495,6 @@ function renderFunnelDetails(data) {
     renderFunnelFeedersList(data, feederAlerts);
     renderFunnelLeaksList(data, leaks);
 
-    const trapStates = Array.isArray(data.funnel?.trap_states) ? data.funnel.trap_states : [];
-    const trapPanel = document.getElementById('funnel-trap-states-panel');
-    if (trapPanel) {
-        if (trapStates.length > 0) {
-            trapPanel.style.display = 'block';
-            trapPanel.innerHTML = `
-                <div class="chart-title" style="margin-bottom: 12px;">
-                    <span class="dot" style="background: var(--amber);"></span>
-                    Estados trampa (leads estancados)
-                </div>
-                <div class="funnel-scroll-list">
-                    ${trapStates.slice(0, 8).map((trap, idx) => renderFunnelListItem({
-                        title: shortenFunnelLabel(cleanTechnicalTerms(trap.state || '—')),
-                        subtitle: trap.reason || 'Bajo avance hacia conversión',
-                        pct: Math.min(Number(trap.loss_rate) || 0, 100),
-                        color: 'var(--amber)',
-                        barColor: 'var(--amber)',
-                        metaRight: `${trap.total_cnt || 0} leads`,
-                        delay: idx * 0.02,
-                        rank: idx + 1,
-                        variant: 'leak',
-                    })).join('')}
-                </div>
-            `;
-        } else {
-            trapPanel.style.display = 'none';
-            trapPanel.innerHTML = '';
-        }
-    }
-
     const statesData = resolveFunnelMarkovStates(data);
     const advancedToggle = document.getElementById('funnel-markov-advanced-toggle');
     if (advancedToggle) {
@@ -2569,7 +2611,7 @@ function getKpiSemantics(kpi, data) {
             showTrend = false;
             if (parseSignedPercent(kpi.value) != null) {
                 const cvr = parseSignedPercent(kpi.value);
-                cardColor = cvr >= 3.0 ? 'green' : cvr >= 2.0 ? 'blue' : 'red';
+                cardColor = cvr >= 10 ? 'green' : cvr >= 5 ? 'blue' : 'gold';
             }
             break;
         case 'CPL implicito': {
@@ -2869,7 +2911,9 @@ function applyBestForecastToKpis(kpis, data) {
     const dailySub = `${modelSub} | ${conf}`;
     const dailyVal = best.dailyValue != null ? `~${Math.round(best.dailyValue)}` : null;
 
-    const forecastLabels = new Set(['Prevision diaria', 'Pronóstico Diario']);
+    const forecastLabels = new Set(['Prevision diaria', 'Pronóstico Diario', 'Pronóstico de Hoy', 'Pronóstico de Mañana']);
+    const ft = getForecastTarget(data);
+    if (ft?.label_kpi) forecastLabels.add(ft.label_kpi);
     const maseLabels = new Set(['MASE', 'Precisión del Modelo']);
 
     return kpis.map(k => {
@@ -2910,16 +2954,19 @@ function renderHorizonCards(horizons, options = {}) {
     const h1d = horizons.next_1d || {};
     const h7d = horizons.next_7d || {};
     const h14d = horizons.next_14d || {};
+    const ft = dashboardData ? getForecastTarget(dashboardData) : null;
+    const card1dLabel = ft?.label_card || 'Pronóstico de mañana';
+    const card1dSub = ft?.subtext ? `${ft.subtext} · ` : '';
     const modelSub = bestName
         ? `Mejor modelo: ${formatModelLabel(bestName)}`
         : 'Mejor modelo por MASE';
 
     let cardsHtml = `
         <div class="card stat-card-blue card-animate" style="animation-delay: 0.03s;"
-            onclick="openKpiModal('Pronóstico Mañana', '${h1d.forecast ?? 0}')">
-            <div class="card-stat-label">Pronóstico Mañana</div>
+            onclick="openKpiModal('${card1dLabel.replace(/'/g, "\\'")}', '${h1d.forecast ?? 0}')">
+            <div class="card-stat-label">${card1dLabel}</div>
             <div class="card-stat-value" id="${prefix}forecast-1d-val" data-value="${h1d.forecast ?? 0}">0</div>
-            <div class="card-stat-sub">Rango: ${h1d.band_low ?? 0} a ${h1d.band_high ?? 0} leads · ${modelSub}</div>
+            <div class="card-stat-sub">${card1dSub}Rango: ${h1d.band_low ?? 0} a ${h1d.band_high ?? 0} leads · ${modelSub}</div>
         </div>
         <div class="card stat-card-gold card-animate" style="animation-delay: 0.06s;"
             onclick="openKpiModal('Pronóstico 7 Días', '${h7d.forecast ?? 0}')">
@@ -2992,7 +3039,111 @@ function normalizeModelSeries(series, chartLen) {
     return series.slice(series.length - chartLen);
 }
 
+function getForecastTarget(data) {
+    if (!data) data = dashboardData;
+    if (!data) return null;
+
+    const cached = data.forecast?.forecast_target || data.forecast_rf?.forecast_target;
+    if (cached) return cached;
+
+    const TZ = 'America/Mexico_City';
+    const toDateKey = (value) => {
+        if (!value) return null;
+        const raw = String(value).split('T')[0];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+        const d = new Date(value);
+        if (isNaN(d.getTime())) return null;
+        return d.toLocaleDateString('en-CA', { timeZone: TZ });
+    };
+    const addDays = (dateKey, days) => {
+        if (!dateKey) return null;
+        const [y, m, d] = dateKey.split('-').map(Number);
+        const dt = new Date(Date.UTC(y, m - 1, d + days));
+        return dt.toISOString().slice(0, 10);
+    };
+    const daysBetween = (fromKey, toKey) => {
+        if (!fromKey || !toKey) return null;
+        const [y1, m1, d1] = fromKey.split('-').map(Number);
+        const [y2, m2, d2] = toKey.split('-').map(Number);
+        const a = Date.UTC(y1, m1 - 1, d1);
+        const b = Date.UTC(y2, m2 - 1, d2);
+        return Math.round((b - a) / 86400000);
+    };
+    const formatShortEs = (dateKey) => {
+        if (!dateKey) return '';
+        const [y, m, d] = dateKey.split('-').map(Number);
+        const dt = new Date(y, m - 1, d);
+        return dt.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+    };
+
+    const referenceDate = toDateKey(data.meta?.generated_at || new Date().toISOString());
+    const ts = data.forecast_rf?.time_series?.length
+        ? data.forecast_rf.time_series
+        : (data.forecast?.time_series || []);
+    const lastCompleteDate = ts.length
+        ? toDateKey(ts[ts.length - 1].date)
+        : toDateKey(data.operations?.latest?.date);
+    let targetDate = toDateKey(
+        data.forecast?.next_point?.date || data.forecast_rf?.next_point?.date
+    );
+    if (!targetDate && lastCompleteDate) targetDate = addDays(lastCompleteDate, 1);
+
+    const horizonOffset = targetDate && referenceDate != null
+        ? daysBetween(referenceDate, targetDate)
+        : 1;
+
+    let labelShort = 'Mañana';
+    let labelCard = 'Pronóstico de mañana';
+    let labelKpi = 'Pronóstico de Mañana';
+    let explanationEs = 'Predicción de leads para el día siguiente al último dato completo en la serie.';
+
+    if (horizonOffset === 0) {
+        labelShort = 'Hoy';
+        labelCard = 'Pronóstico de hoy';
+        labelKpi = 'Pronóstico de Hoy';
+        explanationEs = 'Predicción de leads para hoy, usando datos completos hasta el último día cerrado en la serie.';
+    } else if (horizonOffset === 1) {
+        labelShort = 'Mañana';
+        labelCard = 'Pronóstico de mañana';
+        labelKpi = 'Pronóstico de Mañana';
+        explanationEs = 'Predicción de leads para mañana, usando datos completos hasta el último día cerrado en la serie.';
+    } else if (targetDate) {
+        const fmt = formatShortEs(targetDate);
+        labelShort = fmt;
+        labelCard = `Pronóstico ${fmt}`;
+        labelKpi = `Pronóstico ${fmt}`;
+        explanationEs = `Predicción de leads para el ${fmt}, usando datos completos hasta el último día cerrado en la serie.`;
+    }
+
+    const lastFmt = lastCompleteDate ? formatShortEs(lastCompleteDate) : null;
+    const subtext = lastFmt
+        ? `Basado en datos completos hasta el ${lastFmt}`
+        : 'Basado en el último día completo de la serie';
+
+    return {
+        last_complete_date: lastCompleteDate,
+        target_date: targetDate,
+        reference_date: referenceDate,
+        horizon_offset: horizonOffset,
+        label_short: labelShort,
+        label_card: labelCard,
+        label_kpi: labelKpi,
+        label_chart: targetDate ? formatShortEs(targetDate) : labelShort,
+        subtext,
+        explanation_es: explanationEs,
+        timezone: TZ,
+    };
+}
+
 function resolveNextForecastLabel(forecast, ts) {
+    const ft = getForecastTarget({
+        forecast,
+        forecast_rf: dashboardData?.forecast_rf,
+        meta: dashboardData?.meta,
+        operations: dashboardData?.operations,
+    });
+    if (ft?.label_chart) return ft.label_chart;
+
     const np = forecast?.next_point?.date
         || dashboardData?.forecast_rf?.next_point?.date;
     let dateStr = np;
@@ -3083,20 +3234,22 @@ function getModelRecord(data, modelName) {
 
 function getChartForecastLine() {
     const f = dashboardData?.forecast || {};
+    const ft = dashboardData ? getForecastTarget(dashboardData) : null;
+    const horizonSuffix = ft?.label_short ? ` · ${ft.label_short}` : '';
     const visible = getVisibleModelNames();
     if (visible.length === 1) {
         const name = visible[0];
         const daily = resolveDailyForecastForModel(dashboardData, name);
         return {
             value: daily?.value ?? f.recommended_value,
-            label: `Pronóstico ${formatModelLabel(name)}`,
+            label: `Pronóstico ${formatModelLabel(name)}${horizonSuffix}`,
             color: getModelColor(name),
         };
     }
     const method = f.method || 'recomendado';
     return {
         value: f.recommended_value,
-        label: `Pronóstico ${formatModelLabel(method)}`,
+        label: `Pronóstico ${formatModelLabel(method)}${horizonSuffix}`,
         color: getModelColor(method),
     };
 }
@@ -4010,7 +4163,7 @@ function renderSeasonalChart(indices, options = {}) {
             }]
         },
         options: {
-            animation: getChartAnimationOptions(),
+            animation: getOperationsChartAnimationOptions('seasonal'),
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
@@ -4156,7 +4309,7 @@ function renderHourlyChart(hourly) {
             }]
         },
         options: {
-            animation: getChartAnimationOptions(),
+            animation: getOperationsChartAnimationOptions('hourly'),
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
@@ -4255,7 +4408,7 @@ function renderDailyVolumeChart(ops) {
             ]
         },
         options: {
-            animation: getChartAnimationOptions(),
+            animation: getOperationsChartAnimationOptions('daily'),
             responsive: true,
             maintainAspectRatio: false,
             interaction: {
@@ -4331,10 +4484,12 @@ function renderOperationsTab(data, options = {}) {
             const label = capacity.label === 'critical' ? 'Presión crítica'
                 : capacity.label === 'pressure' ? 'Bajo presión' : 'Capacidad OK';
             capacityBadge.style.display = 'block';
+            capacityBadge.className = 'card ops-enter';
             capacityBadge.innerHTML = `<strong>Forecast vs capacidad:</strong> ${label} — pronóstico ${capacity.forecast_value} vs promedio ${capacity.avg_daily} (ratio ${capacity.ratio})`;
         } else {
             capacityBadge.style.display = 'none';
             capacityBadge.innerHTML = '';
+            capacityBadge.className = 'card';
         }
     }
 
@@ -4413,20 +4568,23 @@ function renderOperationsTab(data, options = {}) {
         kpiCardsEl.innerHTML = kpis.map((kpi, idx) => {
             const escapedLabel = kpi.label.replace(/'/g, "\\'");
             const escapedValue = String(kpi.value).replace(/'/g, "\\'");
+            const canAnimate = shouldAnimateOperationsUI();
             return `
-                <div class="card stat-card-${kpi.color} card-animate" style="animation-delay: ${idx * 0.025}s;cursor:pointer;"
+                <div class="card stat-card-${kpi.color} ops-enter" style="animation-delay: ${idx * 0.025}s;cursor:pointer;"
                     onclick="openKpiModal('${escapedLabel}', '${escapedValue}')">
                     <div class="card-stat-label">${kpi.label}</div>
-                    <div class="card-stat-value" id="ops-kpi-val-${idx}">${kpi.value}</div>
+                    <div class="card-stat-value" id="ops-kpi-val-${idx}" data-ops-value="${escapedValue}">${canAnimate ? '0' : kpi.value}</div>
                     <div class="card-stat-sub">${kpi.sub}</div>
                 </div>
             `;
         }).join('');
 
-        kpis.forEach((kpi, idx) => {
-            const el = document.getElementById(`ops-kpi-val-${idx}`);
-            parseAndAnimate(el, kpi.value);
-        });
+        if (shouldAnimateOperationsUI()) {
+            kpis.forEach((kpi, idx) => {
+                const el = document.getElementById(`ops-kpi-val-${idx}`);
+                parseAndAnimate(el, kpi.value, 700, { scoped: 'operations' });
+            });
+        }
     }
 
     // 2. Render Daily Volume Chart
@@ -4473,20 +4631,21 @@ function renderOperationsTab(data, options = {}) {
             }
         ];
 
-        distBarsEl.innerHTML = items.map(item => {
+        distBarsEl.innerHTML = items.map((item, idx) => {
             const pct = ((item.val / totalCalls) * 100).toFixed(1);
             return `
-                <div class="progress-bar-wrapper" style="width: 100%;">
+                <div class="progress-bar-wrapper ops-enter" style="width: 100%; animation-delay: ${(0.12 + idx * 0.05).toFixed(2)}s;">
                     <div style="display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">
                         <span>${item.label}</span>
                         <span style="font-family: var(--mono); color: var(--text-main);">${item.val.toLocaleString()} (${pct}%)</span>
                     </div>
                     <div style="height: 8px; background: rgba(255,255,255,0.03); border-radius: 4px; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.02);">
-                        <div class="progress-bar-fill" style="width: ${pct}%; background: ${item.color};" data-pct="${pct}"></div>
+                        <div class="progress-bar-fill" style="width: 0%; background: ${item.color};" data-pct="${pct}"></div>
                     </div>
                 </div>
             `;
         }).join('');
+        applyOperationsProgressBars(distBarsEl);
     }
 
     // 4. Update Warning Text
@@ -4802,7 +4961,6 @@ window.toggleTheme = function (event) {
 
 window.triggerSync = async function (event) {
     const icon = document.getElementById('sync-icon-svg');
-    const sbarText = document.getElementById('main-sbar-text');
     if (icon) {
         icon.style.transform = 'rotate(360deg)';
         setTimeout(() => {
@@ -4811,10 +4969,6 @@ window.triggerSync = async function (event) {
             void icon.offsetWidth; // Force reflow
             icon.style.transition = 'transform 1s ease';
         }, 1000);
-    }
-
-    if (sbarText) {
-        sbarText.innerHTML = "Sincronizando datos con n8n al instante...";
     }
 
     // Call loadBOS to fetch the latest dynamic data from the server
