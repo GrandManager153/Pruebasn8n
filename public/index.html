@@ -6,6 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PulseMkt — Inteligencia de Marketing</title>
     <meta name="description" content="PulseMkt — Panel de inteligencia de marketing, leads, embudo y pronósticos">
+    <meta name="theme-color" content="#0a1020">
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/favicon.svg">
 
     <!-- Google Fonts -->
     <link
@@ -17,7 +21,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
 
     <!-- Custom Extracted Stylesheets -->
-    <link rel="stylesheet" href="/css/styles.css?v=18">
+    <link rel="stylesheet" href="/css/styles.css?v=20">
 </head>
 
 <body>
@@ -78,6 +82,9 @@
         <!-- Sidebar Menu (Left - Option A) -->
         <aside class="sidebar">
             <div class="sidebar-brand">
+                <div class="brand-icon-wrapper" aria-hidden="true">
+                    <img src="/favicon.svg" alt="" class="brand-icon" width="32" height="32">
+                </div>
                 <div class="brand-text">
                     <h1>PulseMkt</h1>
                     <p>Inteligencia de Marketing</p>
@@ -262,8 +269,6 @@
                         </div>
                     </div>
 
-                    <div id="funnel-trap-states-panel" class="card v-mt-4" style="display: none;"></div>
-
                     <div class="funnel-accordion v-mt-4">
                         <button type="button" class="funnel-accordion-header" id="funnel-markov-toggle" onclick="toggleFunnelMarkov()" aria-expanded="false">
                             <span class="funnel-accordion-chevron" id="funnel-markov-chevron">▶</span>
@@ -385,7 +390,7 @@
                     </div>
 
                     <!-- Volume Chart row -->
-                    <div class="card v-mb-4 card-animate" style="animation-delay: 0.04s;">
+                    <div class="card v-mb-4 ops-enter" style="animation-delay: 0.04s;">
                         <div class="v-flex-between v-mb-3">
                             <div class="chart-title" style="margin-bottom: 0;"><span class="dot" style="background: #3b82f6"></span> Daily Volume (Volumen Diario de Leads)</div>
                             <div class="chart-toolbar" style="margin-left: auto;">
@@ -403,12 +408,12 @@
 
                     <!-- Seasonality & Hourly row -->
                     <div class="v-grid-1-1">
-                        <div class="card card-animate" style="animation-delay: 0.06s;">
+                        <div class="card ops-enter" style="animation-delay: 0.06s;">
                             <div class="chart-title"><span class="dot" style="background: var(--gold)"></span> Weekly Seasonality (Comportamiento Estacional Semanal)</div>
                             <p class="text-muted v-mb-3" style="font-size: 11.5px;">Índice por día de la semana vs. promedio histórico</p>
                             <div class="chart-wrapper"><canvas id="chart-seasonal"></canvas></div>
                         </div>
-                        <div class="card card-animate" style="animation-delay: 0.08s;">
+                        <div class="card ops-enter" style="animation-delay: 0.08s;">
                             <div class="chart-title"><span class="dot" style="background: #ef4444"></span> Hourly Distribution (Distribución Horaria)</div>
                             <p class="text-muted v-mb-3" style="font-size: 11.5px;" id="hourly-chart-sub">Distribución Horaria de Contactos Telefónicos</p>
                             <div class="chart-wrapper">
@@ -418,7 +423,7 @@
                     </div>
 
                     <!-- Contact Distribution -->
-                    <div class="card card-animate v-mb-4" style="animation-delay: 0.10s;">
+                    <div class="card ops-enter v-mb-4" style="animation-delay: 0.10s;">
                         <div class="chart-title"><span class="dot" style="background: var(--gold)"></span> Contact Distribution (Distribución de Contacto)</div>
                         <p class="text-muted v-mb-3" style="font-size: 11.5px;" id="contact-total-calls">0 llamadas totales</p>
                         <div class="v-flex-col" id="contact-distribution-bars" style="gap: 16px;">
@@ -481,7 +486,7 @@
                     </div>
                 </section>
 
-                <!-- 7. TAB: INFORMES CORPORATIVOS (REPORTES) -->
+                <!-- 8. TAB: INFORMES CORPORATIVOS (REPORTES) -->
                 <section class="tab-content" id="tab-reports">
                     <div class="section-header">
                         <div class="section-title"><span class="bar"></span> Executive Reports (Informes Analíticos de Dirección)</div>
@@ -592,7 +597,7 @@
     <script src="/js/enrich-funnel-client.js?v=1"></script>
     <script src="/js/funnel-markov-groups.js?v=3"></script>
     <script src="/js/markov-stddev-enrich.js?v=1"></script>
-    <script src="/js/app.js?v=38" defer></script>
+    <script src="/js/app.js?v=43" defer></script>
 </body>
 
 </html>

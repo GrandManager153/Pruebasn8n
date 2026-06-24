@@ -1,5 +1,6 @@
 /** Recomputes linear model backtest series for dashboard charts. */
 const { computeTrainTestSplit, testZoneCoverage } = require('./train-test-split');
+const { attachForecastTarget } = require('./forecast-target');
 
 function _matInv(m) {
   const n = m.length;
@@ -489,6 +490,7 @@ function enrichLinearForecastModels(payload, options = {}) {
     payload.forecast.backtest_models = result.models;
   }
 
+  attachForecastTarget(payload);
   return payload;
 }
 

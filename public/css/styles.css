@@ -1705,20 +1705,27 @@ body.light-mode .mase-bar {
 }
 
 .brand-icon-wrapper {
-    background: rgba(163, 230, 53, 0.06);
-    border: 1px solid rgba(163, 230, 53, 0.18);
-    border-radius: 14px;
-    padding: 8px;
+    flex-shrink: 0;
+    background: rgba(232, 168, 56, 0.08);
+    border: 1px solid rgba(232, 168, 56, 0.28);
+    border-radius: 12px;
+    padding: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 0 20px rgba(163, 230, 53, 0.08), inset 0 0 8px rgba(163, 230, 53, 0.04);
+    box-shadow: 0 0 20px rgba(232, 168, 56, 0.1), inset 0 0 8px rgba(232, 168, 56, 0.05);
     transition: box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
 .brand-icon-wrapper:hover {
-    box-shadow: 0 0 28px rgba(163, 230, 53, 0.15), inset 0 0 12px rgba(163, 230, 53, 0.06);
-    border-color: rgba(163, 230, 53, 0.35);
+    box-shadow: 0 0 28px rgba(232, 168, 56, 0.18), inset 0 0 12px rgba(232, 168, 56, 0.08);
+    border-color: rgba(232, 168, 56, 0.45);
+}
+
+.brand-icon {
+    display: block;
+    width: 32px;
+    height: 32px;
 }
 
 .brand-text h1 {
@@ -1984,15 +1991,15 @@ body.light-mode .list-group-item.active .nav-icon {
     }
 }
 
-/* === Status Bar === */
+/* === Status Bar (hidden — system status shown in health hero only) === */
 .sbar {
+    display: none !important;
     margin: 0 0 var(--gap-bento) 0;
     padding: 12px 20px;
     border-radius: var(--radius-md);
     font-size: 12.5px;
     font-weight: 700;
     letter-spacing: .3px;
-    display: flex;
     align-items: center;
     gap: 10px;
     box-shadow: var(--s);
@@ -3055,6 +3062,20 @@ body.light-mode .model-compare-select option {
 #tab-investment .investment-chart-card::before,
 #tab-investment .investment-chart-card::after {
     border-radius: inherit;
+}
+
+/* Operations tab — entrance animations scoped to this section only */
+#tab-operations.active .ops-enter {
+    opacity: 0;
+    animation: cardDropIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #tab-operations.active .ops-enter {
+        opacity: 1;
+        animation: none;
+        transform: none;
+    }
 }
 
 .investment-compare-strip {

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="PulseMkt">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#10182c"/>
+      <stop offset="100%" stop-color="#060a14"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" y1="24" x2="0" y2="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#e8a838"/>
+      <stop offset="100%" stop-color="#f5c842"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="url(#bg)"/>
+  <rect x="7" y="18" width="3.5" height="7" rx="1" fill="url(#bar)" opacity="0.55"/>
+  <rect x="12" y="15" width="3.5" height="10" rx="1" fill="url(#bar)" opacity="0.75"/>
+  <rect x="17" y="12" width="3.5" height="13" rx="1" fill="url(#bar)"/>
+  <path d="M8 20.5 L13.5 16 L18.5 18.5 L24 11" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="24" cy="11" r="2" fill="#38bdf8"/>
+</svg>

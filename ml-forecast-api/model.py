@@ -194,6 +194,68 @@ def _build_holdout_series(
     return out
 
 
+def _format_short_es(date_str: str) -> str:
+    dt = pd.to_datetime(date_str)
+    months = ("ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic")
+    return f"{dt.day:02d} {months[dt.month - 1]}"
+
+
+def _resolve_forecast_target(
+    last_complete_date: str,
+    target_date: str,
+    reference_date: str | None = None,
+) -> dict[str, Any]:
+    last_key = str(last_complete_date).split("T")[0]
+    target_key = str(target_date).split("T")[0]
+    ref_key = str(reference_date).split("T")[0] if reference_date else None
+
+    horizon_offset = 1
+    if ref_key:
+        horizon_offset = (pd.to_datetime(target_key) - pd.to_datetime(ref_key)).days
+
+    label_short = "Mañana"
+    label_card = "Pronóstico de mañana"
+    label_kpi = "Pronóstico de Mañana"
+    explanation_es = (
+        "Predicción de leads para el día siguiente al último dato completo en la serie."
+    )
+
+    if horizon_offset == 0:
+        label_short = "Hoy"
+        label_card = "Pronóstico de hoy"
+        label_kpi = "Pronóstico de Hoy"
+        explanation_es = (
+            "Predicción de leads para hoy, usando datos completos hasta el último día cerrado en la serie."
+        )
+    elif horizon_offset == 1:
+        pass
+    else:
+        fmt = _format_short_es(target_key)
+        label_short = fmt
+        label_card = f"Pronóstico {fmt}"
+        label_kpi = f"Pronóstico {fmt}"
+        explanation_es = (
+            f"Predicción de leads para el {fmt}, usando datos completos hasta el último día cerrado en la serie."
+        )
+
+    last_fmt = _format_short_es(last_key)
+    subtext = f"Basado en datos completos hasta el {last_fmt}"
+
+    return {
+        "last_complete_date": last_key,
+        "target_date": target_key,
+        "reference_date": ref_key,
+        "horizon_offset": horizon_offset,
+        "label_short": label_short,
+        "label_card": label_card,
+        "label_kpi": label_kpi,
+        "label_chart": _format_short_es(target_key),
+        "subtext": subtext,
+        "explanation_es": explanation_es,
+        "timezone": "America/Mexico_City",
+    }
+
+
 def _resolve_model_names(model: str) -> list[str] | None:
     names = list(SKLEARN_MODEL_NAMES)
     if _HAS_LIGHTGBM and "lightgbm" not in names:
@@ -381,6 +443,10 @@ def _build_response(
             "band_low": band_low,
             "band_high": band_high,
         },
+        "forecast_target": _resolve_forecast_target(
+            last_date.strftime("%Y-%m-%d"),
+            next_date,
+        ),
         "diagnostics": {
             "total_history_days": n,
             "backtest_days": test_count,
