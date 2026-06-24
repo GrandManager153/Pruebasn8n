@@ -203,7 +203,7 @@ function ensureTabRendered(tabId) {
                     const seasonalIndices = dashboardData.operations?.seasonal_indices
                         || dashboardData.forecast?.seasonal_indices;
                     if (seasonalIndices) renderSeasonalChart(seasonalIndices);
-                    renderHourlyChart(ops.hourly_distribution);
+                    renderHourlyChart(ops.hourly_distribution, ops);
                 }
                 renderedTabs.add('operations-charts');
             } else if (dashboardData?.operations) {
@@ -530,6 +530,18 @@ const KPI_EXPLANATIONS = {
         definition: 'La suma acumulada de advertencias leves y notas informativas de desviación operativa que no representan un riesgo de negocio crítico inmediato.',
         interpretation: 'Indican oportunidades de mejora proactiva y preventiva. Deben auditarse semanalmente para evitar que escalen a incidentes críticos.',
         source: 'Alertas con nivel "warning" o "info" — system.alerts'
+    },
+    'Advertencias': {
+        icon: '⚠️',
+        definition: 'Cantidad de alertas con severidad "warning": desviaciones operativas que requieren atención pero no son urgentes.',
+        interpretation: 'Conviene revisarlas en la semana para evitar que escalen a críticas. Filtra la tabla por "Advertencias" para ver el detalle.',
+        source: 'Alertas con nivel "warning" — system.alerts'
+    },
+    'Información': {
+        icon: 'ℹ️',
+        definition: 'Cantidad de alertas informativas: señales de contexto o tendencias sin acción inmediata requerida.',
+        interpretation: 'Útiles para auditoría y seguimiento. No implican por sí solas una crisis operativa.',
+        source: 'Alertas con nivel "info" — system.alerts'
     },
     'Registros': {
         icon: '📞',
@@ -1092,39 +1104,46 @@ function parseAndAnimate(element, rawValue, duration = 700, options = {}) {
         const totalMins = hours * 60 + minutes;
         animateValue(element, 0, totalMins, duration, { isTime: true, ...animOpts });
     } else {
-        // Strip $, %, approximate sign (~), commas and spaces
+        // Strip $, %, approximate sign (~), commas and spaces for ratio detection only
         const stripped = valueStr.replace(/[$\s%,~]/g, '');
 
-        // Check for fractional/ratio formats like "79/100"
-        if (stripped.includes('/')) {
-            const parts = stripped.split('/');
-            const current = parseFloat(parts[0]) || 0;
-            const maxVal = parseFloat(parts[1]) || 100;
+        // Ratio formats like "79/100" — not unit suffixes like "leads/h"
+        const ratioMatch = stripped.match(/^(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)$/);
+        if (ratioMatch) {
+            const current = parseFloat(ratioMatch[1]) || 0;
+            const maxVal = parseFloat(ratioMatch[2]) || 100;
             animateValue(element, 0, current, duration, { suffix: `/${maxVal}`, ...animOpts });
         } else {
-            const parsedNumber = parseFloat(stripped) || 0;
+            const leadingNum = valueStr.match(/^~?\$?\s*([\d,]+(?:\.\d+)?)/);
+            const parsedNumber = leadingNum
+                ? parseFloat(leadingNum[1].replace(/,/g, ''))
+                : (parseFloat(stripped) || 0);
+            const trailingUnit = leadingNum
+                ? valueStr.slice(leadingNum[0].length).trim()
+                : '';
 
             const isCurrency = valueStr.includes('$');
             const isPercentage = valueStr.includes('%');
             const isApprox = valueStr.includes('~');
 
             let decimals = 0;
-            if (stripped.includes('.')) {
-                decimals = Math.min(stripped.split('.')[1].length, 2);
+            const numPart = leadingNum ? leadingNum[1] : stripped;
+            if (numPart.includes('.')) {
+                decimals = Math.min(numPart.split('.')[1].length, 2);
             }
             if (isCurrency && parsedNumber >= 1000) {
-                decimals = 0; // Large currencies look cleaner without decimals
+                decimals = 0;
             }
 
             const prefix = isApprox ? '~' + (isCurrency ? '$' : '') : (isCurrency ? '$' : '');
-            const suffix = isPercentage ? '%' : '';
-            const useSeparator = parsedNumber >= 1000 || stripped.length > 4;
+            const suffix = isPercentage ? '%' : (trailingUnit ? ` ${trailingUnit}` : '');
+            const useSeparator = parsedNumber >= 1000 || (leadingNum && leadingNum[1].length > 4);
 
             animateValue(element, 0, parsedNumber, duration, {
                 prefix,
                 suffix,
                 decimals,
-                useSeparator: !isPercentage && useSeparator,
+                useSeparator: !isPercentage && !trailingUnit && useSeparator,
                 ...animOpts,
             });
         }
@@ -1327,12 +1346,18 @@ function renderLittlesLawCards(ops) {
     const gapLabel = ft?.horizon_offset === 0 ? 'Gap hoy' : 'Gap mañana';
 
     const cards = [
-        { label: 'Tasa de llegada (λ)', value: `${Number(ll.arrival_rate_per_hour).toFixed(2)} leads/h`, sub: 'Promedio diario / 24', color: 'blue' },
+        { label: 'Tasa de llegada (λ)', value: `${Number(ll.arrival_rate_per_hour).toFixed(2)} leads/h`, sub: 'Llegadas promedio por hora', color: 'blue' },
         { label: 'Tiempo de servicio (W)', value: `${Number(ll.avg_service_minutes).toFixed(1)} min`, sub: 'Duración media', color: 'blue' },
         { label: 'Cola estimada (L)', value: Number(ll.estimated_queue_leads).toFixed(1), sub: 'λ × W', color: 'gold' },
         { label: 'Utilización', value: `${ll.utilization_pct}%`, sub: `Capacidad: ${ll.capacity_leads_per_day || '—'} leads/día`, color: ll.utilization_pct > 85 ? 'red' : 'green' },
         { label: 'Presión staffing', value: pressureLabel, sub: ll.staffing_gap_tomorrow > 0 ? `${gapLabel}: +${ll.staffing_gap_tomorrow}` : 'Sin gap', color: ll.staffing_pressure === 'critical' ? 'red' : ll.staffing_pressure === 'pressure' ? 'gold' : 'green', animate: false },
-    ];
+    ].filter((c) => !isOperationsKpiHidden(c.label));
+
+    if (!cards.length) {
+        el.style.display = 'none';
+        el.innerHTML = '';
+        return;
+    }
 
     el.style.display = 'grid';
     el.innerHTML = cards.map((c, i) => {
@@ -1463,7 +1488,7 @@ function renderInvestmentTab(data, history) {
         value: '0',
         displayValue: String(inv.campaign_count || 0),
         sub: 'Modeladas por el motor de atribución',
-        color: 'gold',
+        color: 'white',
         valueId: 'spend-count',
         animate: inv.campaign_count || 0,
     });
@@ -1638,6 +1663,43 @@ function renderReportsQaBadge(data) {
 //  CORE RENDERER ENGINE
 // =====================================================================
 
+/** KPIs ocultos en Resumen (detalle vive en pestañas específicas). */
+const DASHBOARD_HIDDEN_KPI_LABELS = new Set([
+    'Promedio diario',
+    'Promedio Diario',
+    'Conversion global',
+    'Conversión Global',
+    'Utilizacion capacidad',
+    'Uso de Capacidad',
+    'Gasto total',
+    'Inversión Publicitaria',
+    'Máximo Diario',
+    'First Contact Rate',
+    'ROAS Proxy',
+    'Breakeven CPL Gap',
+]);
+
+function isDashboardKpiHidden(kpi) {
+    if (!kpi) return true;
+    if (kpi._backendLabel && DASHBOARD_HIDDEN_KPI_LABELS.has(kpi._backendLabel)) return true;
+    return DASHBOARD_HIDDEN_KPI_LABELS.has(kpi.label);
+}
+
+/** KPIs ocultas en Operaciones (marcadas por el usuario / redundantes). */
+const OPERATIONS_HIDDEN_KPI_LABELS = new Set([
+    'Tasa de llegada (λ)',
+    'Tiempo de servicio (W)',
+    'Cola estimada (L)',
+    'Utilización',
+    'Presión staffing',
+    'First Contact Rate (Tasa de Primer Contacto)',
+    'Dial Efficiency (Eficiencia de Marcación)',
+]);
+
+function isOperationsKpiHidden(label) {
+    return label && OPERATIONS_HIDDEN_KPI_LABELS.has(label);
+}
+
 function renderBOS(data, history) {
     renderedTabs.clear();
     renderedTabs.add('dashboard');
@@ -1779,7 +1841,7 @@ function renderBOS(data, history) {
             sub = 'estimación puntual';
         }
 
-        return { ...k, label, sub };
+        return { ...k, label, sub, _backendLabel: k.label };
     });
 
     // Inject additional KPIs from available n8n data not yet shown
@@ -1789,13 +1851,6 @@ function renderBOS(data, history) {
                 value: String(data.operations.latest.leads),
                 label: 'Leads Hoy',
                 sub: data.operations.latest.date || 'Último día registrado',
-            });
-        }
-        if (data.operations.max_daily) {
-            cleanedKpis.push({
-                value: String(data.operations.max_daily),
-                label: 'Máximo Diario',
-                sub: 'Pico histórico del periodo',
             });
         }
         if (data.operations.contact_distribution && data.operations.contact_distribution.overcontact_pct != null) {
@@ -1813,13 +1868,6 @@ function renderBOS(data, history) {
             });
         }
         const derived = data.operations.derived;
-        if (derived?.first_contact_rate != null) {
-            cleanedKpis.push({
-                value: (derived.first_contact_rate * 100).toFixed(1) + '%',
-                label: 'First Contact Rate',
-                sub: 'Primer intento / únicos',
-            });
-        }
         if (derived?.sweet_spot_pct != null) {
             cleanedKpis.push({
                 value: derived.sweet_spot_pct.toFixed(1) + '%',
@@ -1827,27 +1875,13 @@ function renderBOS(data, history) {
                 sub: 'Intentos 1–3',
             });
         }
-        const economics = data.derived?.economics;
-        if (economics?.roas_proxy != null && data.investment?.total_spend > 0) {
-            cleanedKpis.push({
-                value: economics.roas_proxy.toFixed(2),
-                label: 'ROAS Proxy',
-                sub: 'Ingreso est. / gasto',
-            });
-        }
-        if (economics?.breakeven_cpl_gap != null) {
-            cleanedKpis.push({
-                value: '$' + economics.breakeven_cpl_gap.toFixed(2),
-                label: 'Breakeven CPL Gap',
-                sub: economics.breakeven_cpl != null ? `Umbral: $${economics.breakeven_cpl}` : 'Global',
-            });
-        }
     }
 
+    const visibleKpis = cleanedKpis.filter((k) => !isDashboardKpiHidden(k));
     const healthScore = Math.min(100, Math.max(0, Number(data.system.health_score) || 0));
     const liquidTone = healthScore >= 80 ? 'good' : healthScore >= 60 ? 'warn' : 'critical';
 
-    kpisGrid.innerHTML = cleanedKpis.map((kpi, idx) => {
+    kpisGrid.innerHTML = visibleKpis.map((kpi, idx) => {
         const isHealth = idx === 0;
         const escapedLabel = kpi.label.replace(/'/g, "\\'");
         const escapedValue = String(kpi.value).replace(/'/g, "\\'");
@@ -1887,7 +1921,7 @@ function renderBOS(data, history) {
     }).join('');
 
     if (shouldAnimateUI()) {
-        cleanedKpis.forEach((kpi, idx) => {
+        visibleKpis.forEach((kpi, idx) => {
             parseAndAnimate(document.getElementById(`kpi-val-${idx}`), kpi.value);
         });
         requestAnimationFrame(() => {
@@ -1902,7 +1936,7 @@ function renderBOS(data, history) {
     // 3. Render Action Cards in Dashboard Tab
     const actionsGrid = document.getElementById('dashboard-actions');
     actionsGrid.innerHTML = data.system.actions.map((a, idx) => `
-        <div class="card card-animate" style="animation-delay: ${(idx + cleanedKpis.length) * 0.025 + 0.08}s;">
+        <div class="card card-animate" style="animation-delay: ${(idx + visibleKpis.length) * 0.025 + 0.08}s;">
             <div class="urgency-badge ${a.urgency}">${a.urgency === 'today' ? 'Acción Inmediata' : 'Plan Semanal'}</div>
             <div class="action-text">${cleanTechnicalTerms(a.action)}</div>
             <details class="action-details">
@@ -3637,7 +3671,6 @@ function renderAlertsCentre(alerts) {
     const criticalCount = alerts.filter(a => a.severity === 'critical').length;
     const warningCount = alerts.filter(a => a.severity === 'warning').length;
     const infoCount = alerts.filter(a => a.severity === 'info').length;
-    const maxRpn = alerts.length > 0 ? Math.max(...alerts.map(a => a.rpn_score || 0)) : 0;
     const recurrentCount = alerts.filter((a) => classifyAlertRecurrence(a) === 'recurrent').length;
 
     statsGrid.innerHTML = `
@@ -3653,17 +3686,17 @@ function renderAlertsCentre(alerts) {
             <div class="card-stat-value" id="alert-stat-critical" data-value="${criticalCount}">0</div>
             <div class="card-stat-sub">Acción urgente requerida</div>
         </div>
-        <div class="card stat-card-blue card-animate" style="animation-delay: 0.09s;"
-            onclick="openKpiModal('Severidad Máxima', '${maxRpn}')">
-            <div class="card-stat-label">Severidad Máxima</div>
-            <div class="card-stat-value" id="alert-stat-max-rpn" data-value="${maxRpn}">0</div>
-            <div class="card-stat-sub">RPN (prioridad de riesgo)</div>
+        <div class="card stat-card-gold card-animate" style="animation-delay: 0.09s;"
+            onclick="openKpiModal('Advertencias', '${warningCount}')">
+            <div class="card-stat-label">Advertencias</div>
+            <div class="card-stat-value" id="alert-stat-warnings" data-value="${warningCount}">0</div>
+            <div class="card-stat-sub">Revisión prioritaria semanal</div>
         </div>
         <div class="card stat-card-green card-animate" style="animation-delay: 0.12s;"
-            onclick="openKpiModal('Advertencias e Info', '${warningCount + infoCount}')">
-            <div class="card-stat-label">Advertencias e Info</div>
-            <div class="card-stat-value" id="alert-stat-warning-info" data-value="${warningCount + infoCount}">0</div>
-            <div class="card-stat-sub">Desviaciones menores</div>
+            onclick="openKpiModal('Información', '${infoCount}')">
+            <div class="card-stat-label">Información</div>
+            <div class="card-stat-value" id="alert-stat-info" data-value="${infoCount}">0</div>
+            <div class="card-stat-sub">Señales de contexto</div>
         </div>
         ${dashboardHistory?.compare?.available ? `
         <div class="card stat-card-gold card-animate" style="animation-delay: 0.15s;"
@@ -3677,8 +3710,8 @@ function renderAlertsCentre(alerts) {
     // Trigger animations for alerts stats
     parseAndAnimate(document.getElementById('alert-stat-total'), total);
     parseAndAnimate(document.getElementById('alert-stat-critical'), criticalCount);
-    parseAndAnimate(document.getElementById('alert-stat-max-rpn'), maxRpn);
-    parseAndAnimate(document.getElementById('alert-stat-warning-info'), warningCount + infoCount);
+    parseAndAnimate(document.getElementById('alert-stat-warnings'), warningCount);
+    parseAndAnimate(document.getElementById('alert-stat-info'), infoCount);
     const recurrentEl = document.getElementById('alert-stat-recurrent');
     if (recurrentEl) parseAndAnimate(recurrentEl, recurrentCount);
 
@@ -4282,7 +4315,32 @@ function renderCampaignChart(campaigns) {
     });
 }
 
-function renderHourlyChart(hourly) {
+function resolveHourlyArrivals(hourly, ops) {
+    if (!Array.isArray(hourly) || hourly.length === 0) return [];
+    const avgDaily = Number(ops?.avg_daily) || 0;
+    const totalDays = Number(ops?.total_days) || 0;
+    const hasRawCounts = hourly.some((h) =>
+        h.leads != null || h.count != null || h.calls != null || h.total != null
+    );
+
+    if (hasRawCounts && totalDays > 0) {
+        return hourly.map((h) => {
+            const raw = Number(h.leads ?? h.count ?? h.calls ?? h.total ?? 0);
+            return raw / totalDays;
+        });
+    }
+
+    return hourly.map((h) => {
+        if (h.probability != null && avgDaily > 0) {
+            return Number(h.probability) * avgDaily;
+        }
+        const raw = Number(h.leads ?? h.count ?? h.calls ?? h.total ?? 0);
+        if (totalDays > 0) return raw / totalDays;
+        return raw;
+    });
+}
+
+function renderHourlyChart(hourly, ops) {
     if (!hourly || hourly.length === 0) return;
     if (charts.hourly) charts.hourly.destroy();
     const element = document.getElementById('chart-hourly');
@@ -4290,8 +4348,9 @@ function renderHourlyChart(hourly) {
 
     const isLight = document.body.classList.contains('light-mode');
     const ctx = element.getContext('2d');
-    const hourlyValues = hourly.map(h => h.probability !== undefined ? (h.probability * 100) : (h.count || h.calls || h.total || 0));
-    const maxVal = Math.max(...hourlyValues);
+    const hourlyValues = resolveHourlyArrivals(hourly, ops);
+    const maxVal = Math.max(...hourlyValues, 0);
+    const avgPerHour = ops?.avg_daily ? Number(ops.avg_daily) / 24 : 0;
     const peakBg = isLight ? 'rgba(225, 29, 72, 0.85)' : 'rgba(244, 63, 94, 0.85)';
     const peakHover = isLight ? 'rgba(225, 29, 72, 0.95)' : 'rgba(244, 63, 94, 0.95)';
     const normalBg = isLight ? 'rgba(132, 204, 22, 0.55)' : 'rgba(163, 230, 53, 0.45)';
@@ -4301,7 +4360,7 @@ function renderHourlyChart(hourly) {
         data: {
             labels: hourly.map(h => h.label || `${h.hour !== undefined ? h.hour : h.hr}:00`),
             datasets: [{
-                label: 'Contactos',
+                label: 'Llegadas por hora',
                 data: hourlyValues,
                 backgroundColor: hourlyValues.map(v => v === maxVal ? peakBg : normalBg),
                 hoverBackgroundColor: hourlyValues.map(v => v === maxVal ? peakHover : normalHover),
@@ -4326,7 +4385,14 @@ function renderHourlyChart(hourly) {
                     callbacks: {
                         label: (ctx) => {
                             const val = ctx.raw;
-                            return ` Proporción: ${val.toFixed(2)}%`;
+                            return ` ${Number(val).toFixed(1)} leads/h`;
+                        },
+                        afterBody: (items) => {
+                            if (!avgPerHour || !items.length) return [];
+                            const val = items[0].raw;
+                            const diff = ((val / avgPerHour) - 1) * 100;
+                            const sign = diff >= 0 ? '+' : '';
+                            return [`Promedio: ${avgPerHour.toFixed(1)} leads/h (${sign}${diff.toFixed(0)}%)`];
                         }
                     }
                 }
@@ -4337,7 +4403,14 @@ function renderHourlyChart(hourly) {
                     grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255,255,255,0.02)' },
                     ticks: {
                         color: isLight ? '#475569' : '#64748b',
-                        callback: (value) => `${value}%`
+                        font: { family: 'JetBrains Mono', size: 10 },
+                        callback: (value) => Number(value).toFixed(value < 10 ? 1 : 0)
+                    },
+                    title: {
+                        display: true,
+                        text: 'leads/h',
+                        color: isLight ? '#64748b' : '#94a3b8',
+                        font: { size: 10, weight: '600' }
                     }
                 }
             }
@@ -4565,7 +4638,9 @@ function renderOperationsTab(data, options = {}) {
             }
         );
 
-        kpiCardsEl.innerHTML = kpis.map((kpi, idx) => {
+        const visibleKpis = kpis.filter((k) => !isOperationsKpiHidden(k.label));
+
+        kpiCardsEl.innerHTML = visibleKpis.map((kpi, idx) => {
             const escapedLabel = kpi.label.replace(/'/g, "\\'");
             const escapedValue = String(kpi.value).replace(/'/g, "\\'");
             const canAnimate = shouldAnimateOperationsUI();
@@ -4580,7 +4655,7 @@ function renderOperationsTab(data, options = {}) {
         }).join('');
 
         if (shouldAnimateOperationsUI()) {
-            kpis.forEach((kpi, idx) => {
+            visibleKpis.forEach((kpi, idx) => {
                 const el = document.getElementById(`ops-kpi-val-${idx}`);
                 parseAndAnimate(el, kpi.value, 700, { scoped: 'operations' });
             });
@@ -4659,9 +4734,10 @@ function renderOperationsTab(data, options = {}) {
     if (hourlySub && ops.peak_hour !== undefined) {
         const peakStr = `${String(ops.peak_hour).padStart(2, '0')}:00`;
         const valleyStr = `${String(ops.valley_hour !== undefined ? ops.valley_hour : 3).padStart(2, '0')}:00`;
-        hourlySub.textContent = `Pico: ${peakStr} | Valle: ${valleyStr}`;
+        const avgPerHour = ops.avg_daily ? (Number(ops.avg_daily) / 24).toFixed(1) : '—';
+        hourlySub.textContent = `Promedio: ${avgPerHour} leads/h | Pico: ${peakStr} | Valle: ${valleyStr}`;
     }
-    if (renderCharts) renderHourlyChart(ops.hourly_distribution);
+    if (renderCharts) renderHourlyChart(ops.hourly_distribution, ops);
 }
 
 // =====================================================================
