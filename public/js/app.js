@@ -287,6 +287,11 @@ const KPI_EXPLANATION_ALIASES = {
     'Cola estimada (L)': 'Cola estimada (L)',
     'Presión de staffing': 'Presión de staffing',
     'Presión staffing': 'Presión de staffing',
+    'Llegada de leads por hora': 'Tasa de llegada (λ)',
+    'Tiempo medio por contacto': 'Tiempo de servicio (W)',
+    'Personas en espera (estimado)': 'Cola estimada (L)',
+    'Carga del equipo': 'Utilización',
+    '¿Alcanza el personal?': 'Presión de staffing',
 };
 
 const KPI_EXPLANATIONS = {
@@ -580,7 +585,144 @@ const KPI_EXPLANATIONS = {
     }
 };
 
-function setKpiModalContent({ title, subtitle, value, definition, interpretation, source }) {
+/** Una frase simple por métrica (usuario sin conocimiento técnico). */
+const PLAIN_ONE_LINERS = {
+    'Health Score': 'Es como un termómetro de tu negocio: de 0 a 100. Más alto = todo va mejor.',
+    'Leads totales': 'Personas nuevas que mostraron interés en tus servicios en este periodo.',
+    'Promedio diario': 'Cuántos interesados nuevos llegan, en promedio, cada día.',
+    'Hora pico': 'La hora del día en que recibes más contactos. Ahí necesitas más gente atendiendo.',
+    'Prevision diaria': 'Estimación de cuántos interesados podrías recibir mañana (basado en días pasados).',
+    'MASE': 'Qué tan acertado es el pronóstico. Si es menor que 1, la predicción es útil.',
+    'CPL implicito': 'Cuánto te cuesta, en promedio, conseguir un interesado nuevo.',
+    'Gasto total': 'Todo lo que invertiste en publicidad (anuncios) en el periodo.',
+    'HHI': 'Si dependes de pocas campañas de publicidad o tienes el gasto repartido.',
+    'Conversion global': 'De cada 100 interesados, cuántos llegan a agendar una consulta.',
+    'Revenue at Risk': 'Dinero que podrías dejar de ganar si no corriges las fugas del embudo.',
+    'Overcontact Index': 'Llamadas de más a la misma persona (más de 7 intentos). Eso cansa al cliente.',
+    'First Contact Rate': 'Qué tan seguido logras hablar con alguien en el primer intento.',
+    'RPN max': 'Qué tan grave es la alerta más importante del día.',
+    'Cambio de Régimen': 'Cambio brusco en la cantidad de leads respecto al patrón habitual.',
+    'Tasa de llegada (λ)': 'Cuántos interesados nuevos entran por hora, en promedio.',
+    'Tiempo de servicio (W)': 'Cuántos minutos dedica el equipo, en promedio, a cada contacto.',
+    'Cola estimada (L)': 'Personas que probablemente están esperando ser atendidas ahora mismo.',
+    'Utilización': 'Qué tan lleno está tu equipo: cerca de 100% significa que está al límite.',
+    'Presión de staffing': 'Si mañana tendrás suficientes personas para atender la demanda.',
+    'Llegada de leads por hora': 'Cuántos interesados nuevos entran por hora, en promedio.',
+    'Tiempo medio por contacto': 'Cuántos minutos dedica el equipo, en promedio, a cada persona.',
+    'Personas en espera (estimado)': 'Personas que probablemente están esperando ser atendidas ahora mismo.',
+    'Carga del equipo': 'Qué tan lleno está tu equipo: cerca de 100% significa que está al límite.',
+    '¿Alcanza el personal?': 'Si mañana tendrás suficientes personas para atender la demanda.',
+};
+
+const TAB_GUIDES = {
+    dashboard: {
+        title: 'Resumen General',
+        hint: 'Vista rápida: salud del negocio, números importantes y qué hacer hoy.',
+    },
+    funnel: {
+        title: 'Embudo de ventas',
+        hint: 'Recorrido del cliente: de interesado hasta consulta agendada, y dónde se pierden.',
+    },
+    forecast: {
+        title: 'Pronósticos',
+        hint: 'Cuántos interesados podrías recibir mañana o en los próximos días (para planear el equipo).',
+    },
+    investment: {
+        title: 'Inversión y campañas',
+        hint: 'Cuánto gastas en publicidad, en qué campañas y si el gasto está concentrado.',
+    },
+    operations: {
+        title: 'Operaciones diarias',
+        hint: 'Llamadas, horarios pico y si el call center tiene capacidad suficiente.',
+    },
+    alerts: {
+        title: 'Alertas',
+        hint: 'Problemas detectados automáticamente, ordenados por urgencia.',
+    },
+    reports: {
+        title: 'Informes',
+        hint: 'Reportes descargables para compartir con tu equipo.',
+    },
+};
+
+const PLAIN_DEFAULTS = {
+    definition: 'Es un número que resume una parte de tu operación: llamadas, leads, gasto o conversiones.',
+    interpretation: 'No necesitas ser experto: si la tarjeta está en rojo o aparece en alertas, conviene actuar. Si está en verde, vas por buen camino.',
+    summary: 'Métrica de tu panel. Toca otras tarjetas para comparar.',
+};
+
+function simplifyKpiText(text) {
+    if (!text || typeof text !== 'string') return text;
+    return text
+        .replace(/\bSHS\b/g, 'puntuación de salud (0-100)')
+        .replace(/\bMASE\b/g, 'precisión del pronóstico')
+        .replace(/\bCPL\b/g, 'costo por lead')
+        .replace(/\bHHI\b/g, 'concentración del gasto en poca publicidad')
+        .replace(/\bROAS\b/g, 'retorno del gasto publicitario')
+        .replace(/\bholdout\b/gi, 'últimos días de prueba')
+        .replace(/time-series models?/gi, 'historial de días anteriores')
+        .replace(/theta_lite/gi, 'modelo estadístico')
+        .replace(/forecast_rf/gi, 'modelo avanzado')
+        .replace(/vía n8n/gi, 'automáticamente')
+        .replace(/FactsBuilder/gi, 'sistema PulseMkt')
+        .replace(/Motor PulseMkt/gi, 'sistema PulseMkt');
+}
+
+function humanizeSource(src) {
+    if (!src || typeof src !== 'string') return 'Calculado automáticamente con tus datos recientes';
+    let out = simplifyKpiText(src);
+    out = out.replace(/\s*—\s*fuente:.*$/i, '');
+    out = out.replace(/\s*fuente:.*$/i, '');
+    out = out.replace(/campo:\s*\S+/gi, '');
+    out = out.replace(/\s{2,}/g, ' ').trim();
+    if (!out || out.length < 8) return 'Calculado automáticamente con tus datos recientes';
+    return out.charAt(0).toUpperCase() + out.slice(1);
+}
+
+function getPlainSummary(label, explainKey) {
+    if (explainKey && PLAIN_ONE_LINERS[explainKey]) return PLAIN_ONE_LINERS[explainKey];
+    const aliasKey = resolveKpiExplanationKey(label);
+    if (aliasKey && PLAIN_ONE_LINERS[aliasKey]) return PLAIN_ONE_LINERS[aliasKey];
+    return PLAIN_DEFAULTS.summary;
+}
+
+function buildPlainStatusLine(data) {
+    const score = Number(data?.system?.health_score) || 0;
+    const color = data?.system?.status?.color;
+    if (color === 'verde') {
+        return `Todo va bien en general (${score}/100). Revisa las acciones sugeridas si quieres mejorar aún más.`;
+    }
+    if (color === 'amarillo') {
+        return `Hay señales de alerta (${score}/100). Mira las tarjetas en amarillo y la sección «Qué hacer ahora».`;
+    }
+    if (color === 'rojo') {
+        return `Atención urgente (${score}/100). Hay problemas que pueden costarte ventas si no actúas pronto.`;
+    }
+    return 'Cargando el estado de tu operación…';
+}
+
+function updateTabGuide(tabId) {
+    const guide = TAB_GUIDES[tabId] || TAB_GUIDES.dashboard;
+    const titleEl = document.getElementById('topbar-section-title');
+    const hintEl = document.getElementById('topbar-section-hint');
+    if (titleEl) titleEl.textContent = guide.title;
+    if (hintEl) hintEl.textContent = guide.hint;
+}
+
+function initPlainGuideBanner() {
+    const banner = document.getElementById('plain-guide-banner');
+    if (!banner) return;
+    const dismissed = sessionStorage.getItem('pulse-plain-guide-dismissed') === '1';
+    banner.hidden = dismissed;
+}
+
+window.dismissPlainGuide = function dismissPlainGuide() {
+    sessionStorage.setItem('pulse-plain-guide-dismissed', '1');
+    const banner = document.getElementById('plain-guide-banner');
+    if (banner) banner.hidden = true;
+};
+
+function setKpiModalContent({ title, subtitle, value, plainSummary, definition, interpretation, source }) {
     document.getElementById('kpi-modal-title').textContent = title;
     const subtitleEl = document.getElementById('kpi-modal-subtitle');
     if (subtitleEl) {
@@ -593,6 +735,11 @@ function setKpiModalContent({ title, subtitle, value, definition, interpretation
         }
     }
     document.getElementById('kpi-modal-value').textContent = value;
+    const plainEl = document.getElementById('kpi-modal-plain');
+    if (plainEl) {
+        plainEl.textContent = plainSummary || '';
+        plainEl.style.display = plainSummary ? 'block' : 'none';
+    }
     document.getElementById('kpi-modal-definition').textContent = definition;
     document.getElementById('kpi-modal-interpretation').textContent = interpretation;
     document.getElementById('kpi-modal-source-text').textContent = source;
@@ -606,9 +753,10 @@ function openKpiModal(label, value) {
     setKpiModalContent({
         title: label,
         value: value != null && value !== '' ? value : '—',
-        definition: explain?.definition || 'Indicador operativo del call center registrado en el periodo analizado.',
-        interpretation: explain?.interpretation || 'Compara el valor actual con los umbrales operativos recomendados para decidir si requiere acción.',
-        source: explain?.source || 'CRM integrado vía n8n — operations',
+        plainSummary: getPlainSummary(label, explainKey),
+        definition: simplifyKpiText(explain?.definition || PLAIN_DEFAULTS.definition),
+        interpretation: simplifyKpiText(explain?.interpretation || PLAIN_DEFAULTS.interpretation),
+        source: humanizeSource(explain?.source),
     });
 }
 
@@ -620,9 +768,10 @@ function openFeederModal(rawFrom, pct, cnt) {
     setKpiModalContent({
         title: displayName,
         value: `${count} consultas`,
-        definition: `Ruta hacia consulta agendada desde "${displayName}". El ${pctNum.toFixed(2)}% de los leads que salen de este estado pasan a consulta en el siguiente paso.`,
-        interpretation: `En este periodo se registraron ${count} consultas agendadas atribuidas a esta ruta (todas las variantes de Consult Booked).`,
-        source: 'funnel.feeders — transiciones del CRM',
+        plainSummary: `De los que pasan por «${displayName}», el ${pctNum.toFixed(1)}% agenda consulta.`,
+        definition: `Ruta hacia consulta agendada desde "${displayName}". El ${pctNum.toFixed(2)}% de los interesados que salen de este paso pasan a consulta en el siguiente.`,
+        interpretation: `En este periodo se registraron ${count} consultas agendadas desde esta ruta.`,
+        source: humanizeSource('Transiciones del embudo de ventas'),
     });
 }
 
@@ -635,10 +784,11 @@ function openLeakModal(from, to, pct, cnt) {
     setKpiModalContent({
         title: leak.title,
         subtitle: leak.subtitle,
-        value: `${count} leads`,
-        definition: `Punto de fuga: los leads que vienen de ${origin} acaban en ${leak.title} y abandonan el embudo.`,
-        interpretation: `El ${pctNum.toFixed(2)}% de las salidas desde ${origin} van a esta fuga (${count} eventos en el periodo).`,
-        source: 'funnel.leaks — transiciones del CRM',
+        value: `${count} interesados`,
+        plainSummary: `Aquí se «pierden» personas que venían de ${origin} y no siguen hacia una consulta.`,
+        definition: `Punto de fuga: los interesados que vienen de ${origin} acaban en ${leak.title} y abandonan el proceso de venta.`,
+        interpretation: `El ${pctNum.toFixed(2)}% de las salidas desde ${origin} van a esta fuga (${count} casos en el periodo). Conviene revisar qué pasa en ese paso.`,
+        source: humanizeSource('Transiciones del embudo de ventas'),
     });
 }
 
@@ -910,20 +1060,8 @@ function switchTab(tabId) {
         }
     }
 
-    // Update topbar header title
-    const titles = {
-        'dashboard': 'Resumen General',
-        'funnel': 'Funnel y Conversiones',
-        'forecast': 'Pronósticos',
-        'investment': 'Inversión y Campañas',
-        'operations': 'Operaciones Diarias',
-        'alerts': 'Alertas de Operación',
-        'reports': 'Informes Corporativos'
-    };
-    const sectionTitleEl = document.getElementById('topbar-section-title');
-    if (sectionTitleEl) {
-        sectionTitleEl.textContent = titles[tabId] || 'PulseMkt';
-    }
+    // Update topbar header title + plain-language hint
+    updateTabGuide(tabId);
 
     currentTab = tabId;
 
@@ -1138,8 +1276,8 @@ async function loadBOS() {
                 <svg class="premium-empty-icon" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18M3 12h18M3 12a9 9 0 019-9m9 9a9 9 0 00-9-9m-9 9a9 9 0 009 9m9-9a9 9 0 01-9 9" />
                 </svg>
-                <h2 style="margin-bottom: 12px; font-weight: 800; letter-spacing: -0.2px;">Esperando inicialización de datos</h2>
-                <p style="color: var(--text-muted); max-width: 480px; margin: 0 auto; line-height: 1.6; font-size: 14px;">El servidor se encuentra activo y listo para recibir información operativa. Por favor, ejecuta el flujo de trabajo en tu n8n local para inicializar PulseMkt con datos de precisión.</p>
+                <h2 style="margin-bottom: 12px; font-weight: 800; letter-spacing: -0.2px;">Aún no hay datos para mostrar</h2>
+                <p style="color: var(--text-muted); max-width: 480px; margin: 0 auto 16px; line-height: 1.6; font-size: 14px;">El panel está listo, pero necesita recibir información de tu negocio. Ejecuta el flujo automático en n8n (o pide a quien lo administre que lo haga) y luego pulsa el botón de actualizar arriba a la derecha.</p>
             `;
             return;
         }
@@ -1165,8 +1303,8 @@ async function loadBOS() {
             <svg class="premium-error-icon" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
-            <h2 style="margin-bottom: 12px; color: var(--red); font-weight: 800;">Error de Conexión</h2>
-            <p style="color: var(--text-muted); font-size: 14px;">No se pudieron cargar los datos analíticos del servidor local: ${err.message}</p>
+            <h2 style="margin-bottom: 12px; color: var(--red); font-weight: 800;">No pudimos conectar</h2>
+            <p style="color: var(--text-muted); font-size: 14px; max-width: 420px; margin: 0 auto; line-height: 1.6;">Comprueba que el servidor esté encendido (ventana de <code style="font-size:12px">iniciar-todo.bat</code>) y vuelve a intentar. Detalle: ${err.message}</p>
         `;
     }
 }
@@ -1176,13 +1314,65 @@ async function loadBOS() {
 // =====================================================================
 
 const COMPARE_METRICS = [
-    { key: 'health_score', label: 'SHS', suffix: '' },
-    { key: 'total_leads', label: 'Leads', suffix: '' },
-    { key: 'overcontact_pct', label: 'Sobre-contacto', suffix: '%' },
-    { key: 'conversion_pct', label: 'Conversión', suffix: '%' },
-    { key: 'global_cpl', label: 'CPL', prefix: '$' },
-    { key: 'mase', label: 'MASE', suffix: '' },
+    { key: 'health_score', label: 'Salud general', suffix: '' },
+    { key: 'total_leads', label: 'Interesados', suffix: '' },
+    { key: 'overcontact_pct', label: 'Llamadas de más', suffix: '%', invert: true },
+    { key: 'conversion_pct', label: 'Conversión a consulta', suffix: '%' },
+    { key: 'global_cpl', label: 'Costo por lead', prefix: '$', invert: true },
+    { key: 'mase', label: 'Precisión pronóstico', suffix: '', invert: true },
 ];
+
+function buildSparklineSvg(points, options = {}) {
+    const {
+        width = 120,
+        height = 32,
+        color = 'var(--brand-gold)',
+        strokeWidth = 2,
+        valueKey = null,
+    } = options;
+
+    if (!points || points.length < 2) return '';
+
+    const vals = points.map((p) => {
+        if (typeof p === 'number') return p;
+        if (valueKey && p && p[valueKey] != null) return Number(p[valueKey]) || 0;
+        return Number(p.shs ?? p.value ?? 0) || 0;
+    });
+
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    const range = max - min || 1;
+    const step = width / (vals.length - 1);
+    const coords = vals.map((v, i) => {
+        const x = i * step;
+        const y = height - ((v - min) / range) * (height - 4) - 2;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+
+    return `<svg class="mini-sparkline" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" aria-hidden="true"><polyline fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" points="${coords}"/></svg>`;
+}
+
+function updateSyncHeader(meta) {
+    const syncEl = document.getElementById('last-update');
+    const badgeEl = document.getElementById('sync-badge');
+    if (!syncEl || !meta?.generated_at) return;
+
+    const genDate = new Date(meta.generated_at);
+    const formatted = genDate.toLocaleString('es-MX', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+    syncEl.textContent = `Actualizado: ${formatted}`;
+
+    if (badgeEl) {
+        const ageMs = Date.now() - genDate.getTime();
+        const isFresh = ageMs >= 0 && ageMs < 36 * 60 * 60 * 1000;
+        badgeEl.hidden = !isFresh;
+    }
+}
 
 function formatCompareDelta(d, prefix = '', suffix = '') {
     if (!d || d.delta == null) return '—';
@@ -1194,6 +1384,17 @@ function formatCompareDelta(d, prefix = '', suffix = '') {
 function compareDeltaColor(d) {
     if (!d || d.direction === 'flat') return 'var(--text-muted)';
     return d.direction === 'up' ? 'var(--green)' : 'var(--red)';
+}
+
+function compareDeltaClass(d, invert = false) {
+    if (!d || d.direction === 'flat') return 'compare-chip__value--flat';
+    let dir = d.direction;
+    if (invert) {
+        dir = dir === 'up' ? 'down' : dir === 'down' ? 'up' : 'flat';
+    }
+    if (dir === 'up') return 'compare-chip__value--up';
+    if (dir === 'down') return 'compare-chip__value--down';
+    return 'compare-chip__value--flat';
 }
 
 function renderDashboardCompareStrip(history) {
@@ -1219,13 +1420,18 @@ function renderDashboardCompareStrip(history) {
         })
         : '';
 
+    const sparkline = history?.sparkline?.length >= 2
+        ? buildSparklineSvg(history.sparkline, { width: 140, height: 36, valueKey: 'shs', color: 'var(--brand-gold)' })
+        : '';
+
     const chips = COMPARE_METRICS.map((m) => {
         const d = compare.deltas?.[m.key];
         if (!d) return '';
+        const valueClass = compareDeltaClass(d, !!m.invert);
         return `
-            <div style="padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);min-width:100px;">
-                <div style="font-size:10px;color:var(--text-dim);margin-bottom:2px;">${m.label}</div>
-                <div style="font-size:13px;font-weight:700;color:${compareDeltaColor(d)};">
+            <div class="compare-chip">
+                <div class="compare-chip__label">${m.label}</div>
+                <div class="compare-chip__value ${valueClass}">
                     ${formatCompareDelta(d, m.prefix || '', m.suffix || '')}
                 </div>
             </div>
@@ -1233,12 +1439,16 @@ function renderDashboardCompareStrip(history) {
     }).join('');
 
     el.style.display = 'block';
-    el.className = 'card';
+    el.className = 'card compare-strip';
     el.innerHTML = `
-        <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--text-muted);">
-            Vs ejecución anterior${prevDate ? ` <span style="font-weight:500;margin-left:8px;">(${prevDate})</span>` : ''}
+        <div class="compare-strip__head">
+            <div>
+                <div class="compare-strip__title">¿Qué cambió desde la última actualización?</div>
+                ${prevDate ? `<div class="compare-strip__meta">Comparado con: ${prevDate}</div>` : ''}
+            </div>
+            ${sparkline ? `<div class="health-sparkline-wrap" title="Tendencia SHS">${sparkline}</div>` : ''}
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:10px;">${chips}</div>
+        <div class="compare-strip__chips">${chips}</div>
     `;
 }
 
@@ -1257,11 +1467,11 @@ function renderLittlesLawCards(ops) {
         : ll.staffing_pressure === 'pressure' ? 'Presión' : 'OK';
 
     const cards = [
-        { label: 'Tasa de llegada (λ)', value: `${Number(ll.arrival_rate_per_hour).toFixed(2)} leads/h`, sub: 'Promedio diario / 24', color: 'blue' },
-        { label: 'Tiempo de servicio (W)', value: `${Number(ll.avg_service_minutes).toFixed(1)} min`, sub: 'Duración media', color: 'blue' },
-        { label: 'Cola estimada (L)', value: Number(ll.estimated_queue_leads).toFixed(1), sub: 'λ × W', color: 'gold' },
-        { label: 'Utilización', value: `${ll.utilization_pct}%`, sub: `Capacidad: ${ll.capacity_leads_per_day || '—'} leads/día`, color: ll.utilization_pct > 85 ? 'red' : 'green' },
-        { label: 'Presión staffing', value: pressureLabel, sub: ll.staffing_gap_tomorrow > 0 ? `Gap mañana: +${ll.staffing_gap_tomorrow}` : 'Sin gap', color: ll.staffing_pressure === 'critical' ? 'red' : ll.staffing_pressure === 'pressure' ? 'gold' : 'green' },
+        { label: 'Llegada de leads por hora', value: `${Number(ll.arrival_rate_per_hour).toFixed(2)} leads/h`, sub: 'Promedio del día repartido en 24 h', color: 'blue' },
+        { label: 'Tiempo medio por contacto', value: `${Number(ll.avg_service_minutes).toFixed(1)} min`, sub: 'Cuánto tarda el equipo en atender', color: 'blue' },
+        { label: 'Personas en espera (estimado)', value: Number(ll.estimated_queue_leads).toFixed(1), sub: 'Según llegada y tiempo de atención', color: 'gold' },
+        { label: 'Carga del equipo', value: `${ll.utilization_pct}%`, sub: `Capacidad máxima: ${ll.capacity_leads_per_day || '—'} leads/día`, color: ll.utilization_pct > 85 ? 'red' : 'green' },
+        { label: '¿Alcanza el personal?', value: pressureLabel, sub: ll.staffing_gap_tomorrow > 0 ? `Faltan ~${ll.staffing_gap_tomorrow} atenciones mañana` : 'Cobertura suficiente', color: ll.staffing_pressure === 'critical' ? 'red' : ll.staffing_pressure === 'pressure' ? 'gold' : 'green' },
     ];
 
     el.style.display = 'grid';
@@ -1280,10 +1490,10 @@ function renderLittlesLawCards(ops) {
 }
 
 const INVESTMENT_COMPARE_METRICS = [
-    { key: 'total_spend', label: 'Gasto total', prefix: '$' },
-    { key: 'global_cpl', label: 'CPL global', prefix: '$' },
-    { key: 'hhi_index', label: 'HHI', suffix: '' },
-    { key: 'roas_proxy', label: 'ROAS proxy', suffix: '' },
+    { key: 'total_spend', label: 'Gasto en publicidad', prefix: '$', invert: true },
+    { key: 'global_cpl', label: 'Costo por lead', prefix: '$', invert: true },
+    { key: 'hhi_index', label: 'Concentración de gasto', suffix: '', invert: true },
+    { key: 'roas_proxy', label: 'Retorno estimado', suffix: '' },
 ];
 
 function renderInvestmentCompareStrip(history) {
@@ -1312,10 +1522,11 @@ function renderInvestmentCompareStrip(history) {
     const chips = INVESTMENT_COMPARE_METRICS.map((m) => {
         const d = compare.deltas?.[m.key];
         if (!d) return '';
+        const valueClass = compareDeltaClass(d, !!m.invert);
         return `
-            <div style="padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);min-width:100px;">
-                <div style="font-size:10px;color:var(--text-dim);margin-bottom:2px;">${m.label}</div>
-                <div style="font-size:13px;font-weight:700;color:${compareDeltaColor(d)};">
+            <div class="compare-chip">
+                <div class="compare-chip__label">${m.label}</div>
+                <div class="compare-chip__value ${valueClass}">
                     ${formatCompareDelta(d, m.prefix || '', m.suffix || '')}
                 </div>
             </div>
@@ -1323,12 +1534,15 @@ function renderInvestmentCompareStrip(history) {
     }).join('');
 
     el.style.display = 'block';
-    el.className = 'card investment-compare-strip';
+    el.className = 'card compare-strip investment-compare-strip';
     el.innerHTML = `
-        <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--text-muted);">
-            Vs ejecución anterior${prevDate ? ` <span style="font-weight:500;margin-left:8px;">(${prevDate})</span>` : ''}
+        <div class="compare-strip__head">
+            <div>
+                <div class="compare-strip__title">¿Qué cambió desde la última actualización?</div>
+                ${prevDate ? `<div class="compare-strip__meta">Comparado con: ${prevDate}</div>` : ''}
+            </div>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:10px;">${chips}</div>
+        <div class="compare-strip__chips">${chips}</div>
     `;
 }
 
@@ -1569,13 +1783,21 @@ function renderBOS(data, history) {
     if (mainSbar && mainSbarText) {
         const severityClass = data.system.status.color === 'rojo' ? 'status-red' : data.system.status.color === 'amarillo' ? 'status-yellow' : 'status-green';
         mainSbar.className = `sbar topbar-status ${severityClass}`;
-        mainSbarText.innerHTML = `ESTADO: ${cleanTechnicalTerms(data.system.status.label).toUpperCase()} &mdash; ${cleanTechnicalTerms(data.system.status.reasons[0] || 'Operación en curso.')}`;
+        mainSbarText.innerHTML = buildPlainStatusLine(data);
     }
 
     // 1. Render System Health Hero
     const healthColor = data.system.health_score >= 80 ? 'var(--green)' : data.system.health_score >= 60 ? 'var(--amber)' : 'var(--red)';
     const circumference = 2 * Math.PI * 58;
     const dashOffset = circumference - (data.system.health_score / 100) * circumference;
+    const heroSparkline = (history || dashboardHistory)?.sparkline?.length >= 2
+        ? buildSparklineSvg((history || dashboardHistory).sparkline, {
+            width: 100,
+            height: 28,
+            valueKey: 'shs',
+            color: healthColor,
+        })
+        : '';
 
     document.getElementById('dashboard-health-hero').innerHTML = `
         <div class="health-ring">
@@ -1588,14 +1810,16 @@ function renderBOS(data, history) {
             </svg>
             <div class="health-score-text">
                 <div class="num" id="health-num-val" style="color: ${healthColor}" data-value="${data.system.health_score}">0</div>
-                <div class="label">Salud</div>
+                <div class="label">de 100</div>
             </div>
         </div>
         <div class="health-info">
             <div class="health-info-head">
-                <h2 class="health-info-title">Salud Operativa</h2>
+                <h2 class="health-info-title">¿Cómo va tu negocio?</h2>
                 <span class="custom-badge ${data.system.status.color === 'amarillo' ? 'custom-badge-warning' : data.system.status.color === 'rojo' ? 'custom-badge-critical' : 'custom-badge-success'}">${cleanTechnicalTerms(data.system.status.label)}</span>
+                ${heroSparkline ? `<div class="health-sparkline-wrap" title="Tendencia de salud en días recientes">${heroSparkline}</div>` : ''}
             </div>
+            <p class="health-plain-subtitle">${buildPlainStatusLine(data)}</p>
             <div class="health-reasons-inline">
                 ${data.system.status.reasons.slice(0, 3).map(r => `
                     <span class="health-reason-chip">${cleanTechnicalTerms(r)}</span>
@@ -1783,10 +2007,13 @@ function renderBOS(data, history) {
         const cardColor = isHealth ? null : resolveKpiCardColor(kpi, data);
         if (isHealth) {
             return `
-                <div class="card liquid-tank liquid-tone-${liquidTone} card-animate"
+                <div class="card liquid-tank liquid-tone-${liquidTone} card-animate kpi-card-interactive"
                     style="--fill-level: 0; animation-delay: ${idx * 0.025}s;"
                     data-fill-target="${healthScore}"
-                    onclick="openKpiModal('${escapedLabel}', '${escapedValue}')">
+                    onclick="openKpiModal('${escapedLabel}', '${escapedValue}')"
+                    role="button"
+                    tabindex="0"
+                    aria-label="${kpi.label}: ${kpi.value}. Toca para más información">
                     <div class="liquid-tank__fill" aria-hidden="true">
                         <div class="liquid-tank__surface liquid-tank__surface--1"></div>
                         <div class="liquid-tank__surface liquid-tank__surface--2"></div>
@@ -1802,8 +2029,11 @@ function renderBOS(data, history) {
             `;
         }
         return `
-            <div class="card stat-card-${cardColor} card-animate kpi-card" style="animation-delay: ${idx * 0.025}s;"
-                onclick="openKpiModal('${escapedLabel}', '${escapedValue}')">
+            <div class="card stat-card-${cardColor} card-animate kpi-card kpi-card-interactive" style="animation-delay: ${idx * 0.025}s;"
+                onclick="openKpiModal('${escapedLabel}', '${escapedValue}')"
+                role="button"
+                tabindex="0"
+                aria-label="${kpi.label}: ${kpi.value}. Toca para más información">
                 <div class="card-stat-top">
                     <div class="card-stat-label">${kpi.label}</div>
                     ${trendBadge}
@@ -1834,11 +2064,11 @@ function renderBOS(data, history) {
             <div class="urgency-badge ${a.urgency}">${a.urgency === 'today' ? 'Acción Inmediata' : 'Plan Semanal'}</div>
             <div class="action-text">${cleanTechnicalTerms(a.action)}</div>
             <details class="action-details">
-                <summary>Ver contexto</summary>
+                <summary>¿Por qué hacer esto?</summary>
                 <div class="action-meta">
-                    <div><strong>Motivo:</strong> ${cleanTechnicalTerms(a.reason)}</div>
-                    <div><strong>Evidencia:</strong> ${cleanTechnicalTerms(a.evidence)}</div>
-                    <div><strong>Impacto Estimado:</strong> ${cleanTechnicalTerms(a.impact_est)}</div>
+                    <div><strong>En pocas palabras:</strong> ${cleanTechnicalTerms(a.reason)}</div>
+                    <div><strong>Qué nos dice el dato:</strong> ${cleanTechnicalTerms(a.evidence)}</div>
+                    <div><strong>Qué podrías ganar:</strong> ${cleanTechnicalTerms(a.impact_est)}</div>
                 </div>
             </details>
             <div class="action-card-footer">
@@ -1879,9 +2109,8 @@ function renderBOS(data, history) {
 
     renderReportsQaBadge(data);
 
-    // 10. Update Sync Date in top header
-    const genDate = new Date(data.meta.generated_at);
-    document.getElementById('last-update').textContent = `Sincronizado: ${genDate.toLocaleDateString('es-MX')} a las ${genDate.toLocaleTimeString('es-MX')}`;
+    updateSyncHeader(data.meta);
+    initPlainGuideBanner();
 }
 
 // =====================================================================
@@ -2389,11 +2618,11 @@ function renderFunnelDetails(data) {
     const narrative = document.getElementById('funnel-narrative-subtitle');
     if (narrative) {
         if (conversionRate === '—') {
-            narrative.innerHTML = 'Sin tasa de conversión calculada para este periodo.';
+            narrative.innerHTML = 'Aún no hay suficientes datos para calcular cuántos interesados llegan a consulta.';
         } else if (totalLeads > 0) {
-            narrative.innerHTML = `En este periodo (<strong>${totalLeads.toLocaleString('es-MX')} leads</strong>), <strong>${conversionRate}%</strong> llegaron a consulta agendada. Ingreso en riesgo estimado: <strong>${riskRevenueFormatted}</strong> (fugas × $${revenuePer.toLocaleString('es-MX')}; no es ingreso real).`;
+            narrative.innerHTML = `En este periodo hubo <strong>${totalLeads.toLocaleString('es-MX')} interesados</strong>. De ellos, <strong>${conversionRate}%</strong> agendaron consulta. Si no corriges las fugas del proceso, podrías dejar de ganar unos <strong>${riskRevenueFormatted}</strong> (estimación, no es dinero ya perdido).`;
         } else {
-            narrative.innerHTML = `Tasa de conversión del periodo: <strong>${conversionRate}%</strong>. Ingreso en riesgo estimado: <strong>${riskRevenueFormatted}</strong> (fugas × $${revenuePer.toLocaleString('es-MX')}).`;
+            narrative.innerHTML = `<strong>${conversionRate}%</strong> de los interesados agendaron consulta. Fugas del proceso: estimación de <strong>${riskRevenueFormatted}</strong> en ventas en riesgo.`;
         }
     }
 
@@ -4826,7 +5055,7 @@ window.triggerSync = async function (event) {
     }
 
     if (sbarText) {
-        sbarText.innerHTML = "Sincronizando datos con n8n al instante...";
+        sbarText.textContent = 'Actualizando datos… un momento.';
     }
 
     // Call loadBOS to fetch the latest dynamic data from the server
@@ -4856,6 +5085,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     loadBOS();
+    initPlainGuideBanner();
     initSpotlight();
     console.log('⚡ PulseMkt Dashboard logic active');
 });

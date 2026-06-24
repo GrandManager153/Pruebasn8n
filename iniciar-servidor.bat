@@ -31,7 +31,7 @@ echo [+] Dependencias listas.
 echo.
 
 echo [*] [2/3] Iniciando servidor Node en http://localhost:3000
-start "SleekAPI - Servidor Local" cmd /k "cd /d \"%~dp0\" && node server.js"
+start "SleekAPI - Servidor Local" /d "%~dp0" cmd /k node server.js
 echo.
 
 echo [*] [3/3] Iniciando ML API Python en http://127.0.0.1:8000

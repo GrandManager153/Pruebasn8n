@@ -17,15 +17,15 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
 
     <!-- Custom Extracted Stylesheets -->
-    <link rel="stylesheet" href="/css/styles.css?v=15">
+    <link rel="stylesheet" href="/css/styles.css?v=18">
 </head>
 
 <body>
     <!-- Ambient Space Background Nebulas -->
     <div class="ambient-nebula nebula-gold"></div>
-    <div class="ambient-nebula nebula-crimson"></div>
-    <div class="ambient-nebula nebula-violet"></div>
-    <div class="global-flashlight"></div>
+    <div class="ambient-nebula nebula-crimson ambient-muted" aria-hidden="true"></div>
+    <div class="ambient-nebula nebula-violet ambient-muted" aria-hidden="true"></div>
+    <div class="global-flashlight ambient-muted" aria-hidden="true"></div>
 
     <!-- Animated Ocean Wave Background -->
     <div class="wave-bg-container">
@@ -39,12 +39,12 @@
                 <path d="M0,200 C160,260 320,140 480,200 C640,260 800,140 960,200 C1120,260 1280,140 1440,200 L1440,320 L0,320 Z" />
             </svg>
         </div>
-        <div class="wave-layer wave-3">
+        <div class="wave-layer wave-3 wave-muted" aria-hidden="true">
             <svg viewBox="0 0 1440 320" preserveAspectRatio="none">
                 <path d="M0,180 C200,240 400,120 600,180 C800,240 1000,120 1200,180 C1400,240 1440,180 1440,180 L1440,320 L0,320 Z" />
             </svg>
         </div>
-        <div class="wave-layer wave-4">
+        <div class="wave-layer wave-4 wave-muted" aria-hidden="true">
             <svg viewBox="0 0 1440 320" preserveAspectRatio="none">
                 <path d="M0,220 C140,280 280,160 420,220 C560,280 700,160 840,220 C980,280 1120,160 1260,220 C1400,280 1440,220 1440,220 L1440,320 L0,320 Z" />
             </svg>
@@ -57,18 +57,19 @@
             <div class="kpi-modal-title" id="kpi-modal-title"></div>
             <div class="kpi-modal-subtitle" id="kpi-modal-subtitle" style="display: none;"></div>
             <div class="kpi-modal-value" id="kpi-modal-value"></div>
+            <div class="kpi-modal-plain" id="kpi-modal-plain"></div>
             <div class="kpi-modal-section">
-                <div class="kpi-modal-section-label">¿Qué significa?</div>
+                <div class="kpi-modal-section-label">¿Qué es esto?</div>
                 <div class="kpi-modal-section-text" id="kpi-modal-definition"></div>
             </div>
             <div class="kpi-modal-section">
-                <div class="kpi-modal-section-label">¿Cómo interpretar el valor actual?</div>
+                <div class="kpi-modal-section-label">¿Está bien o hay que actuar?</div>
                 <div class="kpi-modal-section-text" id="kpi-modal-interpretation"></div>
             </div>
             <hr class="kpi-modal-divider">
             <div class="kpi-modal-source">
                 <div class="kpi-modal-source-dot"></div>
-                <span id="kpi-modal-source-text">Fuente: n8n Analytics Engine</span>
+                <span id="kpi-modal-source-text">Datos calculados automáticamente</span>
             </div>
         </div>
     </div>
@@ -86,19 +87,19 @@
             <div class="sidebar-menu-wrapper">
                 <div class="list-group list-group-flush v-w-100">
                     <div class="menu-header">Métricas y Resúmenes</div>
-                    <button class="list-group-item active" data-tab="dashboard" onclick="switchTab('dashboard')">
+                    <button class="list-group-item active" data-tab="dashboard" onclick="switchTab('dashboard')" title="Cómo va el negocio hoy y qué hacer">
                         <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span> Resumen
                     </button>
-                    <button class="list-group-item" data-tab="funnel" onclick="switchTab('funnel')">
-                        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8v6l-4 2v-8L3 4z"/></svg></span> Funnel
+                    <button class="list-group-item" data-tab="funnel" onclick="switchTab('funnel')" title="Dónde entran los clientes y dónde se pierden">
+                        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8v6l-4 2v-8L3 4z"/></svg></span> Embudo
                     </button>
-                    <button class="list-group-item" data-tab="forecast" onclick="switchTab('forecast')">
+                    <button class="list-group-item" data-tab="forecast" onclick="switchTab('forecast')" title="Cuántos leads podrías recibir mañana o la próxima semana">
                         <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></span> Pronósticos
                     </button>
-                    <button class="list-group-item" data-tab="investment" onclick="switchTab('investment')">
+                    <button class="list-group-item" data-tab="investment" onclick="switchTab('investment')" title="Cuánto gastas en publicidad y en qué campañas">
                         <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span> Inversión
                     </button>
-                    <button class="list-group-item" data-tab="operations" onclick="switchTab('operations')">
+                    <button class="list-group-item" data-tab="operations" onclick="switchTab('operations')" title="Llamadas, horarios y carga del equipo">
                         <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg></span> Operaciones
                     </button>
                     <button class="list-group-item" data-tab="alerts" onclick="switchTab('alerts')">
@@ -125,10 +126,14 @@
                 <div class="topbar-main">
                     <div class="topbar-left">
                         <h2 id="topbar-section-title">Resumen General</h2>
-                        <span class="topbar-sync" id="last-update">Cargando...</span>
+                        <p class="topbar-section-hint" id="topbar-section-hint">Vista rápida de cómo va tu negocio hoy</p>
+                        <div class="topbar-sync-row">
+                            <span class="topbar-sync" id="last-update">Cargando...</span>
+                            <span class="sync-live-badge" id="sync-badge" hidden>Datos actualizados</span>
+                        </div>
                     </div>
                     <div class="topbar-right">
-                        <button id="sync-btn" class="theme-toggle-btn" onclick="triggerSync(event)" title="Sincronizar Datos al Instante">
+                        <button id="sync-btn" class="theme-toggle-btn" onclick="triggerSync(event)" title="Actualizar datos ahora" aria-label="Actualizar datos ahora">
                             <svg viewBox="0 0 24 24" id="sync-icon-svg" class="topbar-icon">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
                             </svg>
@@ -142,7 +147,7 @@
                 </div>
                 <div class="sbar topbar-status" id="main-sbar">
                     <span class="sdot"></span>
-                    <span id="main-sbar-text">Auditoría PulseMkt en curso...</span>
+                    <span id="main-sbar-text">Preparando tu resumen…</span>
                 </div>
             </header>
 
@@ -151,31 +156,51 @@
 
                 <!-- LOADING & CONNECTION STATES -->
                 <div class="loading-state" id="loading">
-                    <div class="loading-spinner"></div>
-                    <p style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Estableciendo conexión y
-                        cargando datos analíticos de PulseMkt...</p>
+                    <div class="loading-skeleton" aria-hidden="true">
+                        <div class="skeleton-block skeleton-hero"></div>
+                        <div class="skeleton-grid">
+                            <div class="skeleton-block skeleton-card"></div>
+                            <div class="skeleton-block skeleton-card"></div>
+                            <div class="skeleton-block skeleton-card"></div>
+                            <div class="skeleton-block skeleton-card"></div>
+                            <div class="skeleton-block skeleton-card"></div>
+                            <div class="skeleton-block skeleton-card"></div>
+                        </div>
+                    </div>
+                    <p class="loading-caption">Preparando tu resumen del negocio…</p>
                 </div>
 
                 <!-- 1. TAB: RESUMEN GENERAL (DASHBOARD) -->
                 <section class="tab-content active" id="tab-dashboard">
+                    <div class="plain-guide-banner" id="plain-guide-banner" hidden>
+                        <div class="plain-guide-banner__icon" aria-hidden="true">💡</div>
+                        <div class="plain-guide-banner__body">
+                            <strong>¿Primera vez aquí?</strong>
+                            <p>Mira el <b>círculo de salud</b> (verde = bien, amarillo = revisar, rojo = urgente). Toca cualquier tarjeta con números para ver una explicación sencilla. Abajo encontrarás <b>qué hacer hoy</b>.</p>
+                        </div>
+                        <button type="button" class="plain-guide-banner__close" onclick="dismissPlainGuide()">Entendido</button>
+                    </div>
+
                     <!-- System Health Hero -->
                     <div class="health-hero" id="dashboard-health-hero"></div>
 
                     <div id="dashboard-compare-strip" style="display: none; margin-bottom: 16px;"></div>
-                    <p id="dashboard-history-empty" style="display: none; font-size: 13px; color: var(--text-muted); margin: 0 0 16px;">
-                        Historial disponible tras la próxima ejecución diaria de n8n
+                    <p id="dashboard-history-empty" class="section-hint section-hint--inline" style="display: none;">
+                        Cuando los datos se actualicen otra vez (normalmente cada día), verás aquí si los números subieron o bajaron respecto a ayer.
                     </p>
 
                     <!-- Core KPIs Grid -->
                     <div class="section-header">
-                        <div class="section-title"><span class="bar"></span> KPIs</div>
+                        <div class="section-title"><span class="bar"></span> Números clave</div>
+                        <p class="section-hint">Cada número tiene una explicación sencilla si lo seleccionas.</p>
                     </div>
                     <div class="v-grid-kpi" id="dashboard-kpis"></div>
 
                     <!-- Actions Summary Grid -->
                     <div class="v-mb-4">
                         <div class="section-header" style="margin-top: 32px;">
-                            <div class="section-title"><span class="bar"></span> Acciones Prioritarias</div>
+                            <div class="section-title"><span class="bar"></span> Qué hacer ahora</div>
+                            <p class="section-hint">Pasos concretos sugeridos según tus datos de hoy.</p>
                         </div>
                         <div class="v-grid-3" id="dashboard-actions"></div>
                     </div>
@@ -308,12 +333,13 @@
                 <!-- 4. TAB: INVERSIÓN Y CAMPAÑAS -->
                 <section class="tab-content" id="tab-investment">
                     <div class="section-header">
-                        <div class="section-title"><span class="bar"></span> Ad Spend & Budget (Presupuesto Publicitario y Distribución)</div>
+                        <div class="section-title"><span class="bar"></span> Gasto en publicidad</div>
+                        <p class="section-hint">Cuánto inviertes y cómo se reparte entre campañas.</p>
                     </div>
 
                     <div id="investment-compare-strip" style="display: none; margin-bottom: 16px;"></div>
-                    <p id="investment-history-empty" style="display: none; font-size: 13px; color: var(--text-muted); margin: 0 0 16px;">
-                        Historial de inversión disponible tras la próxima ejecución diaria de n8n
+                    <p id="investment-history-empty" class="section-hint section-hint--inline" style="display: none;">
+                        Tras la próxima actualización diaria verás si tu gasto en publicidad subió o bajó.
                     </p>
 
                     <div class="v-grid-4" id="investment-kpi-strip" style="margin-bottom: 16px;"></div>
@@ -566,7 +592,7 @@
     <script src="/js/enrich-funnel-client.js?v=1"></script>
     <script src="/js/funnel-markov-groups.js?v=3"></script>
     <script src="/js/markov-stddev-enrich.js?v=1"></script>
-    <script src="/js/app.js?v=36" defer></script>
+    <script src="/js/app.js?v=38" defer></script>
 </body>
 
 </html>

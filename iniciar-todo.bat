@@ -32,7 +32,7 @@ echo [+] Dependencias listas.
 echo.
 
 echo [*] [2/4] Iniciando el servidor API en una nueva ventana...
-start "SleekAPI - Servidor Local" cmd /k "cd /d \"%~dp0\" && node server.js"
+start "SleekAPI - Servidor Local" /d "%~dp0" cmd /k node server.js
 echo [+] Servidor API iniciado en http://localhost:3000
 echo.
 

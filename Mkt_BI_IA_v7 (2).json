@@ -715,7 +715,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ ($vars.WEBHOOK_BASE_URL || 'https://vacate-railing-geometric.ngrok-free.dev') + '/api/webhook' }}",
+        "url": "={{ ($vars.WEBHOOK_BASE_URL || 'https://delegate-operation-browbeat.ngrok-free.dev') + '/api/webhook' }}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ $json }}",
