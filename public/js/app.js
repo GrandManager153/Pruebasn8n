@@ -143,13 +143,11 @@ function ensureTabRendered(tabId) {
             break;
         }
         case 'investment':
-            if (dashboardData.investment?.campaigns) {
-                if (!renderedTabs.has('investment-chart')) {
-                    renderCampaignChart(dashboardData.investment.campaigns);
-                    renderedTabs.add('investment-chart');
-                } else {
-                    replayInvestmentChartAnimation();
-                }
+            renderInvestmentTab(dashboardData, dashboardHistory);
+            if (!renderedTabs.has('investment-chart')) {
+                renderedTabs.add('investment-chart');
+            } else if (dashboardData.investment?.campaigns) {
+                replayInvestmentChartAnimation();
             }
             break;
         case 'operations':
@@ -345,6 +343,24 @@ const KPI_EXPLANATIONS = {
         definition: 'HHI: índice de concentración del gasto entre campañas. Cerca de 0 = diversificado; cerca de 1 = dependencia de pocas campañas.',
         interpretation: '< 0.15 diversificado; 0.15–0.25 moderado; > 0.25 riesgo de concentración en poca pauta.',
         source: 'investment.mmm.hhi_index'
+    },
+    'Concentración Top 3': {
+        icon: '📈',
+        definition: 'Porcentaje del gasto total concentrado en las 3 campañas con mayor presupuesto.',
+        interpretation: 'Valores altos (>70%) indican dependencia de pocas campañas; complementa el HHI.',
+        source: 'investment.derived.concentration.top3_pct'
+    },
+    'ROAS Proxy': {
+        icon: '💹',
+        definition: 'Retorno estimado sobre gasto: ingreso estimado por conversiones Markov ÷ gasto total.',
+        interpretation: '≥ 1 sugiere rentabilidad proxy; < 1 indica gasto superior al ingreso estimado.',
+        source: 'derived.economics.roas_proxy'
+    },
+    'Breakeven CPL Gap': {
+        icon: '⚖️',
+        definition: 'Diferencia entre CPL global actual y el CPL máximo rentable según tasa de conversión.',
+        interpretation: 'Positivo = pagas más de lo sostenible por lead; negativo = margen favorable.',
+        source: 'derived.economics.breakeven_cpl_gap'
     },
     'Conversion global': {
         icon: '🎯',
@@ -1263,6 +1279,226 @@ function renderLittlesLawCards(ops) {
     }).join('');
 }
 
+const INVESTMENT_COMPARE_METRICS = [
+    { key: 'total_spend', label: 'Gasto total', prefix: '$' },
+    { key: 'global_cpl', label: 'CPL global', prefix: '$' },
+    { key: 'hhi_index', label: 'HHI', suffix: '' },
+    { key: 'roas_proxy', label: 'ROAS proxy', suffix: '' },
+];
+
+function renderInvestmentCompareStrip(history) {
+    const el = document.getElementById('investment-compare-strip');
+    const emptyEl = document.getElementById('investment-history-empty');
+    if (!el) return;
+
+    const compare = history?.compare;
+    if (!compare?.available) {
+        el.style.display = 'none';
+        el.innerHTML = '';
+        if (emptyEl) {
+            emptyEl.style.display = history && (history.entry_count || 0) < 2 ? 'block' : 'none';
+        }
+        return;
+    }
+
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    const prevDate = compare.previous_generated_at
+        ? new Date(compare.previous_generated_at).toLocaleString('es-MX', {
+            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+        })
+        : '';
+
+    const chips = INVESTMENT_COMPARE_METRICS.map((m) => {
+        const d = compare.deltas?.[m.key];
+        if (!d) return '';
+        return `
+            <div style="padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);min-width:100px;">
+                <div style="font-size:10px;color:var(--text-dim);margin-bottom:2px;">${m.label}</div>
+                <div style="font-size:13px;font-weight:700;color:${compareDeltaColor(d)};">
+                    ${formatCompareDelta(d, m.prefix || '', m.suffix || '')}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    el.style.display = 'block';
+    el.className = 'card investment-compare-strip';
+    el.innerHTML = `
+        <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--text-muted);">
+            Vs ejecución anterior${prevDate ? ` <span style="font-weight:500;margin-left:8px;">(${prevDate})</span>` : ''}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">${chips}</div>
+    `;
+}
+
+function renderInvestmentKpiCards(kpis, { containerId, cardClass = '', startDelay = 0 } = {}) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = kpis.map((k, i) => {
+        const escapedLabel = k.label.replace(/'/g, "\\'");
+        const escapedValue = String(k.displayValue ?? k.value).replace(/'/g, "\\'");
+        const valueId = k.valueId ? ` id="${k.valueId}"` : '';
+        const animAttr = k.animate != null ? ` data-value="${k.animate}"` : '';
+        return `
+            <div class="card stat-card-${k.color} card-animate ${cardClass}" style="animation-delay:${(startDelay + i) * 0.03}s;cursor:pointer;"
+                onclick="openKpiModal('${escapedLabel}', '${escapedValue}')">
+                <div class="card-stat-label">${k.label}</div>
+                <div class="card-stat-value"${valueId}${animAttr}>${k.value}</div>
+                <div class="card-stat-sub">${k.sub}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderInvestmentTab(data, history) {
+    if (!data?.investment) return;
+
+    const inv = data.investment;
+    const derived = inv.derived || {};
+    const econ = { ...(data.derived?.economics || {}), ...(derived.economics || {}) };
+    const globalCpl = econ.global_cpl ?? inv.cpl?.global_cpl ?? null;
+    const concentration = derived.concentration || {};
+
+    renderInvestmentCompareStrip(history || dashboardHistory);
+
+    const spendFormatted = `$${Number(inv.total_spend || 0).toLocaleString('es-MX')}`;
+    const sideKpis = [
+        {
+            label: 'Ad Spend (Inversión Total)',
+            value: spendFormatted,
+            sub: 'Gasto publicitario del periodo',
+            color: 'gold',
+        },
+    ];
+    if (econ.revenue_estimated != null) {
+        sideKpis.push({
+            label: 'Revenue Estimado',
+            value: `$${Number(econ.revenue_estimated).toLocaleString('es-MX')}`,
+            sub: 'Conversiones Markov × ticket',
+            color: 'green',
+        });
+    }
+    sideKpis.push({
+        label: 'Active Campaigns (Campañas Activas Modeladas)',
+        value: '0',
+        displayValue: String(inv.campaign_count || 0),
+        sub: 'Modeladas por el motor de atribución',
+        color: 'gold',
+        valueId: 'spend-count',
+        animate: inv.campaign_count || 0,
+    });
+    renderInvestmentKpiCards(sideKpis, {
+        containerId: 'investment-side-stats',
+        cardClass: 'investment-side-stat',
+        startDelay: 1,
+    });
+
+    const stripKpis = [
+        {
+            label: 'CPL Global',
+            value: globalCpl != null ? `$${Number(globalCpl).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : '—',
+            sub: 'Costo por lead implícito',
+            color: 'blue',
+        },
+        {
+            label: 'HHI (Concentración)',
+            value: concentration.hhi != null ? concentration.hhi : (inv.hhi?.index ?? '—'),
+            sub: concentration.label || inv.hhi?.label || 'Diversificación de pauta',
+            color: concentration.risk === 'high' ? 'red' : concentration.risk === 'moderate' ? 'gold' : 'green',
+        },
+        {
+            label: 'ROAS Proxy',
+            value: econ.roas_proxy != null ? Number(econ.roas_proxy).toFixed(2) : '—',
+            sub: 'Ingreso estimado / gasto',
+            color: econ.roas_proxy >= 1 ? 'green' : 'red',
+        },
+    ];
+    if (econ.breakeven_cpl_gap != null) {
+        stripKpis.push({
+            label: 'Breakeven CPL Gap',
+            value: `$${Number(econ.breakeven_cpl_gap).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+            sub: 'CPL vs umbral rentable',
+            color: econ.breakeven_cpl_gap > 0 ? 'red' : 'green',
+        });
+    }
+    renderInvestmentKpiCards(stripKpis, { containerId: 'investment-kpi-strip' });
+
+    const concPanel = document.getElementById('investment-concentration-panel');
+    if (concPanel) {
+        if (concentration.available) {
+            const riskLabel = concentration.risk === 'high' ? 'Concentración alta'
+                : concentration.risk === 'moderate' ? 'Concentración moderada' : 'Diversificación OK';
+            const riskClass = concentration.risk === 'high' ? 'custom-badge-critical'
+                : concentration.risk === 'moderate' ? 'custom-badge-warning' : 'custom-badge-success';
+            const topName = concentration.top_campaign?.name
+                ? cleanTechnicalTerms(concentration.top_campaign.name).slice(0, 60)
+                : '—';
+            concPanel.style.display = 'block';
+            concPanel.innerHTML = `
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;">
+                    <span class="custom-badge ${riskClass}">${riskLabel}</span>
+                    <span>Top 3 campañas = <strong>${concentration.top3_pct}%</strong> del gasto</span>
+                    <span style="color:var(--text-muted);">Dominante: <strong>${topName}</strong> (${concentration.top_campaign?.pct_of_total || 0}%)</span>
+                </div>
+            `;
+        } else {
+            concPanel.style.display = 'none';
+            concPanel.innerHTML = '';
+        }
+    }
+
+    const alertsStrip = document.getElementById('investment-alerts-strip');
+    if (alertsStrip) {
+        const invAlerts = (derived.investment_alerts || []).slice(0, 3);
+        if (invAlerts.length) {
+            alertsStrip.style.display = 'flex';
+            alertsStrip.style.flexWrap = 'wrap';
+            alertsStrip.style.gap = '10px';
+            alertsStrip.innerHTML = invAlerts.map((a) => {
+                const sev = a.severity === 'critical' ? 'custom-badge-critical'
+                    : a.severity === 'warning' ? 'custom-badge-warning' : 'custom-badge-success';
+                const title = formatAlertTitle ? formatAlertTitle(a) : (a.title || a.metric);
+                return `
+                    <div class="card" style="flex:1;min-width:200px;padding:12px 16px;border-left:3px solid var(--${a.severity === 'critical' ? 'red' : a.severity === 'warning' ? 'amber' : 'blue'});">
+                        <span class="custom-badge ${sev}" style="font-size:10px;">${a.severity || 'info'}</span>
+                        <div style="font-size:12px;font-weight:600;margin-top:6px;">${title}</div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            alertsStrip.style.display = 'none';
+            alertsStrip.innerHTML = '';
+        }
+    }
+
+    const spendCountVal = document.getElementById('spend-count');
+    if (spendCountVal) {
+        spendCountVal.setAttribute('data-value', inv.campaign_count || 0);
+        parseAndAnimate(spendCountVal, inv.campaign_count || 0);
+    }
+
+    const campaigns = derived.campaigns?.length
+        ? derived.campaigns
+        : (inv.campaigns || []);
+
+    const campaignsTable = document.querySelector('#investment-campaigns-table tbody');
+    if (campaignsTable) {
+        campaignsTable.innerHTML = campaigns.map((c) => `
+            <tr>
+                <td style="font-weight: 600; color: white;">${cleanTechnicalTerms(c.name)}</td>
+                <td style="text-align: right; font-family: var(--mono); color: var(--gold); font-weight: bold;">$${Number(c.spend).toLocaleString('es-MX')}</td>
+                <td style="text-align: right; font-family: var(--mono); color: var(--text-muted);">${c.pct_of_total}%</td>
+                <td style="text-align: right; font-family: var(--mono); color: var(--text-dim); text-transform: capitalize;">${c.source || '—'}</td>
+            </tr>
+        `).join('');
+    }
+
+    if (inv.campaigns?.length) {
+        renderCampaignChart(inv.campaigns);
+    }
+}
+
 function alertFingerprintLegacy(a) {
     return String(a?.metric || a?.id || '').trim();
 }
@@ -1611,30 +1847,7 @@ function renderBOS(data, history) {
         </div>
     `).join('');
 
-    // 4. Render Campaign Statistics
-    const spendTotalVal = document.getElementById('spend-total');
-    if (spendTotalVal) {
-        spendTotalVal.setAttribute('data-value', `$${data.investment.total_spend}`);
-        parseAndAnimate(spendTotalVal, `$${data.investment.total_spend}`);
-    }
-    const spendCountVal = document.getElementById('spend-count');
-    if (spendCountVal) {
-        spendCountVal.setAttribute('data-value', data.investment.campaign_count);
-        parseAndAnimate(spendCountVal, data.investment.campaign_count);
-    }
-
-    // 5. Render Campaigns Table
-    const campaignsTable = document.querySelector('#investment-campaigns-table tbody');
-    if (campaignsTable) {
-        campaignsTable.innerHTML = data.investment.campaigns.map(c => `
-            <tr>
-                <td style="font-weight: 600; color: white;">${cleanTechnicalTerms(c.name)}</td>
-                <td style="text-align: right; font-family: var(--mono); color: var(--gold); font-weight: bold;">$${Number(c.spend).toLocaleString()}</td>
-                <td style="text-align: right; font-family: var(--mono); color: var(--text-muted);">${c.pct_of_total}%</td>
-                <td style="text-align: right; font-family: var(--mono);">${c.records || c.conversions || 0}</td>
-            </tr>
-        `).join('');
-    }
+    renderInvestmentTab(data, history);
 
     // 6–9. Pestañas secundarias y gráficas: diferidas para no bloquear la carga inicial
     scheduleDeferredRender(() => {
@@ -3876,17 +4089,28 @@ function renderCampaignChart(campaigns) {
                     },
                 },
             } : undefined,
+            layout: {
+                padding: {
+                    top: 12,
+                    bottom: 4,
+                    left: 8,
+                    right: 8,
+                },
+            },
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '65%',
+            cutout: '58%',
             plugins: {
                 legend: {
-                    position: 'right',
+                    position: 'bottom',
+                    align: 'start',
+                    fullSize: false,
                     labels: {
                         color: isLight ? '#475569' : '#94a3b8',
                         font: { size: 11 },
                         boxWidth: 10,
-                        padding: 8
+                        padding: 8,
+                        usePointStyle: true,
                     }
                 },
                 tooltip: {

@@ -13,6 +13,7 @@ const { enrichOperationalAlerts, formatDurationMinutes } = require('./scripts/en
 const { enrichFunnelMarkovStddev } = require('./scripts/enrich-funnel-markov-stddev');
 const { enrichFunnelFromTransitions } = require('./scripts/enrich-funnel-from-transitions');
 const { enrichOperationsDerived } = require('./scripts/enrich-operations-derived');
+const { enrichInvestmentDerived } = require('./scripts/enrich-investment-derived');
 const { enrichLittlesLaw } = require('./scripts/enrich-littles-law');
 const {
   appendHistoryEntry,
@@ -24,6 +25,7 @@ const {
 function applyServerEnrichment(data) {
   enrichFunnelFromTransitions(data);
   enrichOperationsDerived(data);
+  enrichInvestmentDerived(data);
   enrichLittlesLaw(data);
   enrichOperationalAlerts(data);
   enrichFunnelMarkovStddev(data);

@@ -116,6 +116,7 @@ function buildHistoryEntry(payload) {
             conversion_pct: Number(payload?.funnel?.conversion_pct ?? payload?.funnel?.global_conversion_pct) || null,
             global_cpl: Number(inv.cpl?.global_cpl) || null,
             total_spend: Number(inv.total_spend) || 0,
+            hhi_index: Number(inv.hhi?.index ?? inv.mmm?.hhi_index) || null,
             mase: extractMase(payload),
             roas_proxy: payload?.derived?.economics?.roas_proxy != null
                 ? Number(payload.derived.economics.roas_proxy)
@@ -219,6 +220,8 @@ function compareWithPrevious(currentPayload, dataDir) {
         overcontact_pct: buildDelta(cm.overcontact_pct, pm.overcontact_pct, true),
         conversion_pct: buildDelta(cm.conversion_pct, pm.conversion_pct),
         global_cpl: buildDelta(cm.global_cpl, pm.global_cpl, true),
+        total_spend: buildDelta(cm.total_spend, pm.total_spend),
+        hhi_index: buildDelta(cm.hhi_index, pm.hhi_index, true),
         mase: buildDelta(cm.mase, pm.mase, true),
         roas_proxy: buildDelta(cm.roas_proxy, pm.roas_proxy),
     };
