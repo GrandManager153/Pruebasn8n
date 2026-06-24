@@ -235,8 +235,19 @@ function syncRfAlignedSeries(payload) {
   const baseTs = resolveTimeSeries(payload);
   if (!baseTs.length) return payload;
   const rf = payload.forecast_rf;
-  const aligned = buildRfAlignedSeries(baseTs, rf.backtest_series || []);
-  if (aligned) rf.series = aligned;
+  const rfName = String(rf.model_name || 'random_forest').toLowerCase();
+  const primary = (rf.backtest_models || []).find(
+    (m) => String(m.name).toLowerCase() === rfName
+  );
+
+  // Keep full holdout series from ML API; backtest_series only covers the test window.
+  if (primary && Array.isArray(primary.series) && primary.series.length === baseTs.length) {
+    rf.series = primary.series;
+  } else if (!Array.isArray(rf.series) || rf.series.length !== baseTs.length) {
+    const aligned = buildRfAlignedSeries(baseTs, rf.backtest_series || []);
+    if (aligned) rf.series = aligned;
+  }
+
   rf.time_series = rf.time_series?.length ? rf.time_series : baseTs;
   return payload;
 }

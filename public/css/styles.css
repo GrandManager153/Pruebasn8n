@@ -1070,6 +1070,26 @@ body.light-mode .metric-badge-bad {
     font-weight: 700;
 }
 
+.funnel-period-meta {
+    color: var(--text-muted);
+    opacity: 0.9;
+}
+
+.funnel-enrich-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--amber);
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    border-radius: 999px;
+    padding: 3px 10px;
+    margin-bottom: 8px;
+}
+
 .funnel-expand-btn {
     display: block;
     width: 100%;
@@ -3003,6 +3023,103 @@ body.light-mode .model-compare-select option {
     position: relative;
     height: 240px;
     width: 100%;
+}
+
+.chart-wrapper--campaigns {
+    flex: 1 1 auto;
+    min-height: 280px;
+    height: clamp(280px, 34vh, 360px);
+    padding: 6px 8px 2px;
+    overflow: visible;
+}
+
+.investment-chart-row {
+    align-items: stretch;
+}
+
+.investment-chart-row > .investment-chart-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.investment-chart-row > .investment-chart-card .chart-title {
+    flex-shrink: 0;
+}
+
+#tab-investment .investment-chart-card {
+    overflow: visible;
+}
+
+#tab-investment .investment-chart-card::before,
+#tab-investment .investment-chart-card::after {
+    border-radius: inherit;
+}
+
+.investment-compare-strip {
+    padding: 14px 18px;
+}
+
+#investment-kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--gap-bento);
+}
+
+.investment-side-stats-col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-bento);
+    min-width: 0;
+    height: 100%;
+    align-self: stretch;
+}
+
+.investment-side-stat {
+    overflow: visible !important;
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 0;
+}
+
+.investment-side-stat .card-stat-label {
+    line-height: 1.35;
+}
+
+.investment-side-stat .card-stat-value {
+    font-size: clamp(1.1rem, 2.4vw, 1.75rem);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+#investment-kpi-strip .card-stat-value {
+    font-size: clamp(1.25rem, 2vw, 1.65rem);
+    overflow-wrap: anywhere;
+}
+
+#investment-concentration-panel {
+    padding: 14px 18px;
+    border-left: 4px solid var(--gold);
+}
+
+#investment-alerts-strip .card {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+@media (max-width: 1100px) {
+    .investment-chart-row .chart-wrapper--campaigns {
+        min-height: 260px;
+        height: 280px;
+    }
+
+    .investment-chart-row .investment-side-stat {
+        flex: 0 0 auto;
+    }
 }
 
 .health-hero {

@@ -58,6 +58,33 @@ function getForecastChartAnimationOptions(heavy = false) {
     };
 }
 
+function shouldAnimateInvestmentChart() {
+    return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function getInvestmentChartAnimationOptions() {
+    if (!shouldAnimateInvestmentChart()) return false;
+    return {
+        animateRotate: true,
+        animateScale: true,
+        duration: 1100,
+        easing: 'easeOutCubic',
+        delay: (context) => {
+            if (context.type === 'data' && context.mode === 'default') {
+                return context.dataIndex * 80;
+            }
+            return 0;
+        },
+    };
+}
+
+function replayInvestmentChartAnimation() {
+    const chart = charts.campaigns;
+    if (!chart || !shouldAnimateInvestmentChart()) return;
+    chart.reset();
+    chart.update('active');
+}
+
 function scheduleDeferredRender(fn) {
     if (typeof requestIdleCallback === 'function') {
         requestIdleCallback(() => fn(), { timeout: 1500 });
@@ -116,9 +143,11 @@ function ensureTabRendered(tabId) {
             break;
         }
         case 'investment':
-            if (!renderedTabs.has('investment-chart') && dashboardData.investment?.campaigns) {
-                renderCampaignChart(dashboardData.investment.campaigns);
+            renderInvestmentTab(dashboardData, dashboardHistory);
+            if (!renderedTabs.has('investment-chart')) {
                 renderedTabs.add('investment-chart');
+            } else if (dashboardData.investment?.campaigns) {
+                replayInvestmentChartAnimation();
             }
             break;
         case 'operations':
@@ -315,16 +344,34 @@ const KPI_EXPLANATIONS = {
         interpretation: '< 0.15 diversificado; 0.15–0.25 moderado; > 0.25 riesgo de concentración en poca pauta.',
         source: 'investment.mmm.hhi_index'
     },
+    'Concentración Top 3': {
+        icon: '📈',
+        definition: 'Porcentaje del gasto total concentrado en las 3 campañas con mayor presupuesto.',
+        interpretation: 'Valores altos (>70%) indican dependencia de pocas campañas; complementa el HHI.',
+        source: 'investment.derived.concentration.top3_pct'
+    },
+    'ROAS Proxy': {
+        icon: '💹',
+        definition: 'Retorno estimado sobre gasto: ingreso estimado por conversiones Markov ÷ gasto total.',
+        interpretation: '≥ 1 sugiere rentabilidad proxy; < 1 indica gasto superior al ingreso estimado.',
+        source: 'derived.economics.roas_proxy'
+    },
+    'Breakeven CPL Gap': {
+        icon: '⚖️',
+        definition: 'Diferencia entre CPL global actual y el CPL máximo rentable según tasa de conversión.',
+        interpretation: 'Positivo = pagas más de lo sostenible por lead; negativo = margen favorable.',
+        source: 'derived.economics.breakeven_cpl_gap'
+    },
     'Conversion global': {
         icon: '🎯',
-        definition: 'Global CVR: porcentaje de leads que avanzan a la etapa clave del embudo (p. ej. consulta reservada) vs total de entradas.',
+        definition: 'Porcentaje de consultas agendadas respecto al total de leads del periodo (operations.total_leads). Incluye todas las variantes de Consult Booked.',
         interpretation: '> 5% suele ser fuerte en este sector; < 3.5% sugiere fuga temprana o leads no calificados por creativo/audiencia.',
-        source: 'funnel.global_conversion_pct'
+        source: 'funnel.conversion_pct — (consultas agendadas ÷ leads totales del periodo) × 100'
     },
     'Revenue at Risk': {
         icon: '💸',
-        definition: 'Revenue at Risk: valoración del opportunity cost de leads perdidos en el funnel, con case value assumption (p. ej. $1,200 USD).',
-        interpretation: 'Proxy del costo de ineficiencia operativa. Reducirlo vía mejor speed-to-lead y menos over-dialing mejora revenue sin subir ad spend.',
+        definition: 'Estimación del costo de oportunidad por fugas: suma de eventos de fuga (top N) × valor por conversión configurado (p. ej. $1,200 USD). No es ingreso contable ni cuenta leads únicos.',
+        interpretation: 'Proxy de ineficiencia operativa. Sirve para comparar periodos y priorizar fugas de alto volumen, no como cifra financiera exacta.',
         source: 'funnel.total_revenue_at_risk'
     },
     'Cambio semanal': {
@@ -365,15 +412,15 @@ const KPI_EXPLANATIONS = {
     },
     'Tasa Global de Conversión': {
         icon: '🎯',
-        definition: 'El porcentaje total de leads o prospectos que logran reservar una consulta o avanzar exitosamente a la fase clave del embudo, medido contra el total de leads entrantes en el sistema.',
-        interpretation: 'Una tasa superior al 5% es excelente para este sector. Por debajo de 3.5% sugiere una fuga importante de prospectos en el primer contacto o que la publicidad atrae leads no calificados.',
-        source: 'Cálculo: (Consultas reservadas ÷ Leads totales) × 100 — Motor PulseMkt desde n8n'
+        definition: 'Porcentaje de consultas agendadas respecto al total de leads del periodo analizado (operations.total_leads).',
+        interpretation: 'Una tasa superior al 5% es excelente para este sector. Por debajo de 3.5% sugiere fuga importante o leads poco calificados.',
+        source: 'funnel.conversion_pct — consultas agendadas ÷ leads totales del periodo'
     },
     'Ingresos en Riesgo Estimados': {
         icon: '💸',
-        definition: 'Valoración financiera del costo de oportunidad que representan los leads perdidos (no interesados, sin respuesta, cortadas o números incorrectos) asumiendo un valor promedio de caso de $1,200 USD.',
-        interpretation: 'Representa el impacto de la ineficiencia del call center. Reducir esta cifra optimizando las llamadas incrementa de manera directa los ingresos facturados sin aumentar el presupuesto.',
-        source: 'Cálculo: Leads perdidos × Valor de caso promedio ($1,200) — Motor PulseMkt'
+        definition: 'Estimación: eventos de fuga del periodo × $1,200 USD (valor configurable). No es ingreso real ni leads únicos.',
+        interpretation: 'Indicador relativo de oportunidad perdida por fugas. Útil para priorizar mejoras operativas.',
+        source: 'funnel.total_revenue_at_risk'
     },
     'Pronóstico Mañana': {
         icon: '🔮',
@@ -572,10 +619,10 @@ function openFeederModal(rawFrom, pct, cnt) {
 
     setKpiModalContent({
         title: displayName,
-        value: pct,
-        definition: `Ruta de conversión desde "${displayName}". Los leads que pasan por esta etapa logran una consulta agendada.`,
-        interpretation: `Participa con el ${pctNum.toFixed(2)}% de las conversiones del periodo, con ${count} consultas agendadas atribuidas a esta ruta.`,
-        source: 'Mapeo de transiciones del CRM vía n8n',
+        value: `${count} consultas`,
+        definition: `Ruta hacia consulta agendada desde "${displayName}". El ${pctNum.toFixed(2)}% de los leads que salen de este estado pasan a consulta en el siguiente paso.`,
+        interpretation: `En este periodo se registraron ${count} consultas agendadas atribuidas a esta ruta (todas las variantes de Consult Booked).`,
+        source: 'funnel.feeders — transiciones del CRM',
     });
 }
 
@@ -588,10 +635,10 @@ function openLeakModal(from, to, pct, cnt) {
     setKpiModalContent({
         title: leak.title,
         subtitle: leak.subtitle,
-        value: pct,
+        value: `${count} leads`,
         definition: `Punto de fuga: los leads que vienen de ${origin} acaban en ${leak.title} y abandonan el embudo.`,
-        interpretation: `El ${pctNum.toFixed(2)}% de los leads en esta transición se pierden (${count} leads afectados). Conviene revisar tiempos de respuesta y calidad del contacto en ${origin}.`,
-        source: 'Análisis de transición de estados del CRM',
+        interpretation: `El ${pctNum.toFixed(2)}% de las salidas desde ${origin} van a esta fuga (${count} eventos en el periodo).`,
+        source: 'funnel.leaks — transiciones del CRM',
     });
 }
 
@@ -1098,6 +1145,9 @@ async function loadBOS() {
         }
 
         normalizeOperationalAlerts(json.data);
+        if (typeof enrichFunnelClientData === 'function') {
+            enrichFunnelClientData(json.data);
+        }
         if (typeof enrichFunnelMarkovStddev === 'function') {
             enrichFunnelMarkovStddev(json.data);
         }
@@ -1227,6 +1277,226 @@ function renderLittlesLawCards(ops) {
         </div>
     `;
     }).join('');
+}
+
+const INVESTMENT_COMPARE_METRICS = [
+    { key: 'total_spend', label: 'Gasto total', prefix: '$' },
+    { key: 'global_cpl', label: 'CPL global', prefix: '$' },
+    { key: 'hhi_index', label: 'HHI', suffix: '' },
+    { key: 'roas_proxy', label: 'ROAS proxy', suffix: '' },
+];
+
+function renderInvestmentCompareStrip(history) {
+    const el = document.getElementById('investment-compare-strip');
+    const emptyEl = document.getElementById('investment-history-empty');
+    if (!el) return;
+
+    const compare = history?.compare;
+    if (!compare?.available) {
+        el.style.display = 'none';
+        el.innerHTML = '';
+        if (emptyEl) {
+            emptyEl.style.display = history && (history.entry_count || 0) < 2 ? 'block' : 'none';
+        }
+        return;
+    }
+
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    const prevDate = compare.previous_generated_at
+        ? new Date(compare.previous_generated_at).toLocaleString('es-MX', {
+            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+        })
+        : '';
+
+    const chips = INVESTMENT_COMPARE_METRICS.map((m) => {
+        const d = compare.deltas?.[m.key];
+        if (!d) return '';
+        return `
+            <div style="padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);min-width:100px;">
+                <div style="font-size:10px;color:var(--text-dim);margin-bottom:2px;">${m.label}</div>
+                <div style="font-size:13px;font-weight:700;color:${compareDeltaColor(d)};">
+                    ${formatCompareDelta(d, m.prefix || '', m.suffix || '')}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    el.style.display = 'block';
+    el.className = 'card investment-compare-strip';
+    el.innerHTML = `
+        <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--text-muted);">
+            Vs ejecución anterior${prevDate ? ` <span style="font-weight:500;margin-left:8px;">(${prevDate})</span>` : ''}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">${chips}</div>
+    `;
+}
+
+function renderInvestmentKpiCards(kpis, { containerId, cardClass = '', startDelay = 0 } = {}) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = kpis.map((k, i) => {
+        const escapedLabel = k.label.replace(/'/g, "\\'");
+        const escapedValue = String(k.displayValue ?? k.value).replace(/'/g, "\\'");
+        const valueId = k.valueId ? ` id="${k.valueId}"` : '';
+        const animAttr = k.animate != null ? ` data-value="${k.animate}"` : '';
+        return `
+            <div class="card stat-card-${k.color} card-animate ${cardClass}" style="animation-delay:${(startDelay + i) * 0.03}s;cursor:pointer;"
+                onclick="openKpiModal('${escapedLabel}', '${escapedValue}')">
+                <div class="card-stat-label">${k.label}</div>
+                <div class="card-stat-value"${valueId}${animAttr}>${k.value}</div>
+                <div class="card-stat-sub">${k.sub}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderInvestmentTab(data, history) {
+    if (!data?.investment) return;
+
+    const inv = data.investment;
+    const derived = inv.derived || {};
+    const econ = { ...(data.derived?.economics || {}), ...(derived.economics || {}) };
+    const globalCpl = econ.global_cpl ?? inv.cpl?.global_cpl ?? null;
+    const concentration = derived.concentration || {};
+
+    renderInvestmentCompareStrip(history || dashboardHistory);
+
+    const spendFormatted = `$${Number(inv.total_spend || 0).toLocaleString('es-MX')}`;
+    const sideKpis = [
+        {
+            label: 'Ad Spend (Inversión Total)',
+            value: spendFormatted,
+            sub: 'Gasto publicitario del periodo',
+            color: 'gold',
+        },
+    ];
+    if (econ.revenue_estimated != null) {
+        sideKpis.push({
+            label: 'Revenue Estimado',
+            value: `$${Number(econ.revenue_estimated).toLocaleString('es-MX')}`,
+            sub: 'Conversiones Markov × ticket',
+            color: 'green',
+        });
+    }
+    sideKpis.push({
+        label: 'Active Campaigns (Campañas Activas Modeladas)',
+        value: '0',
+        displayValue: String(inv.campaign_count || 0),
+        sub: 'Modeladas por el motor de atribución',
+        color: 'gold',
+        valueId: 'spend-count',
+        animate: inv.campaign_count || 0,
+    });
+    renderInvestmentKpiCards(sideKpis, {
+        containerId: 'investment-side-stats',
+        cardClass: 'investment-side-stat',
+        startDelay: 1,
+    });
+
+    const stripKpis = [
+        {
+            label: 'CPL Global',
+            value: globalCpl != null ? `$${Number(globalCpl).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : '—',
+            sub: 'Costo por lead implícito',
+            color: 'blue',
+        },
+        {
+            label: 'HHI (Concentración)',
+            value: concentration.hhi != null ? concentration.hhi : (inv.hhi?.index ?? '—'),
+            sub: concentration.label || inv.hhi?.label || 'Diversificación de pauta',
+            color: concentration.risk === 'high' ? 'red' : concentration.risk === 'moderate' ? 'gold' : 'green',
+        },
+        {
+            label: 'ROAS Proxy',
+            value: econ.roas_proxy != null ? Number(econ.roas_proxy).toFixed(2) : '—',
+            sub: 'Ingreso estimado / gasto',
+            color: econ.roas_proxy >= 1 ? 'green' : 'red',
+        },
+    ];
+    if (econ.breakeven_cpl_gap != null) {
+        stripKpis.push({
+            label: 'Breakeven CPL Gap',
+            value: `$${Number(econ.breakeven_cpl_gap).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+            sub: 'CPL vs umbral rentable',
+            color: econ.breakeven_cpl_gap > 0 ? 'red' : 'green',
+        });
+    }
+    renderInvestmentKpiCards(stripKpis, { containerId: 'investment-kpi-strip' });
+
+    const concPanel = document.getElementById('investment-concentration-panel');
+    if (concPanel) {
+        if (concentration.available) {
+            const riskLabel = concentration.risk === 'high' ? 'Concentración alta'
+                : concentration.risk === 'moderate' ? 'Concentración moderada' : 'Diversificación OK';
+            const riskClass = concentration.risk === 'high' ? 'custom-badge-critical'
+                : concentration.risk === 'moderate' ? 'custom-badge-warning' : 'custom-badge-success';
+            const topName = concentration.top_campaign?.name
+                ? cleanTechnicalTerms(concentration.top_campaign.name).slice(0, 60)
+                : '—';
+            concPanel.style.display = 'block';
+            concPanel.innerHTML = `
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;">
+                    <span class="custom-badge ${riskClass}">${riskLabel}</span>
+                    <span>Top 3 campañas = <strong>${concentration.top3_pct}%</strong> del gasto</span>
+                    <span style="color:var(--text-muted);">Dominante: <strong>${topName}</strong> (${concentration.top_campaign?.pct_of_total || 0}%)</span>
+                </div>
+            `;
+        } else {
+            concPanel.style.display = 'none';
+            concPanel.innerHTML = '';
+        }
+    }
+
+    const alertsStrip = document.getElementById('investment-alerts-strip');
+    if (alertsStrip) {
+        const invAlerts = (derived.investment_alerts || []).slice(0, 3);
+        if (invAlerts.length) {
+            alertsStrip.style.display = 'flex';
+            alertsStrip.style.flexWrap = 'wrap';
+            alertsStrip.style.gap = '10px';
+            alertsStrip.innerHTML = invAlerts.map((a) => {
+                const sev = a.severity === 'critical' ? 'custom-badge-critical'
+                    : a.severity === 'warning' ? 'custom-badge-warning' : 'custom-badge-success';
+                const title = formatAlertTitle ? formatAlertTitle(a) : (a.title || a.metric);
+                return `
+                    <div class="card" style="flex:1;min-width:200px;padding:12px 16px;border-left:3px solid var(--${a.severity === 'critical' ? 'red' : a.severity === 'warning' ? 'amber' : 'blue'});">
+                        <span class="custom-badge ${sev}" style="font-size:10px;">${a.severity || 'info'}</span>
+                        <div style="font-size:12px;font-weight:600;margin-top:6px;">${title}</div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            alertsStrip.style.display = 'none';
+            alertsStrip.innerHTML = '';
+        }
+    }
+
+    const spendCountVal = document.getElementById('spend-count');
+    if (spendCountVal) {
+        spendCountVal.setAttribute('data-value', inv.campaign_count || 0);
+        parseAndAnimate(spendCountVal, inv.campaign_count || 0);
+    }
+
+    const campaigns = derived.campaigns?.length
+        ? derived.campaigns
+        : (inv.campaigns || []);
+
+    const campaignsTable = document.querySelector('#investment-campaigns-table tbody');
+    if (campaignsTable) {
+        campaignsTable.innerHTML = campaigns.map((c) => `
+            <tr>
+                <td style="font-weight: 600; color: white;">${cleanTechnicalTerms(c.name)}</td>
+                <td style="text-align: right; font-family: var(--mono); color: var(--gold); font-weight: bold;">$${Number(c.spend).toLocaleString('es-MX')}</td>
+                <td style="text-align: right; font-family: var(--mono); color: var(--text-muted);">${c.pct_of_total}%</td>
+                <td style="text-align: right; font-family: var(--mono); color: var(--text-dim); text-transform: capitalize;">${c.source || '—'}</td>
+            </tr>
+        `).join('');
+    }
+
+    if (inv.campaigns?.length) {
+        renderCampaignChart(inv.campaigns);
+    }
 }
 
 function alertFingerprintLegacy(a) {
@@ -1577,30 +1847,7 @@ function renderBOS(data, history) {
         </div>
     `).join('');
 
-    // 4. Render Campaign Statistics
-    const spendTotalVal = document.getElementById('spend-total');
-    if (spendTotalVal) {
-        spendTotalVal.setAttribute('data-value', `$${data.investment.total_spend}`);
-        parseAndAnimate(spendTotalVal, `$${data.investment.total_spend}`);
-    }
-    const spendCountVal = document.getElementById('spend-count');
-    if (spendCountVal) {
-        spendCountVal.setAttribute('data-value', data.investment.campaign_count);
-        parseAndAnimate(spendCountVal, data.investment.campaign_count);
-    }
-
-    // 5. Render Campaigns Table
-    const campaignsTable = document.querySelector('#investment-campaigns-table tbody');
-    if (campaignsTable) {
-        campaignsTable.innerHTML = data.investment.campaigns.map(c => `
-            <tr>
-                <td style="font-weight: 600; color: white;">${cleanTechnicalTerms(c.name)}</td>
-                <td style="text-align: right; font-family: var(--mono); color: var(--gold); font-weight: bold;">$${Number(c.spend).toLocaleString()}</td>
-                <td style="text-align: right; font-family: var(--mono); color: var(--text-muted);">${c.pct_of_total}%</td>
-                <td style="text-align: right; font-family: var(--mono);">${c.records || c.conversions || 0}</td>
-            </tr>
-        `).join('');
-    }
+    renderInvestmentTab(data, history);
 
     // 6–9. Pestañas secundarias y gráficas: diferidas para no bloquear la carga inicial
     scheduleDeferredRender(() => {
@@ -1652,23 +1899,49 @@ const funnelUiState = {
 };
 
 function buildFunnelInsight(feeders, leaks) {
-    const topFeeder = feeders[0];
+    const topFeederByVolume = feeders[0];
+    const topFeederByEfficiency = feeders.slice().sort((a, b) => (Number(b.pct) || 0) - (Number(a.pct) || 0))[0];
     const topLeak = leaks[0];
-    if (!topFeeder && !topLeak) return '';
+    if (!topFeederByVolume && !topLeak) return '';
 
     const parts = [];
-    if (topFeeder) {
-        const state = shortenFunnelLabel(cleanTechnicalTerms(topFeeder.from || 'Origen'));
-        const pct = Number(topFeeder.pct) || 0;
-        parts.push(`Tu mejor ruta es <strong>${state}</strong> (${pct.toFixed(1)}% de las conversiones).`);
+    if (topFeederByVolume) {
+        const state = shortenFunnelLabel(cleanTechnicalTerms(topFeederByVolume.from || 'Origen'));
+        const cnt = Number(topFeederByVolume.cnt) || 0;
+        parts.push(`Mayor volumen de consultas: <strong>${state}</strong> (${cnt} consultas en el periodo).`);
+    }
+    if (topFeederByEfficiency && topFeederByEfficiency.from !== topFeederByVolume?.from) {
+        const effState = shortenFunnelLabel(cleanTechnicalTerms(topFeederByEfficiency.from || 'Origen'));
+        const effPct = Number(topFeederByEfficiency.pct) || 0;
+        parts.push(`Mayor eficiencia: <strong>${effState}</strong> (${effPct.toFixed(1)}% pasan a consulta desde ese estado).`);
     }
     if (topLeak) {
         const leak = formatLeakDisplay(topLeak.from, topLeak.to);
         const cnt = Number(topLeak.cnt) || 0;
         const pct = Number(topLeak.pct) || 0;
-        parts.push(`La fuga más relevante: <strong>${leak.title}</strong> (${leak.subtitle.replace('Origen: ', '')}) — ${pct.toFixed(1)}%, ${cnt} leads.`);
+        parts.push(`Fuga con más impacto: <strong>${leak.title}</strong> (${leak.subtitle.replace('Origen: ', '')}) — ${cnt} leads (${pct.toFixed(1)}% de esa transición).`);
     }
     return parts.join(' ');
+}
+
+function formatFunnelPeriodMeta(data) {
+    const generatedAt = data?.meta?.generated_at;
+    const lookback = data?.meta?.config?.lookback_days;
+    const totalLeads = Number(data?.operations?.total_leads) || 0;
+    const parts = [];
+
+    if (generatedAt) {
+        try {
+            const date = new Date(generatedAt);
+            parts.push(`Datos al ${date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}`);
+        } catch (_) {
+            parts.push(`Periodo: ${generatedAt}`);
+        }
+    }
+    if (lookback) parts.push(`${lookback} días`);
+    if (totalLeads > 0) parts.push(`${totalLeads.toLocaleString('es-MX')} leads`);
+
+    return parts.join(' · ');
 }
 
 function renderFunnelListToggle(listId, items, expanded, noun) {
@@ -1707,8 +1980,8 @@ function renderFunnelFeedersList(data, feeders) {
                 pct,
                 color: 'var(--green)',
                 barColor: 'var(--green)',
-                metaLeft: 'Participación en conversiones',
-                metaRight: `${cnt} consultas agendadas`,
+                metaLeft: 'Eficiencia de la ruta',
+                metaRight: `${cnt} consultas · ${pct.toFixed(1)}%`,
                 onClick: `openFeederModal('${(f.from || '').replace(/'/g, "\\'")}', '${pct.toFixed(2)}%', ${cnt})`,
                 delay: (idx * 0.02) + 0.12,
                 rank: idx + 1,
@@ -1930,25 +2203,19 @@ function resolveFunnelFeeders(data) {
                 pct: Number(f.pct) || 0,
                 cnt: Number(f.cnt) || 0,
             }))
-            .sort((a, b) => b.pct - a.pct);
+            .sort((a, b) => b.cnt - a.cnt);
     }
 
     return (data.system?.alerts || [])
         .filter((a) => (a.title || '').includes('Feeder a conversion'))
         .map(parseFeederAlert)
-        .sort((a, b) => b.pct - a.pct);
+        .sort((a, b) => b.cnt - a.cnt);
 }
 
 function isLeakDestination(to) {
-    const t = String(to || '').toLowerCase();
-    return t.includes('not interested')
-        || t.includes('no answer')
-        || t.includes('hung up')
-        || t.includes('wrong number')
-        || t.includes('busy')
-        || t.includes('lost')
-        || t.includes('voicemail')
-        || t.includes('distrust');
+    return typeof isFunnelLossState === 'function'
+        ? isFunnelLossState(to, 'Consult Booked')
+        : false;
 }
 
 function resolveFunnelLeaks(data) {
@@ -1961,7 +2228,7 @@ function resolveFunnelLeaks(data) {
                 pct: Number(l.pct) || 0,
                 cnt: Number(l.cnt) || 0,
             }))
-            .sort((a, b) => b.pct - a.pct);
+            .sort((a, b) => b.cnt - a.cnt);
     }
     return (data.funnel?.transitions || [])
         .filter((t) => isLeakDestination(t.to))
@@ -1971,7 +2238,7 @@ function resolveFunnelLeaks(data) {
             pct: Number(t.pct) || 0,
             cnt: Number(t.cnt) || 0,
         }))
-        .sort((a, b) => b.pct - a.pct);
+        .sort((a, b) => b.cnt - a.cnt);
 }
 
 function resolveFunnelRevenuePerConversion(data) {
@@ -2065,10 +2332,11 @@ function renderFunnelListItem(options) {
                 <div class="funnel-data-row-bar">
                     <div class="funnel-data-row-bar-fill progress-bar-fill" data-pct="${barWidth}" style="width: 0%; background: ${barColor};"></div>
                 </div>
+                ${metaLeft || metaRight ? `
                 <div class="funnel-data-row-foot">
-                    <span class="funnel-data-chip">${metaLeft}</span>
-                    <span class="funnel-data-chip funnel-data-chip--value">${metaRight}</span>
-                </div>
+                    ${metaLeft ? `<span class="funnel-data-chip">${metaLeft}</span>` : ''}
+                    ${metaRight ? `<span class="funnel-data-chip funnel-data-chip--value">${metaRight}</span>` : ''}
+                </div>` : ''}
             </div>
         </div>
     `;
@@ -2083,6 +2351,9 @@ function renderFunnelDetails(data) {
             ? Number(data.funnel.global_conversion_pct).toFixed(2)
             : '—';
 
+    const totalLeads = Number(data.operations?.total_leads) || 0;
+    const revenuePer = resolveFunnelRevenuePerConversion(data);
+
     const funnelConvVal = document.getElementById('funnel-conv-pct');
     if (funnelConvVal) {
         const display = conversionRate === '—' ? '—' : `${conversionRate}%`;
@@ -2095,6 +2366,19 @@ function renderFunnelDetails(data) {
         targetLabel.textContent = `Objetivo: ${cleanTechnicalTerms(data.funnel.conversion_target)}`;
     }
 
+    const periodMeta = document.getElementById('funnel-period-meta');
+    if (periodMeta) {
+        const periodText = formatFunnelPeriodMeta(data);
+        periodMeta.textContent = periodText || '';
+        periodMeta.style.display = periodText ? 'block' : 'none';
+    }
+
+    const enrichChip = document.getElementById('funnel-enrich-chip');
+    if (enrichChip) {
+        const showEnrich = data.meta?._enriched_funnel === true;
+        enrichChip.style.display = showEnrich ? 'inline-flex' : 'none';
+    }
+
     const leaks = resolveFunnelLeaks(data);
 
     const revenueAtRisk = resolveFunnelRevenueAtRisk(data);
@@ -2104,9 +2388,13 @@ function renderFunnelDetails(data) {
 
     const narrative = document.getElementById('funnel-narrative-subtitle');
     if (narrative) {
-        narrative.innerHTML = conversionRate === '—'
-            ? `Sin tasa de conversión calculada para este periodo.`
-            : `De cada 100 leads, <strong>${conversionRate}</strong> llegan a consulta. Hay <strong>${riskRevenueFormatted}</strong> en riesgo por fugas detectadas.`;
+        if (conversionRate === '—') {
+            narrative.innerHTML = 'Sin tasa de conversión calculada para este periodo.';
+        } else if (totalLeads > 0) {
+            narrative.innerHTML = `En este periodo (<strong>${totalLeads.toLocaleString('es-MX')} leads</strong>), <strong>${conversionRate}%</strong> llegaron a consulta agendada. Ingreso en riesgo estimado: <strong>${riskRevenueFormatted}</strong> (fugas × $${revenuePer.toLocaleString('es-MX')}; no es ingreso real).`;
+        } else {
+            narrative.innerHTML = `Tasa de conversión del periodo: <strong>${conversionRate}%</strong>. Ingreso en riesgo estimado: <strong>${riskRevenueFormatted}</strong> (fugas × $${revenuePer.toLocaleString('es-MX')}).`;
+        }
     }
 
     const riskRevVal = document.getElementById('funnel-risk-revenue');
@@ -2152,7 +2440,6 @@ function renderFunnelDetails(data) {
                         pct: Math.min(Number(trap.loss_rate) || 0, 100),
                         color: 'var(--amber)',
                         barColor: 'var(--amber)',
-                        metaLeft: `Auto-loop: ${trap.self_loop_pct ?? '—'}%`,
                         metaRight: `${trap.total_cnt || 0} leads`,
                         delay: idx * 0.02,
                         rank: idx + 1,
@@ -2668,17 +2955,21 @@ function modelSeriesCoverage(series) {
     return series.filter((v) => v != null && isFinite(v)).length;
 }
 
-function pickBetterModelSeries(a, b) {
+function holdoutSeriesScore(series, splitIndex) {
+    if (!Array.isArray(series) || splitIndex == null) return modelSeriesCoverage(series);
+    const train = series.slice(0, splitIndex).filter((v) => v != null && isFinite(v)).length;
+    const test = series.slice(splitIndex).filter((v) => v != null && isFinite(v)).length;
+    const bothZones = train > 0 && test > 0 ? 10000 : 0;
+    return bothZones + train + test;
+}
+
+function pickBetterModelSeries(a, b, splitIndex) {
     if (!seriesHasChartPoints(a)) return b;
     if (!seriesHasChartPoints(b)) return a;
-    const covA = modelSeriesCoverage(a);
-    const covB = modelSeriesCoverage(b);
-    if (covB > covA) return b;
-    if (covA > covB) return a;
-    const sparseA = a.some((v) => v == null);
-    const sparseB = b.some((v) => v == null);
-    if (sparseA && !sparseB) return a;
-    if (sparseB && !sparseA) return b;
+    const scoreA = holdoutSeriesScore(a, splitIndex);
+    const scoreB = holdoutSeriesScore(b, splitIndex);
+    if (scoreB > scoreA) return b;
+    if (scoreA > scoreB) return a;
     return a.length >= b.length ? a : b;
 }
 
@@ -2912,7 +3203,11 @@ function buildComparableModels(data) {
     const list = [];
     const f = (data && data.forecast) ? data.forecast : {};
     const chartLen = Array.isArray(f.time_series) ? f.time_series.length : 0;
+    const splitIndex = resolveTrainTestSplit(f)?.split_index ?? null;
+    const mlNames = new Set(ML_MODEL_NAMES.map(normModelName));
+
     (f.backtest_models || []).forEach(m => {
+        if (mlNames.has(normModelName(m.name))) return;
         let series = m.series;
         if (seriesHasChartPoints(series) && chartLen) {
             series = normalizeModelSeries(series, chartLen);
@@ -2931,30 +3226,13 @@ function buildComparableModels(data) {
     const rf = data ? data.forecast_rf : null;
     if (rf && rf.available !== false) {
         const rfName = rf.model_name || 'random_forest';
-        if (!list.some(m => normModelName(m.name) === normModelName(rfName))) {
-            let series = Array.isArray(rf.series) ? rf.series : null;
-            if (!series && Array.isArray(rf.backtest_models)) {
-                const e = rf.backtest_models.find(x => x.name === rfName);
-                if (e && Array.isArray(e.series)) series = e.series;
-            }
-            if (!series) series = buildRfAlignedSeries(data);
-            if (seriesHasChartPoints(series) && chartLen) {
-                series = normalizeModelSeries(series, chartLen);
-            }
-            list.push({
-                name: rfName,
-                mase: rf.mase,
-                mae: (rf.backtest_models || []).find(x => x.name === rfName)?.mae,
-                rmse: (rf.backtest_models || []).find(x => x.name === rfName)?.rmse,
-                series: series,
-                horizons: rf.horizons,
-                forecast_1d: rf.recommended_value ?? rf.horizons?.next_1d?.forecast,
-            });
-        }
         (rf.backtest_models || []).forEach(m => {
             const key = normModelName(m.name);
-            if (ML_MODEL_NAMES.indexOf(key) < 0) return;
+            if (!mlNames.has(key)) return;
             let series = Array.isArray(m.series) ? m.series : null;
+            if (!series && normModelName(m.name) === normModelName(rfName) && Array.isArray(rf.series)) {
+                series = rf.series;
+            }
             if (!series && normModelName(m.name) === normModelName(rfName)) {
                 series = buildRfAlignedSeries(data);
             }
@@ -2963,7 +3241,7 @@ function buildComparableModels(data) {
             }
             const existing = list.find(x => normModelName(x.name) === key);
             if (existing) {
-                existing.series = pickBetterModelSeries(existing.series, series);
+                existing.series = pickBetterModelSeries(existing.series, series, splitIndex);
                 existing.mase = m.mase ?? existing.mase;
                 existing.mae = m.mae ?? existing.mae;
                 existing.rmse = m.rmse ?? existing.rmse;
@@ -2981,6 +3259,25 @@ function buildComparableModels(data) {
                 forecast_1d: m.forecast_1d || null,
             });
         });
+
+        if (!list.some(m => normModelName(m.name) === normModelName(rfName))) {
+            let series = Array.isArray(rf.series) ? rf.series : null;
+            const e = (rf.backtest_models || []).find(x => normModelName(x.name) === normModelName(rfName));
+            if (!series && e && Array.isArray(e.series)) series = e.series;
+            if (!series) series = buildRfAlignedSeries(data);
+            if (seriesHasChartPoints(series) && chartLen) {
+                series = normalizeModelSeries(series, chartLen);
+            }
+            list.push({
+                name: rfName,
+                mase: rf.mase,
+                mae: e?.mae,
+                rmse: e?.rmse,
+                series: series,
+                horizons: rf.horizons,
+                forecast_1d: rf.recommended_value ?? rf.horizons?.next_1d?.forecast,
+            });
+        }
     }
     comparableModelsCache = { source: data, list };
     return list;
@@ -3546,7 +3843,7 @@ function renderTimeSeriesChart(forecast, typeOrOptions) {
             pointRadius: 0,
             pointHoverRadius: heavyChart ? 0 : 4,
             fill: false,
-            spanGaps: false,
+            spanGaps: true,
             clip: false,
             _modelName: ov.modelName || null,
         });
@@ -3765,6 +4062,7 @@ function renderCampaignChart(campaigns) {
     const colors = isLight
         ? ['#0284c7', '#84cc16', '#7c3aed', '#ea580c', '#db2777', '#cca43b', '#e11d48']
         : ['#38bdf8', '#a3e635', '#8b5cf6', '#f97316', '#ec4899', '#fbbf24', '#f43f5e'];
+    const animate = shouldAnimateInvestmentChart();
 
     charts.campaigns = new Chart(ctx, {
         type: 'doughnut',
@@ -3775,22 +4073,56 @@ function renderCampaignChart(campaigns) {
                 backgroundColor: colors.slice(0, campaigns.length).map(c => c + '77'),
                 borderColor: colors.slice(0, campaigns.length),
                 borderWidth: 2,
-                hoverOffset: 12
+                borderRadius: 6,
+                spacing: 2,
+                hoverOffset: 14,
+                hoverBorderWidth: 3,
             }]
         },
         options: {
-            animation: getChartAnimationOptions(),
+            animation: getInvestmentChartAnimationOptions(),
+            animations: animate ? {
+                circumference: {
+                    duration: 1100,
+                    easing: 'easeOutCubic',
+                    delay: (context) => (context.type === 'data' ? context.dataIndex * 80 : 0),
+                },
+                numbers: {
+                    type: 'number',
+                    duration: 900,
+                    easing: 'easeOutCubic',
+                },
+            } : undefined,
+            transitions: animate ? {
+                active: {
+                    animation: {
+                        duration: 380,
+                        easing: 'easeOutQuart',
+                    },
+                },
+            } : undefined,
+            layout: {
+                padding: {
+                    top: 12,
+                    bottom: 4,
+                    left: 8,
+                    right: 8,
+                },
+            },
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '65%',
+            cutout: '58%',
             plugins: {
                 legend: {
-                    position: 'right',
+                    position: 'bottom',
+                    align: 'start',
+                    fullSize: false,
                     labels: {
                         color: isLight ? '#475569' : '#94a3b8',
                         font: { size: 11 },
                         boxWidth: 10,
-                        padding: 8
+                        padding: 8,
+                        usePointStyle: true,
                     }
                 },
                 tooltip: {

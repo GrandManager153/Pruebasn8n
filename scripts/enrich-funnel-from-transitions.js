@@ -46,7 +46,32 @@ function buildLeaks(transitions, conversionTarget) {
             pct: Number(t.pct) || 0,
             cnt: Number(t.cnt) || 0,
         }))
-        .sort((a, b) => b.pct - a.pct);
+        .sort((a, b) => b.cnt - a.cnt);
+}
+
+function buildFeedersFromTransitions(transitions, conversionTarget) {
+    const conversionCntByFrom = {};
+    const totalOutByFrom = {};
+
+    (transitions || []).forEach((t) => {
+        const from = t.from || 'Origen';
+        const cnt = Number(t.cnt) || 0;
+        if (!totalOutByFrom[from]) totalOutByFrom[from] = 0;
+        totalOutByFrom[from] += cnt;
+
+        if (isConversionState(t.to, conversionTarget)) {
+            if (!conversionCntByFrom[from]) conversionCntByFrom[from] = 0;
+            conversionCntByFrom[from] += cnt;
+        }
+    });
+
+    return Object.entries(conversionCntByFrom)
+        .map(([from, cnt]) => {
+            const totalOut = totalOutByFrom[from] || cnt;
+            const pct = totalOut > 0 ? Math.round((cnt / totalOut) * 10000) / 100 : 0;
+            return { from, pct, cnt };
+        })
+        .sort((a, b) => b.cnt - a.cnt);
 }
 
 function buildTrapStates(transitions, matrix, config) {
@@ -125,19 +150,29 @@ function computeConversionPct(transitions, config, totalLeads) {
         .filter((t) => isConversionState(t.to, target))
         .reduce((sum, t) => sum + (Number(t.cnt) || 0), 0);
 
+    if (totalLeads > 0) {
+        return Math.round((conversionsToTarget / totalLeads) * 10000) / 100;
+    }
+
     let entryLeads = (transitions || [])
         .filter((t) => isEntryState(t.from))
         .reduce((sum, t) => sum + (Number(t.cnt) || 0), 0);
 
-    if (entryLeads <= 0 && totalLeads > 0) {
-        entryLeads = totalLeads;
-    }
     if (entryLeads <= 0) {
         entryLeads = conversionsToTarget > 0 ? conversionsToTarget : 1;
     }
 
-    const pct = (conversionsToTarget / entryLeads) * 100;
-    return Math.round(pct * 100) / 100;
+    return Math.round((conversionsToTarget / entryLeads) * 10000) / 100;
+}
+
+function syncConversionKpi(data, pct) {
+    if (!Array.isArray(data.kpis)) return;
+    const formatted = `${pct}%`;
+    data.kpis.forEach((kpi) => {
+        if (kpi.label === 'Conversion global') {
+            kpi.value = formatted;
+        }
+    });
 }
 
 function buildRevenueAtRisk(leaks, config) {
@@ -166,12 +201,10 @@ function enrichFunnelFromTransitions(data) {
     const transitions = funnel.transitions;
     if (!Array.isArray(transitions) || !transitions.length) return data;
 
-    if (data.meta?._enriched_funnel === true
+    const skipHeavyEnrich = data.meta?._enriched_funnel === true
         && hasValidArray(funnel.absorption_probabilities)
         && funnel.total_revenue_at_risk != null
-        && hasValidArray(funnel.leaks)) {
-        return data;
-    }
+        && hasValidArray(funnel.leaks);
 
     const config = resolveConfig(data);
     const totalLeads = Number(data.operations?.total_leads) || 0;
@@ -185,38 +218,45 @@ function enrichFunnelFromTransitions(data) {
 
     const matrix = buildTransitionMatrix(transitions, { conversionTarget: config.conversion_target });
 
-    if (!hasValidArray(funnel.leaks)) {
-        funnel.leaks = buildLeaks(transitions, config.conversion_target);
-    }
-
-    if (!hasValidArray(funnel.trap_states)) {
-        funnel.trap_states = buildTrapStates(transitions, matrix, config);
-    }
-
-    if (!hasValidArray(funnel.absorption_probabilities)) {
-        funnel.absorption_probabilities = buildAbsorptionProbabilities(matrix);
-    }
-
-    if (funnel.conversion_pct == null && funnel.global_conversion_pct == null) {
-        const pct = computeConversionPct(transitions, config, totalLeads);
-        funnel.conversion_pct = pct;
-        funnel.global_conversion_pct = pct;
-    } else if (funnel.conversion_pct == null && funnel.global_conversion_pct != null) {
-        funnel.conversion_pct = funnel.global_conversion_pct;
-    } else if (funnel.global_conversion_pct == null && funnel.conversion_pct != null) {
-        funnel.global_conversion_pct = funnel.conversion_pct;
-    }
-
-    if (!hasValidArray(funnel.revenue_at_risk) || funnel.total_revenue_at_risk == null) {
-        const leaks = hasValidArray(funnel.leaks) ? funnel.leaks : buildLeaks(transitions, config.conversion_target);
-        const { items, total } = buildRevenueAtRisk(leaks, config);
-        if (!hasValidArray(funnel.revenue_at_risk)) {
-            funnel.revenue_at_risk = items;
+    if (!skipHeavyEnrich) {
+        if (!hasValidArray(funnel.leaks)) {
+            funnel.leaks = buildLeaks(transitions, config.conversion_target);
         }
-        if (funnel.total_revenue_at_risk == null) {
-            funnel.total_revenue_at_risk = total;
+
+        if (!hasValidArray(funnel.trap_states)) {
+            funnel.trap_states = buildTrapStates(transitions, matrix, config);
         }
+
+        if (!hasValidArray(funnel.absorption_probabilities)) {
+            funnel.absorption_probabilities = buildAbsorptionProbabilities(matrix);
+        }
+
+        if (!hasValidArray(funnel.revenue_at_risk) || funnel.total_revenue_at_risk == null) {
+            const leaks = hasValidArray(funnel.leaks) ? funnel.leaks : buildLeaks(transitions, config.conversion_target);
+            const { items, total } = buildRevenueAtRisk(leaks, config);
+            if (!hasValidArray(funnel.revenue_at_risk)) {
+                funnel.revenue_at_risk = items;
+            }
+            if (funnel.total_revenue_at_risk == null) {
+                funnel.total_revenue_at_risk = total;
+            }
+        }
+    } else if (hasValidArray(funnel.leaks)) {
+        funnel.leaks = funnel.leaks.slice().sort((a, b) => (Number(b.cnt) || 0) - (Number(a.cnt) || 0));
     }
+
+    const previousPct = funnel.conversion_pct ?? funnel.global_conversion_pct;
+    const recalculatedPct = computeConversionPct(transitions, config, totalLeads);
+
+    if (previousPct != null && Math.abs(Number(previousPct) - recalculatedPct) > 0.01) {
+        funnel.markov_entry_conversion_pct = Number(previousPct);
+    }
+
+    funnel.conversion_pct = recalculatedPct;
+    funnel.global_conversion_pct = recalculatedPct;
+    syncConversionKpi(data, recalculatedPct);
+
+    funnel.feeders = buildFeedersFromTransitions(transitions, config.conversion_target);
 
     data.meta._enriched_funnel = true;
     data.meta._enriched_at = new Date().toISOString();
@@ -228,7 +268,9 @@ module.exports = {
     enrichFunnelFromTransitions,
     DEFAULT_FUNNEL_CONFIG,
     buildLeaks,
+    buildFeedersFromTransitions,
     buildTrapStates,
     buildAbsorptionProbabilities,
     computeConversionPct,
+    syncConversionKpi,
 };

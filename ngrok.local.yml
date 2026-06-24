@@ -1,9 +1,0 @@
-version: "2"
-tunnels:
-  sleek-api:
-    addr: 3000
-    proto: http
-    host_header: rewrite
-  ml-api:
-    addr: 8000
-    proto: http

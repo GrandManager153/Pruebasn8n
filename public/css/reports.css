@@ -48,24 +48,48 @@ body.theme-executive {
     --brand-gold-bright: #3b82f6;
     --metric-value: #1e3a8a;
     --border-hover: rgba(59, 130, 246, 0.45);
+    --p: #1e3a8a;
+    --a: #3b82f6;
 }
 body.theme-manager {
     --brand-gold: #065f46;
     --brand-gold-bright: #10b981;
     --metric-value: #065f46;
     --border-hover: rgba(16, 185, 129, 0.45);
+    --p: #065f46;
+    --a: #10b981;
 }
 body.theme-analyst {
     --brand-gold: #581c87;
     --brand-gold-bright: #8b5cf6;
     --metric-value: #581c87;
     --border-hover: rgba(139, 92, 246, 0.45);
+    --p: #581c87;
+    --a: #8b5cf6;
 }
 body.theme-operations {
     --brand-gold: #7c2d12;
     --brand-gold-bright: #ea580c;
     --metric-value: #7c2d12;
     --border-hover: rgba(234, 88, 12, 0.45);
+    --p: #7c2d12;
+    --a: #ea580c;
+}
+
+/* Títulos de sección n8n (texto directo en <p>, sin <strong>) */
+.content-block p[style*="font-weight:800"],
+.content-block p[style*="font-weight: 800"] {
+    display: block !important;
+    font-family: var(--font-sans) !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: var(--brand-gold) !important;
+    margin-top: 24px !important;
+    margin-bottom: 14px !important;
+    border-bottom: 1px solid var(--border) !important;
+    padding-bottom: 6px !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 body.theme-executive .hero,

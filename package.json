@@ -11,6 +11,7 @@
     "pm2:logs": "pm2 logs sleek-api",
     "validate:phase1": "node scripts/validate-phase1-enrichment.js",
     "validate:phase2": "node scripts/validate-phase2-enrichment.js",
+    "validate:phase3": "node scripts/validate-phase3-enrichment.js",
     "seed:history": "node scripts/seed-history-dev.js"
   },
   "dependencies": {

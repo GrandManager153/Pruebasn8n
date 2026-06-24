@@ -17,7 +17,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
 
     <!-- Custom Extracted Stylesheets -->
-    <link rel="stylesheet" href="/css/styles.css?v=14">
+    <link rel="stylesheet" href="/css/styles.css?v=15">
 </head>
 
 <body>
@@ -189,8 +189,10 @@
                             <h2 style="font-size: 18px; font-weight: 800; color: white; margin: 0;">¿Cómo van las conversiones?</h2>
                             <span class="custom-badge custom-badge-success" id="funnel-target-label">Objetivo</span>
                         </div>
+                        <p class="text-muted funnel-period-meta" id="funnel-period-meta" style="font-size: 12px; margin: 0 0 8px; display: none;"></p>
+                        <span class="funnel-enrich-chip" id="funnel-enrich-chip" style="display: none;">Métricas enriquecidas localmente</span>
                         <p class="text-muted v-mb-4" style="font-size: 13.5px;" id="funnel-narrative-subtitle">
-                            De cada 100 leads, <strong>0</strong> llegan a consulta. Hay <strong>$0</strong> en riesgo por fugas detectadas.
+                            Cargando métricas del embudo…
                         </p>
                         <div class="v-grid-1-1">
                             <div class="card card-animate"
@@ -308,25 +310,23 @@
                     <div class="section-header">
                         <div class="section-title"><span class="bar"></span> Ad Spend & Budget (Presupuesto Publicitario y Distribución)</div>
                     </div>
-                    <div class="v-grid-2-1">
-                        <div class="card card-animate" style="animation-delay: 0.02s;">
+
+                    <div id="investment-compare-strip" style="display: none; margin-bottom: 16px;"></div>
+                    <p id="investment-history-empty" style="display: none; font-size: 13px; color: var(--text-muted); margin: 0 0 16px;">
+                        Historial de inversión disponible tras la próxima ejecución diaria de n8n
+                    </p>
+
+                    <div class="v-grid-4" id="investment-kpi-strip" style="margin-bottom: 16px;"></div>
+
+                    <div id="investment-concentration-panel" class="card" style="display: none; margin-bottom: 16px; font-size: 13px;"></div>
+                    <div id="investment-alerts-strip" style="display: none; margin-bottom: 16px;"></div>
+
+                    <div class="v-grid-2-1 investment-chart-row">
+                        <div class="card card-animate investment-chart-card" style="animation-delay: 0.02s;">
                             <div class="chart-title"><span class="dot" style="background: var(--green)"></span> Campaign Budget Share (Distribución del Gasto por Campaña Publicitaria)</div>
-                            <div class="chart-wrapper"><canvas id="chart-campaigns"></canvas></div>
+                            <div class="chart-wrapper chart-wrapper--campaigns"><canvas id="chart-campaigns"></canvas></div>
                         </div>
-                        <div class="v-flex-col justify-content-center">
-                            <div class="card stat-card-gold card-animate" style="animation-delay: 0.04s;"
-                                onclick="openKpiModal('Ad Spend (Inversión Total Ejecutada)', document.getElementById('spend-total').textContent)">
-                                <div class="card-stat-label">Ad Spend (Inversión Total Ejecutada)</div>
-                                <div class="card-stat-value" id="spend-total">$0</div>
-                                <div class="card-stat-sub">Registrado en bases de datos financieras</div>
-                            </div>
-                            <div class="card stat-card-blue card-animate" style="animation-delay: 0.06s;"
-                                onclick="openKpiModal('Active Campaigns (Campañas Activas Modeladas)', document.getElementById('spend-count').textContent)">
-                                <div class="card-stat-label">Active Campaigns (Campañas Activas Modeladas)</div>
-                                <div class="card-stat-value" id="spend-count">0</div>
-                                <div class="card-stat-sub">Modeladas por el motor de atribución</div>
-                            </div>
-                        </div>
+                        <div class="investment-side-stats-col" id="investment-side-stats"></div>
                     </div>
 
                     <div class="section-header">
@@ -338,9 +338,9 @@
                                 <thead>
                                     <tr>
                                         <th>Campaña</th>
-                                        <th style="text-align: right;">Presupuesto Invertido</th>
-                                        <th style="text-align: right;">Participación en Gasto</th>
-                                        <th style="text-align: right;">Total Leads</th>
+                                        <th style="text-align: right;">Gasto</th>
+                                        <th style="text-align: right;">% gasto</th>
+                                        <th style="text-align: right;">Fuente</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -562,9 +562,11 @@
     </div>
 
     <!-- Application Script Logic Linked Externally -->
+    <script src="/js/funnel-loss-states.js?v=1"></script>
+    <script src="/js/enrich-funnel-client.js?v=1"></script>
     <script src="/js/funnel-markov-groups.js?v=3"></script>
     <script src="/js/markov-stddev-enrich.js?v=1"></script>
-    <script src="/js/app.js?v=25" defer></script>
+    <script src="/js/app.js?v=36" defer></script>
 </body>
 
 </html>

@@ -13,6 +13,7 @@ const { enrichOperationalAlerts, formatDurationMinutes } = require('./scripts/en
 const { enrichFunnelMarkovStddev } = require('./scripts/enrich-funnel-markov-stddev');
 const { enrichFunnelFromTransitions } = require('./scripts/enrich-funnel-from-transitions');
 const { enrichOperationsDerived } = require('./scripts/enrich-operations-derived');
+const { enrichInvestmentDerived } = require('./scripts/enrich-investment-derived');
 const { enrichLittlesLaw } = require('./scripts/enrich-littles-law');
 const {
   appendHistoryEntry,
@@ -24,6 +25,7 @@ const {
 function applyServerEnrichment(data) {
   enrichFunnelFromTransitions(data);
   enrichOperationsDerived(data);
+  enrichInvestmentDerived(data);
   enrichLittlesLaw(data);
   enrichOperationalAlerts(data);
   enrichFunnelMarkovStddev(data);
@@ -271,8 +273,22 @@ function extractHtmlGeneratedAt(htmlContent) {
   return match ? match[1] : null;
 }
 
+// Variables CSS de n8n (inline styles usan var(--p), etc.) — deben persistir tras quitar <style> embebido
+const REPORT_N8N_VARS = {
+  executive: { '--p': '#1e3a8a', '--a': '#3b82f6', '--l': '#eff6ff', '--bg': '#f4f6f9', '--c': '#ffffff', '--t': '#1a202c', '--m': '#718096', '--b': '#e2e8f0' },
+  manager: { '--p': '#065f46', '--a': '#10b981', '--l': '#ecfdf5', '--bg': '#f4f6f9', '--c': '#ffffff', '--t': '#1a202c', '--m': '#718096', '--b': '#e2e8f0' },
+  analyst: { '--p': '#581c87', '--a': '#8b5cf6', '--l': '#faf5ff', '--bg': '#f4f6f9', '--c': '#ffffff', '--t': '#1a202c', '--m': '#718096', '--b': '#e2e8f0' },
+  operations: { '--p': '#7c2d12', '--a': '#ea580c', '--l': '#fff7ed', '--bg': '#f4f6f9', '--c': '#ffffff', '--t': '#1a202c', '--m': '#718096', '--b': '#e2e8f0' },
+};
+
+function buildN8nVarStyle(audience) {
+  const vars = REPORT_N8N_VARS[audience] || REPORT_N8N_VARS.executive;
+  const decl = Object.entries(vars).map(([k, v]) => `${k}:${v}`).join(';');
+  return `<style>:root,body{${decl}}</style>`;
+}
+
 // Inyecta el design system BOS en reportes HTML generados por n8n
-function injectTheme(htmlContent) {
+function injectTheme(htmlContent, audience = 'executive') {
   if (!htmlContent || typeof htmlContent !== 'string') return htmlContent;
 
   // Simplificar títulos de audiencia dinámicamente
@@ -296,8 +312,9 @@ function injectTheme(htmlContent) {
     .replace(/<script>\s*function showTab[\s\S]*?<\/script>/gi, '');
 
   const headAssets = `
+    ${buildN8nVarStyle(audience)}
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/reports.css?v=12">
+    <link rel="stylesheet" href="/css/reports.css?v=13">
   `;
 
   const payload = loadDashboardPayload();
@@ -316,7 +333,7 @@ function injectTheme(htmlContent) {
   const bodyScripts = `
     ${payloadScript}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="/js/reports.js?v=12"></script>`;
+    <script src="/js/reports.js?v=14"></script>`;
 
   const ambientBg = `
     <div class="report-ambient" aria-hidden="true">
@@ -329,6 +346,8 @@ function injectTheme(htmlContent) {
     </div>
   `;
 
+  const bodyClass = `theme-${audience} light-mode`;
+
   if (output.includes('</head>')) {
     output = output.replace('</head>', `${headAssets}</head>`);
   }
@@ -336,10 +355,18 @@ function injectTheme(htmlContent) {
   if (output.includes('<body>')) {
     output = output.replace(
       '<body>',
-      `<body>${ambientBg}<div class="report-back-bar"><a class="report-back-btn" href="/">← Volver a PulseMkt</a></div>`
+      `<body class="${bodyClass}">${ambientBg}<div class="report-back-bar"><a class="report-back-btn" href="/">← Volver a PulseMkt</a></div>`
     );
   } else if (output.includes('<body ')) {
-    output = output.replace(/<body([^>]*)>/, `<body$1>${ambientBg}<div class="report-back-bar"><a class="report-back-btn" href="/">← Volver a PulseMkt</a></div>`);
+    output = output.replace(
+      /<body([^>]*)>/,
+      (match, attrs) => {
+        if (/class="/i.test(attrs)) {
+          return `<body${attrs.replace(/class="([^"]*)"/i, `class="$1 ${bodyClass}"`)}>${ambientBg}<div class="report-back-bar"><a class="report-back-btn" href="/">← Volver a PulseMkt</a></div>`;
+        }
+        return `<body${attrs} class="${bodyClass}">${ambientBg}<div class="report-back-bar"><a class="report-back-btn" href="/">← Volver a PulseMkt</a></div>`;
+      }
+    );
   }
 
   if (output.includes('</body>')) {
@@ -357,7 +384,7 @@ app.get('/reports/:audience', (req, res) => {
   if (htmlContent) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    return res.send(injectTheme(htmlContent));
+    return res.send(injectTheme(htmlContent, audience));
   }
 
   res.status(404).send(`
@@ -581,32 +608,31 @@ app.get('/api/dashboard', async (req, res) => {
       const hadEmptyMarkov = !data?.funnel?.absorption_probabilities || data.funnel.absorption_probabilities.length === 0;
       const hadNoStddev = data?.funnel?.absorption_probabilities && data.funnel.absorption_probabilities.length > 0 && !data.funnel.absorption_probabilities.some(row => Number(row.step_stddev) > 0);
 
-      enrichOperationalAlerts(data);
-      enrichFunnelMarkovStddev(data);
+      applyServerEnrichment(data);
 
       const hasMarkovNow = data?.funnel?.absorption_probabilities && data.funnel.absorption_probabilities.length > 0;
       const hasStddevNow = data?.funnel?.absorption_probabilities && data.funnel.absorption_probabilities.some(row => Number(row.step_stddev) > 0);
-
       const markovUpdated = (hadEmptyMarkov && hasMarkovNow) || (hadNoStddev && hasStddevNow);
 
-      if (markovUpdated) {
-        try {
-          fs.writeFileSync(payloadPath, JSON.stringify(data, null, 2), 'utf-8');
-          console.log(`  💾 Payload actualizado con Markov persistido en disco.`);
-        } catch (saveErr) {
-          console.error('[Dashboard] Falló al guardar el payload persistido con Markov:', saveErr.message);
+      try {
+        fs.writeFileSync(payloadPath, JSON.stringify(data, null, 2), 'utf-8');
+        if (markovUpdated) {
+          console.log('  💾 Payload actualizado con Markov persistido en disco.');
         }
+      } catch (persistErr) {
+        console.warn('[Dashboard] No se pudo persistir payload enriquecido:', persistErr.message);
       }
 
-      res.json({ success: true, data });
+      const history = buildHistoryResponse(data, DATA_DIR);
+
+      res.json({ success: true, data, history });
 
       // Ejecutar enriquecimiento ML en segundo plano para no bloquear al usuario
       if (runEnrichmentInBackground) {
         const dataToEnrich = JSON.parse(JSON.stringify(data));
         enrichPayloadComplete(dataToEnrich)
           .then(enrichedData => {
-            enrichOperationalAlerts(enrichedData);
-            enrichFunnelMarkovStddev(enrichedData);
+            applyServerEnrichment(enrichedData);
             fs.writeFileSync(payloadPath, JSON.stringify(enrichedData, null, 2), 'utf-8');
             console.log('  [Background] ML enrichment complete, saved to disk.');
           })
