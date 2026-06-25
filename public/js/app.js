@@ -58,6 +58,13 @@ function getForecastChartAnimationOptions(heavy = false) {
     };
 }
 
+function clearCampaignChartHover(chart) {
+    if (!chart) return;
+    chart.setActiveElements([]);
+    chart.tooltip?.setActiveElements([], { x: 0, y: 0 });
+    chart.update('none');
+}
+
 function shouldAnimateInvestmentChart() {
     return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
@@ -76,13 +83,6 @@ function getInvestmentChartAnimationOptions() {
             return 0;
         },
     };
-}
-
-function replayInvestmentChartAnimation() {
-    const chart = charts.campaigns;
-    if (!chart || !shouldAnimateInvestmentChart()) return;
-    chart.reset();
-    chart.update('active');
 }
 
 function shouldAnimateOperationsUI() {
@@ -185,11 +185,6 @@ function ensureTabRendered(tabId) {
         }
         case 'investment':
             renderInvestmentTab(dashboardData, dashboardHistory);
-            if (!renderedTabs.has('investment-chart')) {
-                renderedTabs.add('investment-chart');
-            } else if (dashboardData.investment?.campaigns) {
-                replayInvestmentChartAnimation();
-            }
             break;
         case 'operations':
             if (!renderedTabs.has('operations-content')) {
@@ -944,6 +939,10 @@ function restartHealthRing() {
 }
 
 function switchTab(tabId) {
+    if (currentTab === 'investment' && tabId !== 'investment') {
+        clearCampaignChartHover(charts.campaigns);
+    }
+
     document.querySelectorAll('.list-group-item').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
 
@@ -1599,7 +1598,10 @@ function renderInvestmentTab(data, history) {
     }
 
     if (inv.campaigns?.length) {
-        renderCampaignChart(inv.campaigns);
+        const invTab = document.getElementById('tab-investment');
+        if (invTab?.classList.contains('active')) {
+            renderCampaignChart(inv.campaigns);
+        }
     }
 }
 
@@ -4275,6 +4277,10 @@ function renderCampaignChart(campaigns) {
                     },
                 },
             } : undefined,
+            interaction: {
+                mode: 'nearest',
+                intersect: true,
+            },
             layout: {
                 padding: {
                     top: 12,
