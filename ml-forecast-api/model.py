@@ -34,6 +34,10 @@ SKLEARN_MODEL_NAMES = [
 
 TRAIN_RATIO = 0.7
 MIN_TEST_DAYS = 14
+ENSEMBLE_MAX_MODELS = 3
+ENSEMBLE_CLOSE_RATIO = 1.25
+ENSEMBLE_MAX_MASE = 1.5
+MIN_ENSEMBLE_GAIN = 0.005  # ensemble must beat best single by >= 0.005 MASE
 
 
 def _compute_train_test_split(n: int, dates: list[str] | None = None) -> dict[str, Any] | None:
@@ -256,6 +260,205 @@ def _resolve_forecast_target(
     }
 
 
+def _mase_from_pred_array(
+    act_a: np.ndarray,
+    pred_a: np.ndarray,
+    naive_mae: float,
+) -> tuple[float, np.ndarray]:
+    pred_a = np.array(pred_a, dtype=float)
+    valid = ~np.isnan(pred_a)
+    if not valid.any():
+        return 999.0, pred_a
+    m = _metrics(act_a[valid], pred_a[valid])
+    mase = round(m["mae"] / naive_mae, 4) if naive_mae > 0 else 999.0
+    return mase, pred_a
+
+
+def _next_day_predictions(df: pd.DataFrame, model_names: list[str]) -> dict[str, float]:
+    X_full, y_full = build_feature_matrix(df)
+    X_next = build_next_features(df)
+    if X_next is None:
+        return {}
+
+    out: dict[str, float] = {}
+    for name in model_names:
+        try:
+            final_m = _make_final_model(name)
+            final_m.fit(X_full, y_full)
+            out[name] = max(0.0, float(final_m.predict(X_next)[0]))
+        except Exception:
+            continue
+    return out
+
+
+def _combine_next_day_forecast(strategy: dict[str, Any], next_preds: dict[str, float]) -> float | None:
+    if not next_preds:
+        return None
+
+    if strategy["type"] == "single":
+        name = strategy["components"][0]
+        return next_preds.get(name)
+
+    if strategy["type"] == "ensemble_weighted":
+        total = 0.0
+        weight_sum = 0.0
+        for name, weight in (strategy.get("weights") or {}).items():
+            if name in next_preds:
+                total += weight * next_preds[name]
+                weight_sum += weight
+        if weight_sum <= 0:
+            return None
+        return max(0.0, total / weight_sum)
+
+    meta = strategy.get("meta")
+    if meta is None:
+        return None
+    row = np.array([[next_preds.get(name, 0.0) for name in strategy["components"]]])
+    return max(0.0, float(meta.predict(row)[0]))
+
+
+def _build_ensemble_history_series(
+    full_history: dict[str, list[float | None]],
+    strategy: dict[str, Any],
+) -> list[float | None]:
+    components = strategy["components"]
+    if not components:
+        return []
+
+    length = max(len(full_history.get(name) or []) for name in components)
+    blended: list[float | None] = [None] * length
+
+    for idx in range(length):
+        vals: list[float] = []
+        weights: list[float] = []
+
+        if strategy["type"] == "ensemble_stacking" and strategy.get("meta") is not None:
+            row_vals = []
+            for name in components:
+                series = full_history.get(name) or []
+                if idx >= len(series) or series[idx] is None:
+                    row_vals = []
+                    break
+                row_vals.append(float(series[idx]))
+            if len(row_vals) == len(components):
+                blended[idx] = round(
+                    max(0.0, float(strategy["meta"].predict(np.array([row_vals]))[0])),
+                    2,
+                )
+            continue
+
+        for name in components:
+            series = full_history.get(name) or []
+            if idx >= len(series) or series[idx] is None:
+                continue
+            weight = 1.0
+            if strategy["type"] == "ensemble_weighted":
+                weight = float((strategy.get("weights") or {}).get(name, 0.0))
+                if weight <= 0:
+                    continue
+            vals.append(float(series[idx]))
+            weights.append(weight)
+
+        if vals and weights and sum(weights) > 0:
+            blended[idx] = round(sum(v * w for v, w in zip(vals, weights)) / sum(weights), 2)
+
+    return blended
+
+
+def _select_forecast_strategy(
+    model_results: dict[str, dict[str, Any]],
+    preds_bt_dict: dict[str, list[float]],
+    acts_bt: list[float],
+    naive_mae: float,
+) -> dict[str, Any]:
+    act_a = np.array(acts_bt, dtype=float)
+    ranked = sorted(model_results.items(), key=lambda kv: kv[1]["mase"])
+    best_name, best_res = ranked[0]
+    best_mase = float(best_res["mase"])
+
+    single_strategy: dict[str, Any] = {
+        "type": "single",
+        "model": best_name,
+        "mase": best_mase,
+        "preds": np.array(best_res["preds"], dtype=float),
+        "components": [best_name],
+        "weights": None,
+        "meta": None,
+        "candidates_evaluated": [],
+    }
+
+    candidates: list[str] = []
+    for name, res in ranked:
+        mase = float(res["mase"])
+        if mase > ENSEMBLE_MAX_MASE:
+            continue
+        if mase > best_mase * ENSEMBLE_CLOSE_RATIO:
+            continue
+        candidates.append(name)
+        if len(candidates) >= ENSEMBLE_MAX_MODELS:
+            break
+
+    if len(candidates) < 2:
+        return single_strategy
+
+    ensemble_candidates: list[dict[str, Any]] = []
+
+    inv = np.array([1.0 / max(float(model_results[name]["mase"]), 0.01) for name in candidates])
+    weights_arr = inv / inv.sum()
+    weighted_pred = np.zeros(len(act_a), dtype=float)
+    for idx, name in enumerate(candidates):
+        weighted_pred += weights_arr[idx] * np.array(preds_bt_dict[name], dtype=float)
+    weighted_mase, weighted_pred = _mase_from_pred_array(act_a, weighted_pred, naive_mae)
+    ensemble_candidates.append({
+        "type": "ensemble_weighted",
+        "model": "ensemble_ml_weighted",
+        "mase": weighted_mase,
+        "preds": weighted_pred,
+        "components": candidates,
+        "weights": {name: round(float(weights_arr[i]), 4) for i, name in enumerate(candidates)},
+        "meta": None,
+    })
+
+    try:
+        stack_matrix = np.column_stack([
+            np.array(preds_bt_dict[name], dtype=float) for name in candidates
+        ])
+        if not np.isnan(stack_matrix).any():
+            meta = Ridge(alpha=1.0)
+            meta.fit(stack_matrix, act_a)
+            stack_pred = np.maximum(meta.predict(stack_matrix), 0.0)
+            stack_mase, stack_pred = _mase_from_pred_array(act_a, stack_pred, naive_mae)
+            ensemble_candidates.append({
+                "type": "ensemble_stacking",
+                "model": "ensemble_ml_stacking",
+                "mase": stack_mase,
+                "preds": stack_pred,
+                "components": candidates,
+                "weights": None,
+                "meta": meta,
+            })
+    except Exception:
+        pass
+
+    single_strategy["candidates_evaluated"] = [
+        {"model": c["model"], "mase": c["mase"], "components": c["components"]}
+        for c in ensemble_candidates
+    ]
+
+    if not ensemble_candidates:
+        return single_strategy
+
+    best_ensemble = min(ensemble_candidates, key=lambda item: item["mase"])
+    if float(best_ensemble["mase"]) <= best_mase - MIN_ENSEMBLE_GAIN:
+        return best_ensemble
+
+    single_strategy["selection_note"] = (
+        f"Ensemble {best_ensemble['model']} ({best_ensemble['mase']}) "
+        f"no supera a {best_name} ({best_mase}) por >= {MIN_ENSEMBLE_GAIN} MASE"
+    )
+    return single_strategy
+
+
 def _resolve_model_names(model: str) -> list[str] | None:
     names = list(SKLEARN_MODEL_NAMES)
     if _HAS_LIGHTGBM and "lightgbm" not in names:
@@ -269,8 +472,7 @@ def _resolve_model_names(model: str) -> list[str] | None:
 
 
 def _build_response(
-    best_model_name: str,
-    best_mase: float,
+    strategy: dict[str, Any],
     df: pd.DataFrame,
     n: int,
     split_meta: dict[str, Any],
@@ -282,19 +484,20 @@ def _build_response(
     naive_mae: float,
     values: np.ndarray,
 ) -> dict[str, Any]:
-    X_full, y_full = build_feature_matrix(df)
-    final_model = _make_final_model(best_model_name)
-    final_model.fit(X_full, y_full)
-    X_next = build_next_features(df)
-    if X_next is None:
+    best_model_name = strategy["model"]
+    best_mase = float(strategy["mase"])
+    best_preds = np.array(strategy["preds"], dtype=float)
+
+    next_preds = _next_day_predictions(df, strategy["components"])
+    forecast_raw = _combine_next_day_forecast(strategy, next_preds)
+    if forecast_raw is None:
         return {
-            "error": f"Could not build next-day features for {best_model_name}",
+            "error": f"Could not build next-day forecast for {best_model_name}",
             "model_name": best_model_name,
         }
 
-    forecast = max(0.0, float(final_model.predict(X_next)[0]))
-    best_preds = model_results[best_model_name]["preds"]
-    residuals = np.abs(np.array(acts_bt) - best_preds)
+    forecast = float(forecast_raw)
+    residuals = np.abs(np.array(acts_bt, dtype=float) - best_preds)
 
     q50 = float(np.quantile(residuals, 0.5))
     q80 = float(np.quantile(residuals, 0.8))
@@ -307,7 +510,7 @@ def _build_response(
         {
             "date": dates_bt[k],
             "actual": round(float(acts_bt[k]), 2),
-            "predicted": round(float(preds_bt_dict[best_model_name][k]), 2),
+            "predicted": round(float(best_preds[k]), 2),
         }
         for k in range(len(acts_bt))
     ]
@@ -328,6 +531,8 @@ def _build_response(
     full_history = _build_holdout_series(df, model_names, split_meta["split_index"])
 
     models_list = []
+    X_full, y_full = build_feature_matrix(df)
+    X_next = build_next_features(df)
     for name in model_names:
         fc_int = None
         horizons = None
@@ -375,6 +580,21 @@ def _build_response(
             entry["horizons"] = horizons
         models_list.append(entry)
 
+    if strategy["type"] != "single":
+        ens_series = _build_ensemble_history_series(full_history, strategy)
+        ens_entry: dict[str, Any] = {
+            "name": best_model_name,
+            "mae": round(float(np.mean(np.abs(np.array(acts_bt) - best_preds))), 2),
+            "mase": best_mase,
+            "rmse": round(float(np.sqrt(np.mean((np.array(acts_bt) - best_preds) ** 2))), 2),
+            "series": ens_series,
+            "forecast_1d": fc_int,
+            "components": strategy["components"],
+        }
+        if strategy.get("weights"):
+            ens_entry["ensemble_weights"] = strategy["weights"]
+        models_list.append(ens_entry)
+
     naive_series_aligned = [None] * n
     split_index = split_meta["split_index"]
     for i in range(split_index, n):
@@ -392,6 +612,8 @@ def _build_response(
 
     all_mase = {name: model_results[name]["mase"] for name in model_names}
     test_count = split_meta["test_count"]
+    best_single_name = min(model_results.keys(), key=lambda k: model_results[k]["mase"])
+    best_single_mase = float(model_results[best_single_name]["mase"])
 
     return {
         "model_name": best_model_name,
@@ -406,6 +628,8 @@ def _build_response(
             "naive_mae": round(naive_mae, 2),
             "models": models_list,
             "selected": best_model_name,
+            "ensemble_weights": strategy.get("weights"),
+            "ensemble_components": strategy.get("components"),
             "train_test_split": split_meta,
         },
         "forecast_horizons": {
@@ -453,6 +677,14 @@ def _build_response(
             "train_test_split": split_meta,
             "best_model": best_model_name,
             "best_mase": best_mase,
+            "best_single_model": best_single_name,
+            "best_single_mase": best_single_mase,
+            "ensemble_used": strategy["type"] != "single",
+            "ensemble_type": strategy["type"],
+            "ensemble_components": strategy.get("components"),
+            "ensemble_weights": strategy.get("weights"),
+            "ensemble_candidates": strategy.get("candidates_evaluated"),
+            "selection_note": strategy.get("selection_note"),
             "compared_models": model_names,
             "all_mase": all_mase,
         },
@@ -556,12 +788,15 @@ def run_forecast(
     if not model_results:
         return {"error": "No ML models produced valid holdout forecasts", "model_name": model}
 
-    best_model_name = min(model_results.keys(), key=lambda k: model_results[k]["mase"])
-    best_mase = model_results[best_model_name]["mase"]
+    strategy = _select_forecast_strategy(
+        model_results,
+        preds_bt_dict,
+        acts_bt,
+        naive_mae,
+    )
 
     return _build_response(
-        best_model_name,
-        best_mase,
+        strategy,
         df,
         n,
         split_meta,
